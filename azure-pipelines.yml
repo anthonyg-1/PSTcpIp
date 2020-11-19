@@ -39,4 +39,4 @@ jobs:
         inputs:
           apiKey: '$(PSGalleryApiKey)'
           path: '$(Build.ArtifactStagingDirectory)\$(ModuleName)'
-        condition: and(succeeded('PullRequest'), ne(variables['Build.Reason'], 'PullRequest'))
+        condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
