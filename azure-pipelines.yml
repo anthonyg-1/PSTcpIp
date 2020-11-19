@@ -1,0 +1,42 @@
+trigger:
+    paths:
+      exclude:
+        - azure-pipelines.yml
+        - .gitignore
+        - LICENSE
+        - README.md
+    branches:
+      include:
+        - main
+
+variables:
+    - name: ModuleName
+      value: 'PSTcpIp'
+
+pool:
+  vmImage: 'windows-latest'
+
+jobs:
+  - job: PowerShell_CICD
+    workspace:
+      clean: all
+
+    steps:
+      - task: CopyFiles@2
+        displayName: 'Copy Module Source to Staging'
+        inputs:
+          SourceFolder: '$(Build.SourcesDirectory)\$(ModuleName)\'
+          Contents: '**'
+          TargetFolder: '$(Build.ArtifactStagingDirectory)\$(ModuleName)\'
+          CleanTargetFolder: true
+          OverWrite: true
+      - task: PublishBuildArtifacts@1
+        inputs:
+          PathtoPublish: '$(Build.ArtifactStagingDirectory)\$(ModuleName)'
+          ArtifactName: '$(ModuleName)'
+          publishLocation: 'Container'
+      - task: PSGalleryPackager@0
+        inputs:
+          apiKey: '$(PSGalleryApiKey)'
+          path: '$(Build.ArtifactStagingDirectory)\$(ModuleName)'
+        condition: and(succeeded('PullRequest'), ne(variables['Build.Reason'], 'PullRequest'))
