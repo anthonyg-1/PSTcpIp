@@ -2,7 +2,7 @@
 
 ## PSTcpIp
 
-Contains functions that faciliate testing network connectivity, SSL/TLS and other network tasks.
+Contains functions that faciliate testing network connectivity, TLS/SSL and other network tasks.
 
 ## Install and Usage
 
