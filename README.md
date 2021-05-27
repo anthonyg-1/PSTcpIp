@@ -33,7 +33,7 @@ Test-TcpConnection -IPAddress 134.170.184.133 -Port 80
 Test-TcpConnection -ComputerName 'mywebserver' -Port $ports -Count 1 -Timeout 100
 ```
 
-### TLS/TLS certificate retrieval examples
+### TLS/SSL certificate retrieval examples
 
 ```powershell
 # Gets an SSL certificate from www.mysite.com over port 443 (default)
