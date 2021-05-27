@@ -13,7 +13,7 @@ Installing the module.
 Install-Module -Name PSTcpIp -Scope CurrentUser -Repository PSGallery
 ```
 
-### TCP connection test examples
+### TCP connection testing examples
 
 ```powershell
 # Tests HTTP connectivity on the server 'myserver'
@@ -31,4 +31,20 @@ Test-TcpConnection -IPAddress 134.170.184.133 -Port 80
 # Scans 'mywebserver' for TCP ports 80 through 445, and 5000 through 6000 with a 100 millisecond timeout
 @((80..445), (5000..6000)) | % { $ports += $_ }
 Test-TcpConnection -ComputerName 'mywebserver' -Port $ports -Count 1 -Timeout 100
+```
+
+### TLS/TLS certificate retrieval examples
+
+```powershell
+# Gets an SSL certificate from www.mysite.com over port 443 (default)
+Get-SslCertificate -HostName www.mysite.com
+
+# Gets an SSL certificate from www.mysite.com over port 8181
+Get-SslCertificate -HostName www.mysite.com -Port 8181
+
+# Gets an SSL certificate from www.mysite.com over port 443, selects three properties (Thumprint, Subject, NotAfter) and formats the output as a list
+Get-SslCertificate -HostName www.mysite.com -Port 443 | Select Thumbprint, Subject, NotAfter | Format-List
+
+# Gets an SSL certificate from https://www.mysite.com, selects three properties (Thumprint, Subject, NotAfter) and formats the output as a list
+Get-SslCertificate -Uri https://www.mysite.com/default.htm | Select Thumbprint, Subject, NotAfter | Format-List
 ```
