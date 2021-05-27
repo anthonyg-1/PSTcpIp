@@ -319,7 +319,7 @@ function Get-SslCertificate {
         }
 
         if (-not($connectionTestResult.Connected)) {
-            $webExceptionMessage = "Unable to connect to: {0}" -f $targetHost
+            $webExceptionMessage = "Unable to connect to {0} over the following port: {1}" -f $targetHost, $targetPort
             $WebException = New-Object -TypeName System.Net.WebException -ArgumentList $webExceptionMessage
             Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Stop
         }
