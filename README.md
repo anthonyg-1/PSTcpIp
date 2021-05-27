@@ -13,7 +13,7 @@ Installing the module.
 Install-Module -Name PSTcpIp -Scope CurrentUser -Repository PSGallery
 ```
 
-### TCP connection testing examples
+### TCP connection test examples
 
 ```powershell
 # Tests HTTP connectivity on the server 'myserver'
