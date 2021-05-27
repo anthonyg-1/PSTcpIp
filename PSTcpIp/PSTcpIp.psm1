@@ -285,39 +285,51 @@ function Get-SslCertificate {
     [CmdletBinding()]
     [OutputType([System.Security.Cryptography.X509Certificates.X509Certificate2])]
     param(
-        [Parameter(Mandatory = $false, Position = 0, ParameterSetName = "HostName")][ValidateLength(1, 250)][Alias('ComputerName', 'Name', 'h')][String]$HostName,
+        [Parameter(Mandatory = $false, Position = 0, ParameterSetName = "HostName")][ValidateLength(1, 250)][Alias('ComputerName', 'IPAddress', 'Name', 'h', 'i')][String]$HostName,
         [Parameter(Mandatory = $false, Position = 1, ParameterSetName = "HostName")][ValidateRange(1, 65535)][Alias('PortNumber', 'p')][Int]$Port = 443,
         [Parameter(Mandatory = $false, Position = 0, ParameterSetName = "Uri")][Uri]$Uri,
         [Parameter(Mandatory = $false, Position = 2)][ValidateSet("Tls", "Tls11", "Tls12", "Tls13")][String]$TlsVersion = "Tls12"
     )
     PROCESS {
-        [X509Certificate2]$sslCert = $null
-
-        [string]$targetHostName = ""
+        [string]$targetHost = ""
         [string]$targetPort = ""
 
         if ($PSBoundParameters.ContainsKey("Uri")) {
-            $targetHostName = $Uri.Authority
+            $targetHost = $Uri.Authority
             $targetPort = $Uri.Port
         }
         else {
-            $targetHostName = $HostName
+            $targetHost = $HostName
             $targetPort = $Port
         }
 
-        [bool]$canConnect = Test-TcpConnection -Name $targetHostName -Port $targetPort -Quiet
-        if (-not($canConnect)) {
-            $webExceptionMessage = "Unable to connect to {0} over the following port: {1}" -f $targetHostName, $targetPort
-            $WebException = New-Object -TypeName System.Net.WebException -ArgumentList $webExceptionMessage
-            Write-Error -Exception $WebException -ErrorAction Stop
+        $connectionTestResult = Test-TcpConnection -Name $targetHost -Port $targetPort
+
+        [bool]$isIp = $false
+        try {
+            [System.Net.IPAddress]::Parse($targetHost) | Out-Null
+            $isIp = $true
+        }
+        catch {
+            $isIp = $false
         }
 
-        try {
-            $tcpClient = [TcpClient]::new($targetHostName, $targetPort)
+        if ($isIp) {
+            $targetHost = $connectionTestResult.Destination
+        }
 
+        if (-not($connectionTestResult.Connected)) {
+            $webExceptionMessage = "Unable to connect to: {0}" -f $targetHost
+            $WebException = New-Object -TypeName System.Net.WebException -ArgumentList $webExceptionMessage
+            Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Stop
+        }
+
+        [X509Certificate2]$sslCert = $null
+        try {
+            $tcpClient = [TcpClient]::new($targetHost, $Port)
             $sslStream = [SslStream]::new($tcpClient.GetStream())
 
-            $sslStream.AuthenticateAsClient($targetHostName, $null, ([SslProtocols]::$TlsVersion), $true)
+            $sslStream.AuthenticateAsClient($targetHost)
 
             $sslCert = [X509Certificate2]::new($sslStream.RemoteCertificate)
 
@@ -327,15 +339,14 @@ function Get-SslCertificate {
             $tcpClient.Dispose()
         }
         catch {
-            $cryptographicExceptionMessage = "Unable to establish SSL session with: {0}" -f $targetHostName
-            $CryptographicException = New-Object -TypeName CryptographicException -ArgumentList $cryptographicExceptionMessage
-            Write-Error -Exception $CryptographicException -ErrorAction Stop
+            $cryptographicExceptionMessage = "Unable to establish SSL session with {0}." -f $targetHost
+            $CryptographicException = New-Object -TypeName System.Security.Cryptography.CryptographicException -ArgumentList $cryptographicExceptionMessage
+            Write-Error -Exception $CryptographicException -Category SecurityError -ErrorAction Stop
         }
 
         return $sslCert
     }
 }
-
 
 #endregion
 
