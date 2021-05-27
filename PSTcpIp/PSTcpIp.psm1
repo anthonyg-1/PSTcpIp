@@ -327,7 +327,7 @@ function Get-SslCertificate {
             $tcpClient.Dispose()
         }
         catch {
-            $cryptographicExceptionMessage = "Unable to establish SSL session with {0}." -f $HostName
+            $cryptographicExceptionMessage = "Unable to establish SSL session with: {0}" -f $targetHostName
             $CryptographicException = New-Object -TypeName CryptographicException -ArgumentList $cryptographicExceptionMessage
             Write-Error -Exception $CryptographicException -ErrorAction Stop
         }
