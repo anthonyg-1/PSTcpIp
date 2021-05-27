@@ -283,7 +283,7 @@ function Get-SslCertificate {
             https://github.com/anthonyg-1/PSTcpIp
     #>
     [CmdletBinding()]
-    [OutputType([X509Certificate2])]
+    [OutputType([System.Security.Cryptography.X509Certificates.X509Certificate2])]
     param(
         [Parameter(Mandatory = $false, Position = 0, ParameterSetName = "HostName")][Alias('ComputerName', 'Name', 'h')][String]$HostName,
         [Parameter(Mandatory = $false, Position = 1, ParameterSetName = "HostName")][Alias('PortNumber', 'p')][Int]$Port = 443,
