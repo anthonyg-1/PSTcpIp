@@ -2,7 +2,7 @@
 
 ## PSTcpIp
 
-This module was born out of the need for TCP connectivity testing not contained with PowerShell 7. 
+Contains functions that faciliate testing network connectivity, SSL/TLS and other network tasks.
 
 ## Install and Usage
 
