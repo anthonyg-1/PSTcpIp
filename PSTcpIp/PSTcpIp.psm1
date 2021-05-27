@@ -140,7 +140,7 @@ function Test-TcpConnection {
     [OutputType([PSTcpIp.TcpConnectionStatus], ParameterSetName = 'Default')]
     [OutputType([System.Boolean], ParameterSetName = 'Quiet')]
     param(
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, Position = 0)][Alias('ComputerName', 'HostName', 'IPAddress', 'Name', 'h', 'i')][String[]]$DNSHostName,
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, Position = 0)][ValidateLength(1,250)][Alias('ComputerName', 'HostName', 'IPAddress', 'Name', 'h', 'i')][String[]]$DNSHostName,
         [Parameter(Mandatory = $false, ValueFromPipeline = $false, Position = 1)][ValidateRange(1, 65535)][Alias('PortNumber', 'p')][Int[]]$Port,
         [Parameter(Mandatory = $false, ParameterSetName = 'Default', Position = 2)][ValidateRange(1, 100000)][Alias('c')][Int]$Count = 1,
         [Parameter(Mandatory = $true, ParameterSetName = 'Quiet', Position = 2)][Alias('q')][Switch]$Quiet,
@@ -285,8 +285,8 @@ function Get-SslCertificate {
     [CmdletBinding()]
     [OutputType([System.Security.Cryptography.X509Certificates.X509Certificate2])]
     param(
-        [Parameter(Mandatory = $false, Position = 0, ParameterSetName = "HostName")][Alias('ComputerName', 'Name', 'h')][String]$HostName,
-        [Parameter(Mandatory = $false, Position = 1, ParameterSetName = "HostName")][Alias('PortNumber', 'p')][Int]$Port = 443,
+        [Parameter(Mandatory = $false, Position = 0, ParameterSetName = "HostName")][ValidateLength(1,250)][Alias('ComputerName', 'Name', 'h')][String]$HostName,
+        [Parameter(Mandatory = $false, Position = 1, ParameterSetName = "HostName")][ValidateRange(1, 65535)][Alias('PortNumber', 'p')][Int]$Port = 443,
         [Parameter(Mandatory = $false, Position = 0, ParameterSetName = "Uri")][Uri]$Uri,
         [Parameter(Mandatory = $false, Position = 2)][ValidateSet("Tls", "Tls11", "Tls12", "Tls13")][String]$TlsVersion = "Tls12"
     )
@@ -303,6 +303,14 @@ function Get-SslCertificate {
         else {
             $targetHostName = $HostName
             $targetPort = $Port
+        }
+
+        [bool]$canConnect = Test-TcpConnection -Name $targetHostName -Port $targetPort -Quiet
+        if (-not($canConnect))
+        {
+            $webExceptionMessage = "Unable to connect to {0} over the following port: {1}" -f $targetHostName, $targetPort
+			$WebException = New-Object -TypeName System.Net.WebException -ArgumentList $webExceptionMessage
+			Write-Error -Exception $WebException
         }
 
         try {
