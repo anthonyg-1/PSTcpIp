@@ -338,6 +338,8 @@ Export-ModuleMember -Function Get-SslCertificate
 
 New-Alias -Name ttc -Value Test-TcpConnection -Force
 New-Alias -Name gssl -Value Get-SslCertificate -Force
+New-Alias -Name Get-TlsCertificate -Value Get-SslCertificate -Force
 
 Export-ModuleMember -Alias ttc
 Export-ModuleMember -Alias gssl
+Export-ModuleMember -Alias Get-TlsCertificate
