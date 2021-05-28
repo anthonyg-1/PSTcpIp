@@ -18,14 +18,21 @@ if (Test-Path -Path $PSScriptRoot) { Update-FormatData -PrependPath $formatFileP
 
 #region Load config data
 
-$jsonFilePath = Join-Path -Path $PSScriptRoot -ChildPath 'ConfigData\TcpPorts.json'
+$tcpPortsJsonFilePath = Join-Path -Path $PSScriptRoot -ChildPath 'ConfigData\TcpPorts.json'
+$protocolsJsonFilePath = Join-Path -Path $PSScriptRoot -ChildPath 'ConfigData\Protocols.json'
 
-if (-not(Test-Path -Path $jsonFilePath)) {
-    $FileNotFoundException = New-Object -TypeName System.IO.FileNotFoundException -ArgumentList ("JSON configuration file not found in the following path: {0}" -f $jsonFilePath)
+if (-not(Test-Path -Path $tcpPortsJsonFilePath )) {
+    $FileNotFoundException = New-Object -TypeName System.IO.FileNotFoundException -ArgumentList ("JSON configuration file not found in the following path: {0}" -f $tcpPortsJsonFilePath )
     throw $FileNotFoundException
 }
 
-$tcpPortData = Get-Content -Path $jsonFilePath -Raw | ConvertFrom-Json
+if (-not(Test-Path -Path $protocolsJsonFilePath )) {
+    $FileNotFoundException = New-Object -TypeName System.IO.FileNotFoundException -ArgumentList ("JSON configuration file not found in the following path: {0}" -f $protocolsJsonFilePath)
+    throw $FileNotFoundException
+}
+
+$tcpPortData = Get-Content -Path $tcpPortsJsonFilePath  -Raw | ConvertFrom-Json
+$protocolData = Get-Content -Path $protocolsJsonFilePath  -Raw | ConvertFrom-Json
 
 $portTable = @{ }
 foreach ($entry in $tcpPortData) {
@@ -34,7 +41,10 @@ foreach ($entry in $tcpPortData) {
     }
 }
 
+$protocolList = $protocolData | Select-Object -ExpandProperty protocols
+
 New-Variable -Name tcpPortAndDescriptionData -Value $portTable -Option ReadOnly -Scope Global -Force
+New-Variable -Name protocols -Value $protocolList -Option ReadOnly -Scope Global -Force
 
 #endregion
 
@@ -58,7 +68,31 @@ namespace PSTcpIp
 }
 "@
 
+$tlsSslStatusDefinition = @"
+using System;
+using System.Security.Cryptography.X509Certificates;
+
+namespace PSTcpIp
+{
+    public class TlsSslStatus
+    {
+        public string HostName { get; set; }
+        public int Port { get; set; }
+        public string SignatureAlgorithm { get; set; }
+        public X509Certificate2 Certificate { get; set; }
+        public bool HandshakeSuccess { get; set; }
+        public bool Ssl2 { get; set; }
+        public bool Ssl3 { get; set; }
+        public bool Tls { get; set; }
+        public bool Tls11 { get; set; }
+        public bool Tls12 { get; set; }
+        public bool Tls13 { get; set; }
+    }
+}
+"@
+
 Add-Type -TypeDefinition $tcpConnectionStatusClassDef -ReferencedAssemblies System.Net.Primitives -ErrorAction Stop
+Add-Type -TypeDefinition $tlsSslStatusDefinition
 
 #endregion
 
@@ -244,7 +278,6 @@ function Test-TcpConnection {
     }
 }
 
-
 function Get-SslCertificate {
     <#
         .SYNOPSIS
@@ -303,7 +336,7 @@ function Get-SslCertificate {
             $targetPort = $Port
         }
 
-        $connectionTestResult = Test-TcpConnection -Name $targetHost -Port $targetPort
+        $connectionTestResult = Test-TcpConnection -DNSHostName $targetHost -Port $targetPort
 
         [bool]$isIp = $false
         try {
@@ -354,16 +387,140 @@ function Get-SslCertificate {
     }
 }
 
+function Get-TlsStatus {
+    <#
+        .SYNOPSIS
+            Gets the TLS protocols that the client is able to successfully use to connect to a computer.
+        .DESCRIPTION
+            Obtains the SSL/TLS protocols that the client is able to successfully use to connect to a target computer.
+        .PARAMETER HostName
+            The target host to get TLS/SSL settings from.
+        .PARAMETER Port
+            The port for the target host. This parameter is only applicable when using the HostName parameter. Default value is 443.
+        .PARAMETER Uri
+            Specifies the Uniform Resource Identifier (URI) of the internet resource as an alternative to the HostName and Port parameters. This parameter supports HTTPS only.
+        .EXAMPLE
+            Get-TlsStatus -HostName mysite.com -Port 443
+
+            Obtains TLS settings on mysite.com against TCP port 443.
+        .EXAMPLE
+            Get-TlsStatus -Uri "https://www.mysite.com"
+
+            Tests TLS settings on "https://www.mysite.com".
+        .OUTPUTS
+            PSTcpIp.TlsSslStatus
+    #>
+
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory = $false, Position = 0, ParameterSetName = "HostName")][ValidateLength(1, 250)][Alias('ComputerName', 'IPAddress', 'Name', 'h', 'i')][String]$HostName,
+        [Parameter(Mandatory = $false, Position = 1, ParameterSetName = "HostName")][ValidateRange(1, 65535)][Alias('PortNumber', 'p')][Int]$Port = 443,
+        [Parameter(Mandatory = $false, Position = 0, ParameterSetName = "Uri")][Uri]$Uri
+    )
+    BEGIN {
+        $protocolList = @("Ssl2", "Ssl3", "Tls", "Tls11", "Tls12", "Tls13")
+    }
+    PROCESS {
+        [string]$targetHost = ""
+        [string]$targetPort = ""
+
+        if ($PSBoundParameters.ContainsKey("Uri")) {
+            $targetHost = $Uri.Authority
+            $targetPort = $Uri.Port
+        }
+        else {
+            $targetHost = $HostName
+            $targetPort = $Port
+        }
+
+        $connectionTestResult = Test-TcpConnection -DNSHostName $targetHost -Port $targetPort
+
+        [bool]$isIp = $false
+        try {
+            [System.Net.IPAddress]::Parse($targetHost) | Out-Null
+            $isIp = $true
+        }
+        catch {
+            $isIp = $false
+        }
+
+        if ($isIp) {
+            $targetHost = $connectionTestResult.Destination
+        }
+
+        if ($null -eq $targetHost) {
+            $webExceptionMessage = "Host not specified. Unable to connect."
+            $WebException = New-Object -TypeName System.Net.WebException -ArgumentList $webExceptionMessage
+            Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Stop
+        }
+
+        if (-not($connectionTestResult.Connected)) {
+            $webExceptionMessage = "Unable to connect to {0} over the following port: {1}" -f $targetHost, $targetPort
+            $WebException = New-Object -TypeName System.Net.WebException -ArgumentList $webExceptionMessage
+            Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Stop
+        }
+
+        $TlsSslStatus = New-Object -TypeName PSTcpIp.TlsSslStatus
+        $TlsSslStatus.HostName = $targetHost
+        $TlsSslStatus.Port = $targetPort
+        $TlsSslStatus.HandshakeSuccess = $false
+
+        try {
+            Get-SslCertificate -HostName $targetHost -Port $targetPort -ErrorAction Stop | Out-Null
+            $TlsSslStatus.HandshakeSuccess = $true
+        }
+
+        catch {
+            $cryptographicExceptionMessage = "Unable to establish SSL handshake using any protocol with the following host: {0}" -f $targetHost
+            $CryptographicException = New-Object -TypeName System.Security.Cryptography.CryptographicException -ArgumentList $cryptographicExceptionMessage
+            Write-Error -Exception $CryptographicException -Category ProtocolError -ErrorAction Stop
+        }
+
+        If ($TlsSslStatus.HandshakeSuccess) {
+            foreach ($protocol in $protocolList) {
+                $socket = New-Object -TypeName System.Net.Sockets.Socket -ArgumentList ([System.Net.Sockets.SocketType]::Stream, [System.Net.Sockets.ProtocolType]::Tcp)
+                $socket.Connect($targetHost, $targetPort)
+
+                try {
+                    $netStream = New-Object -TypeName System.Net.Sockets.NetworkStream -ArgumentList $socket, $true
+                    $sslStream = New-Object -TypeName System.Net.Security.SslStream -ArgumentList $netStream, $true
+
+                    $sslStream.AuthenticateAsClient($targetHost, $null, $protocol, $false)
+
+                    $remoteCertificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]$sslStream.RemoteCertificate
+                    $TlsSslStatus.SignatureAlgorithm = $remoteCertificate.SignatureAlgorithm.FriendlyName
+                    $TlsSslStatus.Certificate = $remoteCertificate
+                    $TlsSslStatus.$protocol = $true
+                }
+                catch {
+                    $TlsSslStatus.$protocol = $false
+                }
+                finally {
+                    $sslStream.Close()
+                    $sslStream.Dispose()
+                    $socket.Close()
+                    $socket.Dispose()
+                }
+            }
+        }
+        return $TlsSslStatus
+    }
+}
+
 #endregion
 
 
 Export-ModuleMember -Function Test-TcpConnection
 Export-ModuleMember -Function Get-SslCertificate
+Export-ModuleMember -Function Get-TlsStatus
 
 New-Alias -Name ttc -Value Test-TcpConnection -Force
 New-Alias -Name gssl -Value Get-SslCertificate -Force
 New-Alias -Name Get-TlsCertificate -Value Get-SslCertificate -Force
+New-Alias -Name gtlss -Value Get-TlsStatus -Force
 
 Export-ModuleMember -Alias ttc
 Export-ModuleMember -Alias gssl
 Export-ModuleMember -Alias Get-TlsCertificate
+Export-ModuleMember -Alias gtlss
