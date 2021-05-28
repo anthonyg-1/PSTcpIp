@@ -463,8 +463,9 @@ function Get-TlsStatus {
         $tlsStatus.Port = $targetPort
         $tlsStatus.HandshakeSuccess = $false
 
+        [X509Certificate2]$sslCert = $null;
         try {
-            Get-SslCertificate -HostName $targetHost -Port $targetPort -ErrorAction Stop | Out-Null
+            $sslCert = Get-SslCertificate -HostName $targetHost -Port $targetPort -ErrorAction Stop
             $tlsStatus.HandshakeSuccess = $true
         }
 
@@ -485,7 +486,7 @@ function Get-TlsStatus {
 
                     $sslStream.AuthenticateAsClient($targetHost, $null, $protocol, $false)
 
-                    $remoteCertificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]$sslStream.RemoteCertificate
+                    $remoteCertificate = $sslCert
                     $tlsStatus.SignatureAlgorithm = $remoteCertificate.SignatureAlgorithm.FriendlyName
                     $tlsStatus.Certificate = $remoteCertificate
                     $tlsStatus.$protocol = $true
