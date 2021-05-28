@@ -48,3 +48,13 @@ Get-SslCertificate -HostName www.mysite.com -Port 443 | Select Thumbprint, Subje
 # Gets an SSL certificate from https://www.mysite.com, selects three properties (Thumprint, Subject, NotAfter) and formats the output as a list
 Get-SslCertificate -Uri "https://www.mysite.com" | Select Thumbprint, Subject, NotAfter | Format-List
 ```
+
+### TLS/SSL version testing examples
+
+```powershell
+# Obtains TLS settings on mysite.com against TCP port 443.
+Get-TlsStatus -HostName mysite.com -Port 443
+
+# Gets TLS settings on "https://www.mysite.com" 
+Get-TlsStatus -Uri "https://www.mysite.com"
+```
