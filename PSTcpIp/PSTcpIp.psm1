@@ -41,10 +41,10 @@ foreach ($entry in $tcpPortData) {
     }
 }
 
-$protocolList = $protocolData | Select-Object -ExpandProperty protocols
+$protocolArray = $protocolData | Select-Object -ExpandProperty protocols
 
 New-Variable -Name tcpPortAndDescriptionData -Value $portTable -Option ReadOnly -Scope Global -Force
-New-Variable -Name protocols -Value $protocolList -Option ReadOnly -Scope Global -Force
+New-Variable -Name protocolList -Value $protocolArray -Option ReadOnly -Scope Global -Force
 
 #endregion
 
@@ -68,7 +68,7 @@ namespace PSTcpIp
 }
 "@
 
-$tlsSslStatusDefinition = @"
+$tlsStatusDefinition = @"
 using System;
 using System.Security.Cryptography.X509Certificates;
 
@@ -92,7 +92,7 @@ namespace PSTcpIp
 "@
 
 Add-Type -TypeDefinition $tcpConnectionStatusClassDef -ReferencedAssemblies System.Net.Primitives -ErrorAction Stop
-Add-Type -TypeDefinition $tlsSslStatusDefinition
+Add-Type -TypeDefinition $tlsStatusDefinition
 
 #endregion
 
@@ -418,9 +418,6 @@ function Get-TlsStatus {
         [Parameter(Mandatory = $false, Position = 1, ParameterSetName = "HostName")][ValidateRange(1, 65535)][Alias('PortNumber', 'p')][Int]$Port = 443,
         [Parameter(Mandatory = $false, Position = 0, ParameterSetName = "Uri")][Uri]$Uri
     )
-    BEGIN {
-        $protocolList = @("Ssl2", "Ssl3", "Tls", "Tls11", "Tls12", "Tls13")
-    }
     PROCESS {
         [string]$targetHost = ""
         [string]$targetPort = ""
@@ -461,14 +458,14 @@ function Get-TlsStatus {
             Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Stop
         }
 
-        $TlsSslStatus = New-Object -TypeName PSTcpIp.TlsSslStatus
-        $TlsSslStatus.HostName = $targetHost
-        $TlsSslStatus.Port = $targetPort
-        $TlsSslStatus.HandshakeSuccess = $false
+        $tlsStatus = New-Object -TypeName PSTcpIp.TlsSslStatus
+        $tlsStatus.HostName = $targetHost
+        $tlsStatus.Port = $targetPort
+        $tlsStatus.HandshakeSuccess = $false
 
         try {
             Get-SslCertificate -HostName $targetHost -Port $targetPort -ErrorAction Stop | Out-Null
-            $TlsSslStatus.HandshakeSuccess = $true
+            $tlsStatus.HandshakeSuccess = $true
         }
 
         catch {
@@ -477,7 +474,7 @@ function Get-TlsStatus {
             Write-Error -Exception $CryptographicException -Category ProtocolError -ErrorAction Stop
         }
 
-        If ($TlsSslStatus.HandshakeSuccess) {
+        If ($tlsStatus.HandshakeSuccess) {
             foreach ($protocol in $protocolList) {
                 $socket = New-Object -TypeName System.Net.Sockets.Socket -ArgumentList ([System.Net.Sockets.SocketType]::Stream, [System.Net.Sockets.ProtocolType]::Tcp)
                 $socket.Connect($targetHost, $targetPort)
@@ -489,12 +486,12 @@ function Get-TlsStatus {
                     $sslStream.AuthenticateAsClient($targetHost, $null, $protocol, $false)
 
                     $remoteCertificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]$sslStream.RemoteCertificate
-                    $TlsSslStatus.SignatureAlgorithm = $remoteCertificate.SignatureAlgorithm.FriendlyName
-                    $TlsSslStatus.Certificate = $remoteCertificate
-                    $TlsSslStatus.$protocol = $true
+                    $tlsStatus.SignatureAlgorithm = $remoteCertificate.SignatureAlgorithm.FriendlyName
+                    $tlsStatus.Certificate = $remoteCertificate
+                    $tlsStatus.$protocol = $true
                 }
                 catch {
-                    $TlsSslStatus.$protocol = $false
+                    $tlsStatus.$protocol = $false
                 }
                 finally {
                     $sslStream.Close()
@@ -504,7 +501,7 @@ function Get-TlsStatus {
                 }
             }
         }
-        return $TlsSslStatus
+        return $tlsStatus
     }
 }
 
