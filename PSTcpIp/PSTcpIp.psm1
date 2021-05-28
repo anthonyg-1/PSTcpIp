@@ -318,6 +318,12 @@ function Get-SslCertificate {
             $targetHost = $connectionTestResult.Destination
         }
 
+        if ($null -eq $targetHost) {
+            $webExceptionMessage = "Host not specified. Unable to connect."
+            $WebException = New-Object -TypeName System.Net.WebException -ArgumentList $webExceptionMessage
+            Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Stop
+        }
+
         if (-not($connectionTestResult.Connected)) {
             $webExceptionMessage = "Unable to connect to {0} over the following port: {1}" -f $targetHost, $targetPort
             $WebException = New-Object -TypeName System.Net.WebException -ArgumentList $webExceptionMessage
