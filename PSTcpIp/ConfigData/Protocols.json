@@ -1,0 +1,10 @@
+{
+  "protocols": [
+    "Ssl2",
+    "Ssl3",
+    "Tls",
+    "Tls11",
+    "Tls12",
+    "Tls13"
+  ]
+}
