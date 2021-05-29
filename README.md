@@ -10,7 +10,7 @@ Installing the module.
 
 ```powershell
 # Install module
-Install-Module -Name PSTcpIp -Scope CurrentUser -Repository PSGallery
+Install-Module PSTcpIp -Repository PSGallery -AllowClobber
 ```
 
 ### TCP connection test examples
