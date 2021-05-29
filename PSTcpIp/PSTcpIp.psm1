@@ -557,9 +557,11 @@ Export-ModuleMember -Function Get-TlsStatus
 New-Alias -Name ttc -Value Test-TcpConnection -Force
 New-Alias -Name gssl -Value Get-SslCertificate -Force
 New-Alias -Name Get-TlsCertificate -Value Get-SslCertificate -Force
+New-Alias -Name Get-TlsInfo -Value Get-TlsStatus -Force
 New-Alias -Name gtlss -Value Get-TlsStatus -Force
 
 Export-ModuleMember -Alias ttc
 Export-ModuleMember -Alias gssl
 Export-ModuleMember -Alias Get-TlsCertificate
 Export-ModuleMember -Alias gtlss
+Export-ModuleMember -Alias Get-TlsInfo
