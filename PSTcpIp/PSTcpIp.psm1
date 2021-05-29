@@ -80,6 +80,7 @@ namespace PSTcpIp
         public int Port { get; set; }
         public string SerialNumber { get; set; }
         public string Thumbprint { get; set; }
+        public string Subject { get; set; }
         public string Issuer { get; set; }
         public bool HandshakeSuccess { get; set; }
         public bool CertificateIsValid { get; set; }
@@ -397,9 +398,9 @@ function Get-SslCertificate {
 function Get-TlsStatus {
     <#
         .SYNOPSIS
-            Gets the TLS protocols that the client is able to successfully use to connect to a computer.
+            Gets TLS protocols, certificate and cipher information against a remote computer running TLS/SSL.
         .DESCRIPTION
-            Obtains the SSL/TLS protocols that the client is able to successfully use to connect to a target computer as well as other potentially relevant information about the TLS/SSL endpoint.
+            Obtains the negotiated TLS protocols, certificate data (lifetime, validity, subject, serial number and other identifiable information, etc.) and cipher information against a remote target running TLS/SSL.
         .PARAMETER HostName
             The target host to get TLS/SSL settings from.
         .PARAMETER Port
@@ -479,6 +480,7 @@ function Get-TlsStatus {
             $tlsStatus.ValidTo = $sslCert.NotAfter;
             $tlsStatus.SerialNumber = $sslCert.GetSerialNumberString()
             $tlsStatus.Thumbprint = $sslCert.Thumbprint
+            $tlsStatus.Subject = $sslCert.Subject
             $tlsStatus.Issuer = $sslCert.Issuer
         }
         catch {
