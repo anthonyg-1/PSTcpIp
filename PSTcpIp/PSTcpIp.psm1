@@ -78,7 +78,6 @@ namespace PSTcpIp
     {
         public string HostName { get; set; }
         public int Port { get; set; }
-        public int KeyLength { get; set; }
         public string SignatureAlgorithm { get; set; }
         public X509Certificate2 Certificate { get; set; }
         public bool HandshakeSuccess { get; set; }
@@ -486,17 +485,6 @@ function Get-TlsStatus {
 
                     $sslStream.AuthenticateAsClient($targetHost, $null, $protocol, $false)
 
-                    [int]$keyLength = 0
-                    try {
-                        $keyLength = $sslCert.PublicKey.Key.KeySize
-                    }
-                    catch {
-                        $maxSize = $sslCert.PublicKey.Key.LegalKeySizes.MaxSize
-                        $skipSize = $sslCert.PublicKey.Key.LegalKeySizes.SkipSize
-                        $keyLength = $maxSize / $skipSize
-                    }
-
-                    $tlsStatus.KeyLength = $keyLength
                     $tlsStatus.SignatureAlgorithm = $sslCert.SignatureAlgorithm.FriendlyName
                     $tlsStatus.Certificate = $sslCert
                     $tlsStatus.$protocol = $true
