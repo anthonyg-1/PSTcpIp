@@ -2,7 +2,7 @@
 
 ## PSTcpIp
 
-Contains functions that faciliate testing network connectivity, TLS/SSL and other network tasks.
+This PowerShell module contains functions that faciliate testing network connectivity, TLS/SSL and other network tasks.
 
 ## Install and Usage
 
