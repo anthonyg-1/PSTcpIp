@@ -78,9 +78,16 @@ namespace PSTcpIp
     {
         public string HostName { get; set; }
         public int Port { get; set; }
-        public string SignatureAlgorithm { get; set; }
-        public X509Certificate2 Certificate { get; set; }
+        public string SerialNumber { get; set; }
+        public string Thumbprint { get; set; }
+        public string Issuer { get; set; }
         public bool HandshakeSuccess { get; set; }
+        public bool CertificateIsValid { get; set; }
+        public DateTime ValidFrom { get; set; }
+        public DateTime ValidTo { get; set; }
+        public string SignatureAlgorithm { get; set; }
+        public string NegotiatedCipherSuite { get; set; }
+        public string CipherAlgorithm { get; set; }
         public bool Ssl2 { get; set; }
         public bool Ssl3 { get; set; }
         public bool Tls { get; set; }
@@ -392,7 +399,7 @@ function Get-TlsStatus {
         .SYNOPSIS
             Gets the TLS protocols that the client is able to successfully use to connect to a computer.
         .DESCRIPTION
-            Obtains the SSL/TLS protocols that the client is able to successfully use to connect to a target computer.
+            Obtains the SSL/TLS protocols that the client is able to successfully use to connect to a target computer as well as other potentially relevant information about the TLS/SSL endpoint.
         .PARAMETER HostName
             The target host to get TLS/SSL settings from.
         .PARAMETER Port
@@ -467,6 +474,12 @@ function Get-TlsStatus {
         try {
             $sslCert = Get-SslCertificate -HostName $targetHost -Port $targetPort -ErrorAction Stop
             $tlsStatus.HandshakeSuccess = $true
+            $tlsStatus.CertificateIsValid = $sslCert.Verify()
+            $tlsStatus.ValidFrom = $sslCert.NotBefore;
+            $tlsStatus.ValidTo = $sslCert.NotAfter;
+            $tlsStatus.SerialNumber = $sslCert.GetSerialNumberString()
+            $tlsStatus.Thumbprint = $sslCert.Thumbprint
+            $tlsStatus.Issuer = $sslCert.Issuer
         }
         catch {
             $cryptographicExceptionMessage = "Unable to establish SSL handshake using any protocol with the following host: {0}" -f $targetHost
@@ -486,17 +499,23 @@ function Get-TlsStatus {
                     $sslStream.AuthenticateAsClient($targetHost, $null, $protocol, $false)
 
                     $tlsStatus.SignatureAlgorithm = $sslCert.SignatureAlgorithm.FriendlyName
-                    $tlsStatus.Certificate = $sslCert
                     $tlsStatus.$protocol = $true
+                    $tlsStatus.NegotiatedCipherSuite = $sslStream.NegotiatedCipherSuite
+                    $tlsStatus.CipherAlgorithm = $sslStream.CipherAlgorithm
                 }
                 catch {
                     $tlsStatus.$protocol = $false
                 }
                 finally {
-                    $sslStream.Close()
-                    $sslStream.Dispose()
-                    $socket.Close()
-                    $socket.Dispose()
+                    if ($sslStream) {
+                        $sslStream.Close()
+                        $sslStream.Dispose()
+                    }
+
+                    if ($socket) {
+                        $socket.Close()
+                        $socket.Dispose()
+                    }
                 }
             }
         }
