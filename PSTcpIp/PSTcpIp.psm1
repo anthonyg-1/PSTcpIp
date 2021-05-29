@@ -417,6 +417,28 @@ function Get-TlsStatus {
             Tests TLS settings on "https://www.mysite.com".
         .OUTPUTS
             PSTcpIp.TlsSslStatus
+
+                This function returns a TlsSslStatus object. Example output against www.microsoft.com:
+
+                HostName              : www.microsoft.com
+                Port                  : 443
+                SerialNumber          : 6B000003F4E3A67A2348550C330000000003F4
+                Thumbprint            : 9B2B8AE65169AA477C5783D6480F296EF48CF14D
+                Subject               : CN=www.microsoft.com, OU=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=WA, C=US
+                Issuer                : CN=Microsoft RSA TLS CA 01, O=Microsoft Corporation, C=US
+                HandshakeSuccess      : True
+                CertificateIsValid    : True
+                ValidFrom             : 8/28/2020 6:17:02 PM
+                ValidTo               : 8/28/2021 6:17:02 PM
+                SignatureAlgorithm    : sha256RSA
+                NegotiatedCipherSuite : TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+                CipherAlgorithm       : Aes256
+                Ssl2                  : False
+                Ssl3                  : False
+                Tls                   : True
+                Tls11                 : True
+                Tls12                 : True
+                Tls13                 : False
     #>
 
     [CmdletBinding()]
