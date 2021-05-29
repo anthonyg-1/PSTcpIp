@@ -439,6 +439,8 @@ function Get-TlsStatus {
                 Tls11                 : True
                 Tls12                 : True
                 Tls13                 : False
+        .NOTES
+            Requires PowerShell 7 and above to obtain cipher information.
     #>
 
     [CmdletBinding()]
