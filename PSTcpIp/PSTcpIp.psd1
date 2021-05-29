@@ -10,7 +10,7 @@
 RootModule = 'PSTcpIp.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.2.3'
+ModuleVersion = '1.2.4'
 
 # ID used to uniquely identify this module
 GUID = '99675863-c68e-46fd-b669-0d4942004b28'
@@ -25,14 +25,10 @@ Description = 'Provides cmdlets to perform various TCPIP related tasks.'
 PowerShellVersion = '5.1'
 
 PrivateData = @{
-
     PSData = @{
-        Tags = @("TCPIP", "network")
-
+        Tags = @("TCPIP", "network", "TLS", "SSL")
         LicenseUri = "https://github.com/anthonyg-1/PSTcpIp/blob/main/LICENSE"
-
         ProjectUri = "https://github.com/anthonyg-1/PSTcpIp"
-
     } # End PSData
 
 } # End PrivateData
