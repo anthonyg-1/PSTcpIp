@@ -442,7 +442,6 @@ function Get-TlsStatus {
         .NOTES
             Requires PowerShell 7 and above to obtain cipher information.
     #>
-
     [CmdletBinding()]
     param
     (
