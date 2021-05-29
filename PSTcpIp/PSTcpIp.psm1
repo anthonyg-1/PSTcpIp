@@ -6,6 +6,8 @@ using namespace System.Security.Authentication
 using namespace System.Security.Cryptography
 using namespace System.Security.Cryptography.X509Certificates
 
+#Requires -Version 7
+
 
 #region Load format file
 
