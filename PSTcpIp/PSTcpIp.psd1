@@ -10,7 +10,7 @@
     RootModule        = 'PSTcpIp.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '2.0'
+    ModuleVersion     = '1.3.2'
 
     # ID used to uniquely identify this module
     GUID              = '99675863-c68e-46fd-b669-0d4942004b28'
@@ -22,7 +22,7 @@
     Description       = 'Provides cmdlets to perform various TCPIP related tasks.'
 
     # Minimum version of the Windows PowerShell engine required by this module
-    PowerShellVersion = '7.0'
+    PowerShellVersion = '5.1'
 
     PrivateData       = @{
         PSData = @{
