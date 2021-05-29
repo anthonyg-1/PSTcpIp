@@ -6,31 +6,30 @@
 
 @{
 
-# Script module or binary module file associated with this manifest.
-RootModule = 'PSTcpIp.psm1'
+    # Script module or binary module file associated with this manifest.
+    RootModule        = 'PSTcpIp.psm1'
 
-# Version number of this module.
-ModuleVersion = '1.3.0'
+    # Version number of this module.
+    ModuleVersion     = '2.0'
 
-# ID used to uniquely identify this module
-GUID = '99675863-c68e-46fd-b669-0d4942004b28'
+    # ID used to uniquely identify this module
+    GUID              = '99675863-c68e-46fd-b669-0d4942004b28'
 
-# Author of this module
-Author = 'Anthony Guimelli'
+    # Author of this module
+    Author            = 'Anthony Guimelli'
 
-# Description of the functionality provided by this module
-Description = 'Provides cmdlets to perform various TCPIP related tasks.'
+    # Description of the functionality provided by this module
+    Description       = 'Provides cmdlets to perform various TCPIP related tasks.'
 
-# Minimum version of the Windows PowerShell engine required by this module
-PowerShellVersion = '5.1'
+    # Minimum version of the Windows PowerShell engine required by this module
+    PowerShellVersion = '7.0'
 
-PrivateData = @{
-    PSData = @{
-        Tags = @("TCPIP", "network", "TLS", "SSL")
-        LicenseUri = "https://github.com/anthonyg-1/PSTcpIp/blob/main/LICENSE"
-        ProjectUri = "https://github.com/anthonyg-1/PSTcpIp"
-    } # End PSData
+    PrivateData       = @{
+        PSData = @{
+            Tags       = @("TCPIP", "network", "TLS", "SSL")
+            LicenseUri = "https://github.com/anthonyg-1/PSTcpIp/blob/main/LICENSE"
+            ProjectUri = "https://github.com/anthonyg-1/PSTcpIp"
+        } # End PSData
 
-} # End PrivateData
-
+    } # End PrivateData
 }
