@@ -492,7 +492,7 @@ function Get-TlsStatus {
                         $keyLength = $sslCert.PublicKey.Key.KeySize
                     }
                     catch {
-                        $maxSize = $sslCert.PublicKey.Key.LegSQalKeySizes.MaxSize
+                        $maxSize = $sslCert.PublicKey.Key.LegalKeySizes.MaxSize
                         $skipSize = $sslCert.PublicKey.Key.LegalKeySizes.SkipSize
                         $keyLength = $maxSize / $skipSize
                     }
