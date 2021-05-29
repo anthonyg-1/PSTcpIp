@@ -469,7 +469,6 @@ function Get-TlsStatus {
             $sslCert = Get-SslCertificate -HostName $targetHost -Port $targetPort -ErrorAction Stop
             $tlsStatus.HandshakeSuccess = $true
         }
-
         catch {
             $cryptographicExceptionMessage = "Unable to establish SSL handshake using any protocol with the following host: {0}" -f $targetHost
             $CryptographicException = New-Object -TypeName System.Security.Cryptography.CryptographicException -ArgumentList $cryptographicExceptionMessage
