@@ -84,10 +84,9 @@ namespace PSTcpIp
         public string Thumbprint { get; set; }
         public string Subject { get; set; }
         public string Issuer { get; set; }
-        public bool HandshakeSuccess { get; set; }
-        public bool CertificateIsValid { get; set; }
         public DateTime ValidFrom { get; set; }
         public DateTime ValidTo { get; set; }
+        public bool CertificateVerifies { get; set; }
         public string SignatureAlgorithm { get; set; }
         public string NegotiatedCipherSuite { get; set; }
         public string CipherAlgorithm { get; set; }
@@ -428,8 +427,7 @@ function Get-TlsStatus {
                 Thumbprint            : 9B2B8AE65169AA477C5783D6480F296EF48CF14D
                 Subject               : CN=www.microsoft.com, OU=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=WA, C=US
                 Issuer                : CN=Microsoft RSA TLS CA 01, O=Microsoft Corporation, C=US
-                HandshakeSuccess      : True
-                CertificateIsValid    : True
+                CertificateVerifies    : True
                 ValidFrom             : 8/28/2020 6:17:02 PM
                 ValidTo               : 8/28/2021 6:17:02 PM
                 SignatureAlgorithm    : sha256RSA
@@ -494,19 +492,21 @@ function Get-TlsStatus {
         $tlsStatus = New-Object -TypeName PSTcpIp.TlsSslStatus
         $tlsStatus.HostName = $targetHost
         $tlsStatus.Port = $targetPort
-        $tlsStatus.HandshakeSuccess = $false
+
 
         [X509Certificate2]$sslCert = $null;
+        [bool]$handshakeSucceeded = $false;
+
         try {
             $sslCert = Get-SslCertificate -HostName $targetHost -Port $targetPort -ErrorAction Stop
-            $tlsStatus.HandshakeSuccess = $true
-            $tlsStatus.CertificateIsValid = $sslCert.Verify()
+            $tlsStatus.CertificateVerifies = $sslCert.Verify()
             $tlsStatus.ValidFrom = $sslCert.NotBefore;
             $tlsStatus.ValidTo = $sslCert.NotAfter;
             $tlsStatus.SerialNumber = $sslCert.GetSerialNumberString()
             $tlsStatus.Thumbprint = $sslCert.Thumbprint
             $tlsStatus.Subject = $sslCert.Subject
             $tlsStatus.Issuer = $sslCert.Issuer
+            $handshakeSucceeded = $true
         }
         catch {
             $cryptographicExceptionMessage = "Unable to establish SSL handshake using any protocol with the following host: {0}" -f $targetHost
@@ -514,7 +514,7 @@ function Get-TlsStatus {
             Write-Error -Exception $CryptographicException -Category ProtocolError -ErrorAction Stop
         }
 
-        If ($tlsStatus.HandshakeSuccess) {
+        If ($handshakeSucceeded) {
             foreach ($protocol in $protocolList) {
                 $socket = New-Object -TypeName System.Net.Sockets.Socket -ArgumentList ([System.Net.Sockets.SocketType]::Stream, [System.Net.Sockets.ProtocolType]::Tcp)
                 $socket.Connect($targetHost, $targetPort)
