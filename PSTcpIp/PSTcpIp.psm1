@@ -509,7 +509,7 @@ function Get-TlsStatus {
             $handshakeSucceeded = $true
         }
         catch {
-            $cryptographicExceptionMessage = "Unable to establish SSL handshake using any protocol with the following host: {0}" -f $targetHost
+            $cryptographicExceptionMessage = "Unable to establish SSL handshake with the following host: {0}" -f $targetHost
             $CryptographicException = New-Object -TypeName System.Security.Cryptography.CryptographicException -ArgumentList $cryptographicExceptionMessage
             Write-Error -Exception $CryptographicException -Category ProtocolError -ErrorAction Stop
         }
