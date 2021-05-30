@@ -9,7 +9,7 @@ This PowerShell module contains functions that faciliate testing network connect
 :penguin: `Linux`
 :apple: `MacOS`
 
-## Install and Usage
+### Install and Usage
 
 Installing the module.
 
@@ -18,7 +18,7 @@ Installing the module.
 Install-Module PSTcpIp -Repository PSGallery -AllowClobber
 ```
 
-## Requirements
+### Requirements
 Requires PowerShell 7 or above.
 
 
