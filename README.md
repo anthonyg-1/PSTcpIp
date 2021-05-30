@@ -4,6 +4,11 @@
 
 This PowerShell module contains functions that faciliate testing network connectivity, TLS/SSL and other network tasks.
 
+### Tested on
+:desktop_computer: `Windows 10`
+:penguin: `Linux`
+:apple: `MacOS`
+
 ## Install and Usage
 
 Installing the module.
