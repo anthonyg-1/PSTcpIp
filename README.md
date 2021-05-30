@@ -6,12 +6,15 @@ This PowerShell module contains functions that faciliate testing network connect
 
 ## Install and Usage
 
-Installing the module. Requires PowerShell 7 or above.
+Installing the module.
 
 ```powershell
 # Install module
 Install-Module PSTcpIp -Repository PSGallery -AllowClobber
 ```
+
+## Requirements
+Requires PowerShell 7 or above.
 
 ### TCP connection test examples
 
