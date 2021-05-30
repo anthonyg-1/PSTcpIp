@@ -7,26 +7,23 @@
 @{
 
     # Script module or binary module file associated with this manifest.
-    RootModule        = 'PSTcpIp.psm1'
+    RootModule    = 'PSTcpIp.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '2.0.0'
+    ModuleVersion = '2.0.1'
 
     # ID used to uniquely identify this module
-    GUID              = '99675863-c68e-46fd-b669-0d4942004b28'
+    GUID          = '99675863-c68e-46fd-b669-0d4942004b28'
 
     # Author of this module
-    Author            = 'Anthony Guimelli'
+    Author        = 'Anthony Guimelli'
 
     # Description of the functionality provided by this module
-    Description       = 'Provides cmdlets to perform various TCPIP related tasks.'
+    Description   = 'Provides cmdlets to perform various TCPIP related tasks.'
 
-    ## Minimum version of the Windows PowerShell engine required by this module
-    # PowerShellVersion = '7.0'
-
-    PrivateData       = @{
+    PrivateData   = @{
         PSData = @{
-            Tags       = @("TCPIP", "network", "TLS", "SSL")
+            Tags       = @("TCPIP", "TCP", "network", "TLS", "SSL")
             LicenseUri = "https://github.com/anthonyg-1/PSTcpIp/blob/main/LICENSE"
             ProjectUri = "https://github.com/anthonyg-1/PSTcpIp"
         } # End PSData
