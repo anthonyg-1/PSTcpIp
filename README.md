@@ -9,7 +9,7 @@ This PowerShell module contains functions that faciliate testing network connect
 :penguin: `Linux`
 :apple: `MacOS`
 
-### Install and Usage
+### Installation
 
 ```powershell
 # Installing the module
