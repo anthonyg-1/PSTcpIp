@@ -6,7 +6,7 @@ This PowerShell module contains functions that faciliate testing network connect
 
 ## Install and Usage
 
-Installing the module.
+Installing the module. Requires PowerShell 7 or above.
 
 ```powershell
 # Install module
