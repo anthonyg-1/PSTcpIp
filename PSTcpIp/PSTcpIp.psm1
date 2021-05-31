@@ -1,4 +1,5 @@
 using namespace System
+using namespace System.Collections
 using namespace System.Net
 using namespace System.Net.Sockets
 using namespace System.Net.Security
@@ -90,6 +91,7 @@ namespace PSTcpIp
         public string SignatureAlgorithm { get; set; }
         public string NegotiatedCipherSuite { get; set; }
         public string CipherAlgorithm { get; set; }
+        public string StrictTransportSecurity { get; set; }
         public bool Ssl2 { get; set; }
         public bool Ssl3 { get; set; }
         public bool Tls { get; set; }
@@ -433,6 +435,7 @@ function Get-TlsStatus {
                 SignatureAlgorithm    : sha256RSA
                 NegotiatedCipherSuite : TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
                 CipherAlgorithm       : Aes256
+                StrictTransportSecurity : max-age=31536000
                 Ssl2                  : False
                 Ssl3                  : False
                 Tls                   : True
@@ -452,14 +455,17 @@ function Get-TlsStatus {
     PROCESS {
         [string]$targetHost = ""
         [string]$targetPort = ""
+        [string]$targetUri = ""
 
         if ($PSBoundParameters.ContainsKey("Uri")) {
             $targetHost = $Uri.Authority
             $targetPort = $Uri.Port
+            $targetUri = $Uri
         }
         else {
             $targetHost = $HostName
             $targetPort = $Port
+            $targetUri = "https://{0}:{1}" -f $targetHost, $targetPort
         }
 
         $connectionTestResult = Test-TcpConnection -DNSHostName $targetHost -Port $targetPort
@@ -507,6 +513,21 @@ function Get-TlsStatus {
             $tlsStatus.Subject = $sslCert.Subject
             $tlsStatus.Issuer = $sslCert.Issuer
             $handshakeSucceeded = $true
+
+            # Get HTTP Strict Transport Security values:
+            [string]$strictTransportSecurityValue = ""
+            try {
+                $webRequestResponse = Invoke-WebRequest -Uri $targetUri -MaximumRedirection 0 -ErrorAction Stop
+
+                [HashTable]$responseHeaders = $webRequestResponse.Headers
+
+                $strictTransportSecurityValue = $responseHeaders['Strict-Transport-Security']
+            }
+            catch {
+                $strictTransportSecurityValue = "Unable to acquire HSTS value"
+            }
+            $tlsStatus.StrictTransportSecurity = $strictTransportSecurityValue
+
         }
         catch {
             $cryptographicExceptionMessage = "Unable to establish SSL handshake with the following host: {0}" -f $targetHost
