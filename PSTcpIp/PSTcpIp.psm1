@@ -351,7 +351,7 @@ function Get-SslCertificate {
 
         [bool]$isIp = $false
         try {
-            [System.Net.IPAddress]::Parse($targetHost) | Out-Null
+            [IPAddress]::Parse($targetHost) | Out-Null
             $isIp = $true
         }
         catch {
@@ -364,13 +364,13 @@ function Get-SslCertificate {
 
         if ($null -eq $targetHost) {
             $webExceptionMessage = "Host not specified. Unable to connect."
-            $WebException = New-Object -TypeName System.Net.WebException -ArgumentList $webExceptionMessage
+            $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
             Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Stop
         }
 
         if (-not($connectionTestResult.Connected)) {
             $webExceptionMessage = "Unable to connect to {0} over the following port: {1}" -f $targetHost, $targetPort
-            $WebException = New-Object -TypeName System.Net.WebException -ArgumentList $webExceptionMessage
+            $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
             Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Stop
         }
 
@@ -390,7 +390,7 @@ function Get-SslCertificate {
         }
         catch {
             $cryptographicExceptionMessage = "Unable to establish SSL session with: {0}." -f $targetHost
-            $CryptographicException = New-Object -TypeName System.Security.Cryptography.CryptographicException -ArgumentList $cryptographicExceptionMessage
+            $CryptographicException = New-Object -TypeName CryptographicException -ArgumentList $cryptographicExceptionMessage
             Write-Error -Exception $CryptographicException -Category SecurityError -ErrorAction Stop
         }
 
@@ -446,6 +446,7 @@ function Get-TlsStatus {
             Requires PowerShell 7 and above to obtain cipher information.
     #>
     [CmdletBinding()]
+    [OutputType([PSTcpIp.TlsSslStatus])]
     param
     (
         [Parameter(Mandatory = $false, Position = 0, ParameterSetName = "HostName")][ValidateLength(1, 250)][Alias('ComputerName', 'IPAddress', 'Name', 'h', 'i')][String]$HostName,
@@ -472,7 +473,7 @@ function Get-TlsStatus {
 
         [bool]$isIp = $false
         try {
-            [System.Net.IPAddress]::Parse($targetHost) | Out-Null
+            [IPAddress]::Parse($targetHost) | Out-Null
             $isIp = $true
         }
         catch {
@@ -485,13 +486,13 @@ function Get-TlsStatus {
 
         if ($null -eq $targetHost) {
             $webExceptionMessage = "Host not specified. Unable to connect."
-            $WebException = New-Object -TypeName System.Net.WebException -ArgumentList $webExceptionMessage
+            $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
             Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Stop
         }
 
         if (-not($connectionTestResult.Connected)) {
             $webExceptionMessage = "Unable to connect to {0} over the following port: {1}" -f $targetHost, $targetPort
-            $WebException = New-Object -TypeName System.Net.WebException -ArgumentList $webExceptionMessage
+            $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
             Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Stop
         }
 
@@ -531,18 +532,18 @@ function Get-TlsStatus {
         }
         catch {
             $cryptographicExceptionMessage = "Unable to establish SSL handshake with the following host: {0}" -f $targetHost
-            $CryptographicException = New-Object -TypeName System.Security.Cryptography.CryptographicException -ArgumentList $cryptographicExceptionMessage
+            $CryptographicException = New-Object -TypeName CryptographicException -ArgumentList $cryptographicExceptionMessage
             Write-Error -Exception $CryptographicException -Category ProtocolError -ErrorAction Stop
         }
 
         If ($handshakeSucceeded) {
             foreach ($protocol in $protocolList) {
-                $socket = New-Object -TypeName System.Net.Sockets.Socket -ArgumentList ([System.Net.Sockets.SocketType]::Stream, [System.Net.Sockets.ProtocolType]::Tcp)
+                $socket = [Socket]::new([SocketType]::Stream, [ProtocolType]::Tcp)
                 $socket.Connect($targetHost, $targetPort)
 
                 try {
-                    $netStream = New-Object -TypeName System.Net.Sockets.NetworkStream -ArgumentList $socket, $true
-                    $sslStream = New-Object -TypeName System.Net.Security.SslStream -ArgumentList $netStream, $true
+                    $netStream = [NetworkStream]::new($socket, $true)
+                    $sslStream = [SslStream]::new($netStream, $true)
 
                     $sslStream.AuthenticateAsClient($targetHost, $null, $protocol, $false)
 
