@@ -59,9 +59,9 @@ Get-SslCertificate -Uri "https://www.mysite.com" | Select Thumbprint, Subject, N
 ### TLS/SSL version testing examples
 
 ```powershell
-# Obtains TLS settings on mysite.com against TCP port 443.
+# Obtains TLS status on mysite.com against TCP port 443.
 Get-TlsStatus -HostName mysite.com -Port 443
 
-# Gets TLS settings on "https://www.mysite.com" 
+# Gets TLS status on "https://www.mysite.com" 
 Get-TlsStatus -Uri "https://www.mysite.com"
 ```
