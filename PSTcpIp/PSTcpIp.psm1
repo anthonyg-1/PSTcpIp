@@ -74,7 +74,6 @@ namespace PSTcpIp
 $tlsStatusDefinition = @"
 using System;
 using System.Security.Cryptography.X509Certificates;
-
 namespace PSTcpIp
 {
     public class TlsSslStatus
@@ -103,7 +102,7 @@ namespace PSTcpIp
 "@
 
 Add-Type -TypeDefinition $tcpConnectionStatusClassDef -ReferencedAssemblies System.Net.Primitives -ErrorAction Stop
-Add-Type -TypeDefinition $tlsStatusDefinition
+Add-Type -TypeDefinition $tlsStatusDefinition -ErrorAction Stop
 
 #endregion
 
@@ -421,29 +420,31 @@ function Get-TlsStatus {
         .OUTPUTS
             PSTcpIp.TlsSslStatus
 
-                This function returns a TlsSslStatus object. Example output against www.microsoft.com:
+                This function returns a TlsSslStatus object. Example output against "https://www.microsoft.com/en-us" using the Uri parameter:
 
-                HostName              : www.microsoft.com
-                Port                  : 443
-                SerialNumber          : 6B000003F4E3A67A2348550C330000000003F4
-                Thumbprint            : 9B2B8AE65169AA477C5783D6480F296EF48CF14D
-                Subject               : CN=www.microsoft.com, OU=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=WA, C=US
-                Issuer                : CN=Microsoft RSA TLS CA 01, O=Microsoft Corporation, C=US
-                CertificateVerifies    : True
-                ValidFrom             : 8/28/2020 6:17:02 PM
-                ValidTo               : 8/28/2021 6:17:02 PM
-                SignatureAlgorithm    : sha256RSA
-                NegotiatedCipherSuite : TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
-                CipherAlgorithm       : Aes256
+                HostName                : www.microsoft.com
+                Port                    : 443
+                SerialNumber            : 6B000003F4E3A67A2348550C330000000003F4
+                Thumbprint              : 9B2B8AE65169AA477C5783D6480F296EF48CF14D
+                Subject                 : CN=www.microsoft.com, OU=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=WA, C=US
+                Issuer                  : CN=Microsoft RSA TLS CA 01, O=Microsoft Corporation, C=US
+                ValidFrom               : 8/28/2020 6:17:02 PM
+                ValidTo                 : 8/28/2021 6:17:02 PM
+                CertificateVerifies     : True
+                SignatureAlgorithm      : sha256RSA
+                NegotiatedCipherSuite   : TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+                CipherAlgorithm         : Aes256
                 StrictTransportSecurity : max-age=31536000
-                Ssl2                  : False
-                Ssl3                  : False
-                Tls                   : True
-                Tls11                 : True
-                Tls12                 : True
-                Tls13                 : False
+                Ssl2                    : False
+                Ssl3                    : False
+                Tls                     : True
+                Tls11                   : True
+                Tls12                   : True
+                Tls13                   : False
         .NOTES
-            Requires PowerShell 7 and above to obtain cipher information.
+            If StrictTransportSecurity returns Unable to acquire HSTS value with the HostName parameter set try the fully qualified web address with the Uri parameter.
+        .LINK
+            Get-SslCertificate
     #>
     [CmdletBinding()]
     [OutputType([PSTcpIp.TlsSslStatus])]
