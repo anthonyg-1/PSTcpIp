@@ -515,24 +515,6 @@ function Get-TlsStatus {
             $tlsStatus.Subject = $sslCert.Subject
             $tlsStatus.Issuer = $sslCert.Issuer
             $handshakeSucceeded = $true
-
-            # Get HTTP Strict Transport Security values:
-            [string]$strictTransportSecurityValue = "No value specified for strict transport security (HSTS)"
-            try {
-                $webRequestResponse = Invoke-WebRequest -Uri $targetUri -MaximumRedirection 0 -ErrorAction Stop
-
-                [HashTable]$responseHeaders = $webRequestResponse.Headers
-
-                $strictTransportSecurityValue = $responseHeaders['Strict-Transport-Security']
-
-                if ($strictTransportSecurityValue.Length -lt 1) {
-                    $strictTransportSecurityValue = "Strict-Transport-Security not found in header"
-                }
-            }
-            catch {
-                $strictTransportSecurityValue = "Unable to acquire HSTS value"
-            }
-            $tlsStatus.StrictTransportSecurity = $strictTransportSecurityValue
         }
         catch {
             $cryptographicExceptionMessage = "Unable to establish SSL handshake with the following host: {0}" -f $targetHost
@@ -541,6 +523,24 @@ function Get-TlsStatus {
         }
 
         If ($handshakeSucceeded) {
+             # Get HTTP Strict Transport Security values:
+             [string]$strictTransportSecurityValue = "No value specified for strict transport security (HSTS)"
+             try {
+                 $webRequestResponse = Invoke-WebRequest -Uri $targetUri -MaximumRedirection 0 -ErrorAction Stop
+
+                 [HashTable]$responseHeaders = $webRequestResponse.Headers
+
+                 $strictTransportSecurityValue = $responseHeaders['Strict-Transport-Security']
+
+                 if ($strictTransportSecurityValue.Length -lt 1) {
+                     $strictTransportSecurityValue = "Strict-Transport-Security not found in header"
+                 }
+             }
+             catch {
+                 $strictTransportSecurityValue = "Unable to acquire HSTS value"
+             }
+             $tlsStatus.StrictTransportSecurity = $strictTransportSecurityValue
+
             foreach ($protocol in $protocolList) {
                 $socket = [Socket]::new([SocketType]::Stream, [ProtocolType]::Tcp)
                 $socket.Connect($targetHost, $targetPort)
