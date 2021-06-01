@@ -442,7 +442,7 @@ function Get-TlsStatus {
                 Tls12                   : True
                 Tls13                   : False
         .NOTES
-            If StrictTransportSecurity returns Unable to acquire HSTS value with the HostName parameter set try the fully qualified web address with the Uri parameter.
+            If StrictTransportSecurity returns "Unable to acquire HSTS value" or "No value specified for strict transport security (HSTS)" with the HostName parameter set, try the fully qualified web address with the Uri parameter.
         .LINK
             Get-SslCertificate
     #>
