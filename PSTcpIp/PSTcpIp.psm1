@@ -523,23 +523,23 @@ function Get-TlsStatus {
         }
 
         If ($handshakeSucceeded) {
-             # Get HTTP Strict Transport Security values:
-             [string]$strictTransportSecurityValue = "No value specified for strict transport security (HSTS)"
-             try {
-                 $webRequestResponse = Invoke-WebRequest -Uri $targetUri -MaximumRedirection 0 -ErrorAction Stop
+            # Get HTTP Strict Transport Security values:
+            [string]$strictTransportSecurityValue = "No value specified for strict transport security (HSTS)"
+            try {
+                $webRequestResponse = Invoke-WebRequest -Uri $targetUri -MaximumRedirection 0 -ErrorAction Stop
 
-                 [HashTable]$responseHeaders = $webRequestResponse.Headers
+                [HashTable]$responseHeaders = $webRequestResponse.Headers
 
-                 $strictTransportSecurityValue = $responseHeaders['Strict-Transport-Security']
+                $strictTransportSecurityValue = $responseHeaders['Strict-Transport-Security']
 
-                 if ($strictTransportSecurityValue.Length -lt 1) {
-                     $strictTransportSecurityValue = "Strict-Transport-Security not found in header"
-                 }
-             }
-             catch {
-                 $strictTransportSecurityValue = "Unable to acquire HSTS value"
-             }
-             $tlsStatus.StrictTransportSecurity = $strictTransportSecurityValue
+                if ($strictTransportSecurityValue.Length -lt 1) {
+                    $strictTransportSecurityValue = "Strict-Transport-Security not found in header"
+                }
+            }
+            catch {
+                $strictTransportSecurityValue = "Unable to acquire HSTS value"
+            }
+            $tlsStatus.StrictTransportSecurity = $strictTransportSecurityValue
 
             foreach ($protocol in $protocolList) {
                 $socket = [Socket]::new([SocketType]::Stream, [ProtocolType]::Tcp)
