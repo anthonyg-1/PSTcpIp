@@ -557,14 +557,22 @@ function Get-TlsStatus {
                     $tlsStatus.SignatureAlgorithm = $sslCert.SignatureAlgorithm.FriendlyName
                     $tlsStatus.$protocol = $true
                     $tlsStatus.NegotiatedCipherSuite = $sslStream.NegotiatedCipherSuite
-                    $tlsStatus.CipherAlgorithm = $sslStream.CipherAlgorithm
-                    $tlsStatus.CipherStrength = $sslStream.CipherStrength
 
-                    if ($sslStream.KeyExchangeAlgorithm.ToString() -eq "44550") {
-                        $tlsStatus.KeyExchangeAlgorithm = "ECDH Ephemeral"
+                    if (-not($tlsStatus.CipherAlgorithm)) {
+                        $tlsStatus.CipherAlgorithm = $sslStream.CipherAlgorithm
                     }
-                    else {
-                        $tlsStatus.KeyExchangeAlgorithm = $sslStream.KeyExchangeAlgorithm.ToString()
+
+                    if (-not($tlsStatus.CipherStrength)) {
+                        $tlsStatus.CipherStrength = $sslStream.CipherStrength
+                    }
+
+                    if (-not($tlsStatus.KeyExchangeAlgorithm)) {
+                        if ($sslStream.KeyExchangeAlgorithm.ToString() -eq "44550") {
+                            $tlsStatus.KeyExchangeAlgorithm = "ECDH Ephemeral"
+                        }
+                        else {
+                            $tlsStatus.KeyExchangeAlgorithm = $sslStream.KeyExchangeAlgorithm.ToString()
+                        }
                     }
                 }
                 catch {
