@@ -90,6 +90,8 @@ namespace PSTcpIp
         public string SignatureAlgorithm { get; set; }
         public string NegotiatedCipherSuite { get; set; }
         public string CipherAlgorithm { get; set; }
+        public string KeyExchangeAlgorithm { get; set; }
+        public string KeyExchangeStrength { get; set; }
         public string StrictTransportSecurity { get; set; }
         public bool Ssl2 { get; set; }
         public bool Ssl3 { get; set; }
@@ -434,6 +436,8 @@ function Get-TlsStatus {
                 SignatureAlgorithm      : sha256RSA
                 NegotiatedCipherSuite   : TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
                 CipherAlgorithm         : Aes256
+                KeyExchangeAlgorithm    : ECDH Ephemeral
+                KeyExchangeStrength     : 256
                 StrictTransportSecurity : max-age=31536000
                 Ssl2                    : False
                 Ssl3                    : False
@@ -555,6 +559,15 @@ function Get-TlsStatus {
                     $tlsStatus.$protocol = $true
                     $tlsStatus.NegotiatedCipherSuite = $sslStream.NegotiatedCipherSuite
                     $tlsStatus.CipherAlgorithm = $sslStream.CipherAlgorithm
+
+                    if ($sslStream.KeyExchangeAlgorithm.ToString() -eq "44550") {
+                        $tlsStatus.KeyExchangeAlgorithm = "ECDH Ephemeral"
+                    }
+                    else {
+                        $tlsStatus.KeyExchangeAlgorithm = $sslStream.KeyExchangeAlgorithm.ToString()
+                    }
+
+                    $tlsStatus.KeyExchangeStrength = $sslStream.KeyExchangeStrength
                 }
                 catch {
                     $tlsStatus.$protocol = $false
