@@ -90,6 +90,7 @@ namespace PSTcpIp
         public string SignatureAlgorithm { get; set; }
         public string NegotiatedCipherSuite { get; set; }
         public string CipherAlgorithm { get; set; }
+        public string CipherStrength { get; set; }
         public string KeyExchangeAlgorithm { get; set; }
         public string StrictTransportSecurity { get; set; }
         public bool Ssl2 { get; set; }
@@ -557,6 +558,7 @@ function Get-TlsStatus {
                     $tlsStatus.$protocol = $true
                     $tlsStatus.NegotiatedCipherSuite = $sslStream.NegotiatedCipherSuite
                     $tlsStatus.CipherAlgorithm = $sslStream.CipherAlgorithm
+                    $tlsStatus.CipherStrength = $sslStream.CipherStrength
 
                     if ($sslStream.KeyExchangeAlgorithm.ToString() -eq "44550") {
                         $tlsStatus.KeyExchangeAlgorithm = "ECDH Ephemeral"
