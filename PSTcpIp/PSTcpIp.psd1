@@ -13,7 +13,7 @@
     ModuleVersion        = '2.0.14'
 
     # Compatibility
-    CompatiblePSEditions = 'Core'
+    CompatiblePSEditions = 'Core', 'Desktop'
 
     # ID used to uniquely identify this module
     GUID                 = '99675863-c68e-46fd-b669-0d4942004b28'
