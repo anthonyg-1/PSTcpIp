@@ -88,7 +88,7 @@ namespace PSTcpIp
         public DateTime ValidTo { get; set; }
         public bool CertificateVerifies { get; set; }
         public string SignatureAlgorithm { get; set; }
-        public string NegotiatedCipherSuite { get; set; }
+        public string[] NegotiatedCipherSuites { get; set; }
         public string CipherAlgorithm { get; set; }
         public string CipherStrength { get; set; }
         public string KeyExchangeAlgorithm { get; set; }
@@ -441,7 +441,7 @@ function Get-TlsStatus {
                 ValidTo                 : 8/28/2021 6:17:02 PM
                 CertificateVerifies     : True
                 SignatureAlgorithm      : sha256RSA
-                NegotiatedCipherSuite   : TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+                NegotiatedCipherSuites   : {TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384, TLS_AES_256_GCM_SHA384}
                 CipherAlgorithm         : Aes256
                 KeyExchangeAlgorithm    : ECDH Ephemeral
                 StrictTransportSecurity : max-age=31536000
@@ -558,6 +558,8 @@ function Get-TlsStatus {
             }
             $tlsStatus.StrictTransportSecurity = $strictTransportSecurityValue
 
+            $negotiatedCipherSuites = @();
+
             foreach ($protocol in $protocolList) {
                 $socket = [Socket]::new([SocketType]::Stream, [ProtocolType]::Tcp)
                 $socket.Connect($targetHost, $targetPort)
@@ -570,7 +572,10 @@ function Get-TlsStatus {
 
                     $tlsStatus.SignatureAlgorithm = $sslCert.SignatureAlgorithm.FriendlyName
                     $tlsStatus.$protocol = $true
-                    $tlsStatus.NegotiatedCipherSuite = $sslStream.NegotiatedCipherSuite
+
+                    if ($negotiatedCipherSuites -notcontains $sslStream.NegotiatedCipherSuite) {
+                        $negotiatedCipherSuites += $sslStream.NegotiatedCipherSuite
+                    }
 
                     if (-not($tlsStatus.CipherAlgorithm)) {
                         $tlsStatus.CipherAlgorithm = $sslStream.CipherAlgorithm
@@ -604,6 +609,8 @@ function Get-TlsStatus {
                     }
                 }
             }
+
+            $tlsStatus.NegotiatedCipherSuites = $negotiatedCipherSuites
         }
         return $tlsStatus
     }
