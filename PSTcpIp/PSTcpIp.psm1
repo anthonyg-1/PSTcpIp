@@ -340,8 +340,15 @@ function Get-SslCertificate {
         [string]$targetPort = ""
 
         if ($PSBoundParameters.ContainsKey("Uri")) {
-            $targetHost = $Uri.Authority
-            $targetPort = $Uri.Port
+            if ($Uri -like "https://*") {
+                $targetHost = $Uri.Authority
+                $targetPort = $Uri.Port
+            }
+            else {
+                $argumentExceptionMessage = "Provided URI is not does not contain the necessary https:// prefix."
+                $ArgumentException = New-Object ArgumentException -ArgumentList $argumentExceptionMessage
+                Write-Error -Exception $ArgumentException -Category InvalidArgument -ErrorAction Stop
+            }
         }
         else {
             $targetHost = $HostName
