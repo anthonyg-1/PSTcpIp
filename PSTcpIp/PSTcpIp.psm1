@@ -431,9 +431,7 @@ function Get-TlsStatus {
 
                 This function returns a TlsSslStatus object. Example output against "https://www.microsoft.com/en-us" using the Uri parameter:
 
-                HostName                : www.microsoft.com
-                Port                    : 443
-                SerialNumber            : 6B000003F4E3A67A2348550C330000000003F4
+                HostName                : www.microsoft.com                                                         Port                    : 443                                                                       SerialNumber            : 6B000003F4E3A67A2348550C330000000003F4
                 Thumbprint              : 9B2B8AE65169AA477C5783D6480F296EF48CF14D
                 Subject                 : CN=www.microsoft.com, OU=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=WA, C=US
                 Issuer                  : CN=Microsoft RSA TLS CA 01, O=Microsoft Corporation, C=US
@@ -441,16 +439,18 @@ function Get-TlsStatus {
                 ValidTo                 : 8/28/2021 6:17:02 PM
                 CertificateVerifies     : True
                 SignatureAlgorithm      : sha256RSA
-                NegotiatedCipherSuites   : {TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384, TLS_AES_256_GCM_SHA384}
+                NegotiatedCipherSuites  : {TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384, TLS_AES_256_GCM_SHA384}
                 CipherAlgorithm         : Aes256
-                KeyExchangeAlgorithm    : ECDH Ephemeral
+                CipherStrength          : 256
+                KeyExchangeAlgorithm    : DiffieHellman
                 StrictTransportSecurity : max-age=31536000
                 Ssl2                    : False
                 Ssl3                    : False
-                Tls                     : True
-                Tls11                   : True
+                Tls                     : False
+                Tls11                   : False
                 Tls12                   : True
-                Tls13                   : False
+                Tls13                   : True
+
         .NOTES
             If StrictTransportSecurity returns "Unable to acquire HSTS value" or "No value specified for strict transport security (HSTS)" with the HostName parameter set, try the fully qualified web address with the Uri parameter.
         .LINK
