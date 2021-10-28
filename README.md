@@ -13,7 +13,7 @@ This PowerShell module contains functions that faciliate testing network connect
 
 ```powershell
 # Installing the module
-Install-Module PSTcpIp -Repository PSGallery -AllowClobber
+Install-Module PSTcpIp -Repository PSGallery -Scope CurrentUser -AllowClobber
 ```
 
 ### Requirements
