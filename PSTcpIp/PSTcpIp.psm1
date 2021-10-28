@@ -73,12 +73,14 @@ namespace PSTcpIp
 
 $tlsStatusDefinition = @"
 using System;
+using System.Net;
 using System.Security.Cryptography.X509Certificates;
 namespace PSTcpIp
 {
     public class TlsSslStatus
     {
         public string HostName { get; set; }
+        public IPAddress IPAddress { get; set; }
         public int Port { get; set; }
         public string SerialNumber { get; set; }
         public string Thumbprint { get; set; }
@@ -431,7 +433,10 @@ function Get-TlsStatus {
 
                 This function returns a TlsSslStatus object. Example output against "https://www.microsoft.com/en-us" using the Uri parameter:
 
-                HostName                : www.microsoft.com                                                         Port                    : 443                                                                       SerialNumber            : 6B000003F4E3A67A2348550C330000000003F4
+                HostName                : www.microsoft.com
+                IPAddress               : 23.197.181.184
+                Port                    : 443
+                SerialNumber            : 6B000003F4E3A67A2348550C330000000003F4
                 Thumbprint              : 9B2B8AE65169AA477C5783D6480F296EF48CF14D
                 Subject                 : CN=www.microsoft.com, OU=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=WA, C=US
                 Issuer                  : CN=Microsoft RSA TLS CA 01, O=Microsoft Corporation, C=US
@@ -516,6 +521,12 @@ function Get-TlsStatus {
 
         $tlsStatus = New-Object -TypeName PSTcpIp.TlsSslStatus
         $tlsStatus.HostName = $targetHost
+        try {
+            $tlsStatus.IPAddress = $connectionTestResult.IPAddress
+        }
+        catch {
+            $tlsStatus.IPAddress = $null
+        }
         $tlsStatus.Port = $targetPort
 
 
