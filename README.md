@@ -15,7 +15,6 @@ Requires PowerShell 7 or above.
 ### Installation
 
 ```powershell
-# Installing the module
 Install-Module PSTcpIp -Repository PSGallery -Scope CurrentUser -AllowClobber
 ```
 
