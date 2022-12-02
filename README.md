@@ -54,6 +54,27 @@ Get-SslCertificate -HostName www.mysite.com -Port 443 | Select Thumbprint, Subje
 Get-SslCertificate -Uri "https://www.mysite.com" | Select Thumbprint, Subject, NotAfter | Format-List
 ```
 
+```powershell
+# Generate an SSL certificate expiration report from a list of target host names
+$targetHostNames = "microsoft.com", "linkedin.com", "powershellgallery.com", "github.com", "kubernetes.io", "gitlab.com", "asdasdas.com"
+$targetHostNames | ForEach-Object {
+    $targetHost = $_
+    try {
+        $sslCert = Get-SslCertificate -HostName $targetHost -ErrorAction Stop
+
+        [PSCustomObject]@{
+            HostName   = $targetHost
+            Subject    = $sslCert.Subject
+            Expiration = $sslCert.NotAfter
+        }
+    }
+    catch {
+        Write-Warning -Message ("Unable to retrieve SSL certificate from the following host: {0}" -f $targetHost)
+    }
+} | Sort Expiration
+
+```
+
 ### TLS/SSL version testing examples
 
 ```powershell
