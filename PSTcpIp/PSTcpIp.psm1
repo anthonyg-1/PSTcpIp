@@ -324,6 +324,10 @@ function Get-SslCertificate {
             Get-SslCertificate -Uri https://www.mysite.com/default.htm | Select Thumbprint, Subject, NotAfter | Format-List
 
             Gets an SSL certificate from https://www.mysite.com, selects three properties (Thumprint, Subject, NotAfter) and formats the output as a list.
+        .EXAMPLE
+            Get-SslCertificate -HostName www.mysite.com -IncludeChain | Select Subject, Thumbprint, NotAfter | Format-List
+
+            Gets an SSL certificate from https://www.mysite.com including the full certificate chain and writes the full chain's thumbprint, and expiration as a list to the console.
         .OUTPUTS
             System.Security.Cryptography.X509Certificates.X509Certificate2
         .LINK
