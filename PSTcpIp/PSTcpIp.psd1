@@ -1,16 +1,13 @@
 #
 # Module manifest for module 'PSTcpIp'
 #
-# Generated on: 11/19/2020
-#
 
 @{
-
     # Script module or binary module file associated with this manifest.
     RootModule    = 'PSTcpIp.psm1'
 
     # Version number of this module.
-    ModuleVersion = '3.0.1'
+    ModuleVersion = '3.1.0'
 
     # ID used to uniquely identify this module
     GUID          = '99675863-c68e-46fd-b669-0d4942004b28'
@@ -19,7 +16,7 @@
     Author        = 'Anthony Guimelli'
 
     # Description of the functionality provided by this module
-    Description   = 'Provides cmdlets to perform various TcpIp and TLS/SSL related tasks.'
+    Description   = 'Provides cmdlets to perform various TCPIP and TLS/SSL related tasks.'
 
     PrivateData   = @{
         PSData = @{
