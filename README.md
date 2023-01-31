@@ -53,6 +53,9 @@ Get-SslCertificate -HostName www.mysite.com -Port 443 | Select Thumbprint, Subje
 # Gets an SSL certificate from https://www.mysite.com, selects three properties (Thumprint, Subject, NotAfter) and formats the output as a list
 Get-SslCertificate -Uri "https://www.mysite.com" | Select Thumbprint, Subject, NotAfter | Format-List
 
+# Gets an SSL certificate from https://www.mysite.com including the full certificate chain and writes the full chain's thumbprint, and expiration as a list to the console
+Get-SslCertificate -HostName www.mysite.com -IncludeChain | Select Subject, Thumbprint, NotAfter | Format-List
+
 # Generate an SSL certificate expiration report from a list of target host names
 $targetHostNames = "microsoft.com", "linkedin.com", "powershellgallery.com", "github.com", "kubernetes.io", "gitlab.com"
 $targetHostNames | ForEach-Object {
