@@ -15,7 +15,7 @@ Requires PowerShell 7 or above.
 ### Installation
 
 ```powershell
-Install-Module PSTcpIp -Repository PSGallery -Scope CurrentUser -AllowClobber
+Install-Module PSTcpIp -Repository PSGallery -Scope CurrentUser
 ```
 
 ### TCP connection test examples
