@@ -21,7 +21,7 @@ if (Test-Path -Path $PSScriptRoot) { Update-FormatData -PrependPath $formatFileP
 
 #region Load config data
 
-# Determine if OS is Windows or other (MacOS, Linux)
+# Determine if OS is Windows or other (MacOS, Linux) as some X509Certificate2 properties will be populatd on Windows but not on Linux or MacOS.
 [bool]$osIsWindows = $false
 if (($PSVersionTable["OS"]).ToLower() -like "*windows*") {
     $osIsWindows = $true
@@ -78,10 +78,7 @@ namespace PSTcpIp
 "@
 
 
-[string]$tlsStatusDefinition = ""
-# Can only detect SANs (Subject Alternative Names) on Windows 10/11 at the time of authoring this:
-if ($osIsWindows) {
-    $tlsStatusDefinition = @"
+$tlsStatusDefinition = @"
 using System;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
@@ -115,42 +112,6 @@ namespace PSTcpIp
     }
 }
 "@
-}
-else {
-    $tlsStatusDefinition = @"
-using System;
-using System.Net;
-using System.Security.Cryptography.X509Certificates;
-namespace PSTcpIp
-{
-    public class TlsInfo
-    {
-        public string HostName { get; set; }
-        public IPAddress IPAddress { get; set; }
-        public int Port { get; set; }
-        public string SerialNumber { get; set; }
-        public string Thumbprint { get; set; }
-        public string Subject { get; set; }
-        public string Issuer { get; set; }
-        public DateTime ValidFrom { get; set; }
-        public DateTime ValidTo { get; set; }
-        public bool CertificateVerifies { get; set; }
-        public string SignatureAlgorithm { get; set; }
-        public string[] NegotiatedCipherSuites { get; set; }
-        public string CipherAlgorithm { get; set; }
-        public string CipherStrength { get; set; }
-        public string KeyExchangeAlgorithm { get; set; }
-        public string StrictTransportSecurity { get; set; }
-        public bool Ssl2 { get; set; }
-        public bool Ssl3 { get; set; }
-        public bool Tls { get; set; }
-        public bool Tls11 { get; set; }
-        public bool Tls12 { get; set; }
-        public bool Tls13 { get; set; }
-    }
-}
-"@
-}
 
 Add-Type -TypeDefinition $tcpConnectionStatusClassDef -ReferencedAssemblies System.Net.Primitives -ErrorAction Stop
 Add-Type -TypeDefinition $tlsStatusDefinition -ErrorAction Stop
@@ -502,28 +463,29 @@ function Get-TlsInformation {
         .EXAMPLE
             Get-TlsStatus -HostName www.mysite.com | Select -Expand SubjectAlternativeNames
 
-            Obtain a list of SANs (Subject Alternative Names) from ww.mysite.com. NOTE: This only works on Windows operating systems at this time.
+            Obtain a list of SANs (Subject Alternative Names) from ww.mysite.com.
         .OUTPUTS
             PSTcpIp.TlsInfo
 
                 This function returns a TlsInfo object. Example output against "https://www.microsoft.com/en-us" using the Uri parameter:
 
                 HostName                : www.microsoft.com
-                IPAddress               : 23.197.181.184
+                IPAddress               : 23.33.242.16
                 Port                    : 443
-                SerialNumber            : 6B000003F4E3A67A2348550C330000000003F4
-                Thumbprint              : 9B2B8AE65169AA477C5783D6480F296EF48CF14D
-                Subject                 : CN=www.microsoft.com, OU=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=WA, C=US
-                Issuer                  : CN=Microsoft RSA TLS CA 01, O=Microsoft Corporation, C=US
-                ValidFrom               : 8/28/2020 6:17:02 PM
-                ValidTo                 : 8/28/2021 6:17:02 PM
+                SerialNumber            : 330059F8B6DA8689706FFA1BD900000059F8B6
+                Thumbprint              : 2D6E2AE5B36F22076A197D50009DEE66396AA99C
+                Subject                 : CN=www.microsoft.com, O=Microsoft Corporation, L=Redmond, S=WA, C=US
+                Issuer                  : CN=Microsoft Azure TLS Issuing CA 06, O=Microsoft Corporation, C=US
+                ValidFrom               : 10/4/2022 7:23:11 PM
+                ValidTo                 : 9/29/2023 7:23:11 PM
                 CertificateVerifies     : True
-                SignatureAlgorithm      : sha256RSA
+                SignatureAlgorithm      : sha384RSA
                 NegotiatedCipherSuites  : {TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384, TLS_AES_256_GCM_SHA384}
                 CipherAlgorithm         : Aes256
                 CipherStrength          : 256
                 KeyExchangeAlgorithm    : DiffieHellman
-                StrictTransportSecurity : max-age=31536000
+                StrictTransportSecurity : Strict-Transport-Security not found in header
+                SubjectAlternativeNames : {wwwqa.microsoft.com, www.microsoft.com, staticview.microsoft.com, i.s-microsoft.com…}
                 Ssl2                    : False
                 Ssl3                    : False
                 Tls                     : False
@@ -597,28 +559,28 @@ function Get-TlsInformation {
             Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Stop
         }
 
-        $tlsStatus = New-Object -TypeName PSTcpIp.TlsInfo
-        $tlsStatus.HostName = $targetHost
+        $tlsInfo = New-Object -TypeName PSTcpIp.TlsInfo
+        $tlsInfo.HostName = $targetHost
         try {
-            $tlsStatus.IPAddress = $connectionTestResult.IPAddress
+            $tlsInfo.IPAddress = $connectionTestResult.IPAddress
         }
         catch {
-            $tlsStatus.IPAddress = $null
+            $tlsInfo.IPAddress = $null
         }
-        $tlsStatus.Port = $targetPort
+        $tlsInfo.Port = $targetPort
 
 
         [X509Certificate2]$sslCert = $null
         [bool]$handshakeSucceeded = $false
         try {
             $sslCert = Get-TlsCertificate -HostName $targetHost -Port $targetPort -ErrorAction Stop
-            $tlsStatus.CertificateVerifies = $sslCert.Verify()
-            $tlsStatus.ValidFrom = $sslCert.NotBefore;
-            $tlsStatus.ValidTo = $sslCert.NotAfter;
-            $tlsStatus.SerialNumber = $sslCert.GetSerialNumberString()
-            $tlsStatus.Thumbprint = $sslCert.Thumbprint
-            $tlsStatus.Subject = $sslCert.Subject
-            $tlsStatus.Issuer = $sslCert.Issuer
+            $tlsInfo.CertificateVerifies = $sslCert.Verify()
+            $tlsInfo.ValidFrom = $sslCert.NotBefore;
+            $tlsInfo.ValidTo = $sslCert.NotAfter;
+            $tlsInfo.SerialNumber = $sslCert.GetSerialNumberString()
+            $tlsInfo.Thumbprint = $sslCert.Thumbprint
+            $tlsInfo.Subject = $sslCert.Subject
+            $tlsInfo.Issuer = $sslCert.Issuer
             $handshakeSucceeded = $true
         }
         catch {
@@ -644,16 +606,24 @@ function Get-TlsInformation {
             catch {
                 $strictTransportSecurityValue = "Unable to acquire HSTS value"
             }
-            $tlsStatus.StrictTransportSecurity = $strictTransportSecurityValue
+            $tlsInfo.StrictTransportSecurity = $strictTransportSecurityValue
 
-            # Can only detect SANs (Subject Alternative Names) on Windows 10/11 at the time of authoring this:
+            # If OS is Windows, the X509Certificate2.Extensions property is populated and thus we can infer SANS from that.
+            # Else, we default to openssl to obtain the list of SANs on the retrieved certificate:
+            $sansList = @()
             if ($osIsWindows) {
                 # Get list of Subject Alternative Names:
                 $sansList = ($sslCert.Extensions | Where-Object { $_.Oid.FriendlyName -eq "Subject Alternative Name" }).format($false).Split(",").Replace("DNS Name=", "").Trim()
-                $tlsStatus.SubjectAlternativeNames = $sansList
             }
+            else {
+                $opensslFound = $null -ne (Get-Command -CommandType Application -Name "openssl" -ErrorAction SilentlyContinue)
+                if ($opensslFound) {
+                    $sansList = (($sslCert.ExportCertificatePem() | openssl x509 -noout -text | Select-String -Pattern "DNS:") -split ",").Replace("DNS:", "").Trim()
+                }
+            }
+            $tlsInfo.SubjectAlternativeNames = $sansList
 
-            $negotiatedCipherSuites = @();
+            $negotiatedCipherSuites = @()
 
             foreach ($protocol in $protocolList) {
                 $socket = [Socket]::new([SocketType]::Stream, [ProtocolType]::Tcp)
@@ -665,32 +635,32 @@ function Get-TlsInformation {
 
                     $sslStream.AuthenticateAsClient($targetHost, $null, $protocol, $false)
 
-                    $tlsStatus.SignatureAlgorithm = $sslCert.SignatureAlgorithm.FriendlyName
-                    $tlsStatus.$protocol = $true
+                    $tlsInfo.SignatureAlgorithm = $sslCert.SignatureAlgorithm.FriendlyName
+                    $tlsInfo.$protocol = $true
 
                     if ($negotiatedCipherSuites -notcontains $sslStream.NegotiatedCipherSuite) {
                         $negotiatedCipherSuites += $sslStream.NegotiatedCipherSuite
                     }
 
-                    if (-not($tlsStatus.CipherAlgorithm)) {
-                        $tlsStatus.CipherAlgorithm = $sslStream.CipherAlgorithm
+                    if (-not($tlsInfo.CipherAlgorithm)) {
+                        $tlsInfo.CipherAlgorithm = $sslStream.CipherAlgorithm
                     }
 
-                    if (-not($tlsStatus.CipherStrength)) {
-                        $tlsStatus.CipherStrength = $sslStream.CipherStrength
+                    if (-not($tlsInfo.CipherStrength)) {
+                        $tlsInfo.CipherStrength = $sslStream.CipherStrength
                     }
 
-                    if (-not($tlsStatus.KeyExchangeAlgorithm)) {
+                    if (-not($tlsInfo.KeyExchangeAlgorithm)) {
                         if ($sslStream.KeyExchangeAlgorithm.ToString() -eq "44550") {
-                            $tlsStatus.KeyExchangeAlgorithm = "ECDH Ephemeral"
+                            $tlsInfo.KeyExchangeAlgorithm = "ECDH Ephemeral"
                         }
                         else {
-                            $tlsStatus.KeyExchangeAlgorithm = $sslStream.KeyExchangeAlgorithm.ToString()
+                            $tlsInfo.KeyExchangeAlgorithm = $sslStream.KeyExchangeAlgorithm.ToString()
                         }
                     }
                 }
                 catch {
-                    $tlsStatus.$protocol = $false
+                    $tlsInfo.$protocol = $false
                 }
                 finally {
                     if ($sslStream) {
@@ -705,9 +675,9 @@ function Get-TlsInformation {
                 }
             }
 
-            $tlsStatus.NegotiatedCipherSuites = $negotiatedCipherSuites
+            $tlsInfo.NegotiatedCipherSuites = $negotiatedCipherSuites
 
-            return $tlsStatus
+            return $tlsInfo
         }
 
     }
