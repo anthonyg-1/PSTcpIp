@@ -624,7 +624,6 @@ function Get-TlsInformation {
             $tlsInfo.SubjectAlternativeNames = $sansList
 
             $negotiatedCipherSuites = @()
-
             foreach ($protocol in $protocolList) {
                 $socket = [Socket]::new([SocketType]::Stream, [ProtocolType]::Tcp)
                 $socket.Connect($targetHost, $targetPort)
