@@ -36,6 +36,9 @@ Test-TcpConnection -IPAddress 134.170.184.133 -Port 80
 # Scans 'mywebserver' for TCP ports 80 through 445, and 5000 through 6000 with a 100 millisecond timeout
 @((80..445), (5000..6000)) | % { $ports += $_ }
 Test-TcpConnection -ComputerName 'mywebserver' -Port $ports -Count 1 -Timeout 100
+
+# Determine the listening TCP ports on mywebsite.org
+Test-TcpConnection -HostName mywebsite.org | Where Connected
 ```
 
 ### TLS/SSL certificate retrieval examples
