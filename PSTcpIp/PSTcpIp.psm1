@@ -61,7 +61,7 @@ namespace PSTcpIp
 {
     public class TcpConnectionStatus
     {
-        public string Destination { get; set; }
+        public string HostName { get; set; }
         public string IPAddress { get; set; }
         public Int32 Port { get; set; }
         public string Service { get; set; }
@@ -77,7 +77,7 @@ using System.Net;
 using System.Security.Cryptography.X509Certificates;
 namespace PSTcpIp
 {
-    public class TlsSslStatus
+    public class TlsInfo
     {
         public string HostName { get; set; }
         public IPAddress IPAddress { get; set; }
@@ -95,6 +95,7 @@ namespace PSTcpIp
         public string CipherStrength { get; set; }
         public string KeyExchangeAlgorithm { get; set; }
         public string StrictTransportSecurity { get; set; }
+        public string[] SubjectAlternativeNames { get; set; }
         public bool Ssl2 { get; set; }
         public bool Ssl3 { get; set; }
         public bool Tls { get; set; }
@@ -118,19 +119,7 @@ function Test-TcpConnection {
     .SYNOPSIS
         Tests TCP connectivity to a remote computer.
     .DESCRIPTION
-        The Test-TcpConnection function attempts to establish TCP connectivity
-        to one or more remote computers.
-
-        You can use the parameters of Test-TcpConnection to specify the
-        receiving computers and to set the number of connection requests.
-
-        Unlike the traditional ping command, Test-TcpConnection returns a PSObject
-        that you can investigate in Windows PowerShell, but you can use the Quiet parameter
-        to force it to return only a Boolean value.
-
-        Unlike Test-Connection, Test-TcpConnection does not depend on ICMP echo requests
-        to determine if connectivity can be established. This is particularly useful in
-        cases where firewalls block ICMP but allow access to HTTP and SSL.
+        The Test-TcpConnection function attempts to establish TCP connectivity to one or more target hosts.
     .PARAMETER DNSHostName
         The target hostname to test TCP connectivity against.
     .PARAMETER Port
@@ -166,6 +155,10 @@ function Test-TcpConnection {
         Test-TcpConnection -DNSHostName 'myserver'
 
         Tests TCP connectivity on the server 'myserver' against the following ports: 20, 21, 22, 23, 25, 53, 80, 88, 139, 389, 443, 445, 636, 3389, 5985
+    .EXAMPLE
+        Test-TcpConnection -HostName mywebsite.org | Where Connected
+
+        Determine the listening TCP ports on mywebsite.org.
     .INPUTS
         System.String
 
@@ -181,6 +174,7 @@ function Test-TcpConnection {
 
             By default this cmdlet returns a TcpConnectionStatus object. When you use the Quiet parameter, it returns a Boolean.
      .LINK
+        Where-Object
         https://github.com/anthonyg-1/PSTcpIp
 	#>
     [CmdletBinding(DefaultParameterSetName = 'Default')]
@@ -268,7 +262,7 @@ function Test-TcpConnection {
                     }
 
                     $connectionStatusObject = New-Object -TypeName PSTcpIp.TcpConnectionStatus
-                    $connectionStatusObject.Destination = $destination
+                    $connectionStatusObject.HostName = $destination
                     $connectionStatusObject.IPAddress = $ipv4Address
                     $connectionStatusObject.Port = $__PortNumber
                     $connectionStatusObject.Service = $tcpPortAndDescriptionData.Item($__PortNumber)
@@ -292,45 +286,51 @@ function Test-TcpConnection {
     }
 }
 
-function Get-SslCertificate {
+function Get-TlsCertificate {
     <#
         .SYNOPSIS
-            Gets an SSL certificate from an endpoint.
+            Gets a TLS certificate from an endpoint.
         .DESCRIPTION
-            Gets an SSL certificate from an endpoint specified as a host name and port or URI.
+            Gets a TLS certificate from an endpoint specified as a host name and port or URI.
         .PARAMETER HostName
-            The target host to obtain an SSL certificate from.
+            The target host to obtain an TLS certificate from.
         .PARAMETER Port
             The port for the target host. This parameter is only applicable when using the HostName parameter. Default value is 443.
         .PARAMETER Uri
-            Specifies the Uniform Resource Identifier (URI) of the internet resource to which the request for the SSL certificate is sent. This parameter supports HTTPS only.
+            Specifies the Uniform Resource Identifier (URI) of the internet resource to which the request for the TLS certificate is sent. This parameter supports HTTPS only.
         .PARAMETER TlsVersion
             Specifies the TLS version for the target endpoint. Works with both the HostName and Uri parameters. Default value is Tls12.
         .PARAMETER IncludeChain
             Instructs the function to return the x509 certificate chain for the given certificate as a list starting with the end-entity certificate followed by one or more CA certificates.
         .EXAMPLE
-            Get-SslCertificate -HostName www.mysite.com
+            Get-TlsCertificate -HostName www.mysite.com
 
-            Gets an SSL certificate from www.mysite.com over port 443 (default).
+            Gets a TLS certificate from www.mysite.com over port 443 (default).
         .EXAMPLE
-            Get-SslCertificate -HostName www.mysite.com -Port 8181
+            Get-TlsCertificate -HostName www.mysite.com -Port 8181
 
-            Gets an SSL certificate from www.mysite.com over port 8181.
+            Gets a TLS certificate from www.mysite.com over port 8181.
         .EXAMPLE
-            Get-SslCertificate -HostName www.mysite.com -Port 443 | Select Thumbprint, Subject, NotAfter | Format-List
+            Get-TlsCertificate -HostName www.mysite.com -Port 443 | Select Thumbprint, Subject, NotAfter | Format-List
 
-            Gets an SSL certificate from www.mysite.com over port 443, selects three properties (Thumprint, Subject, NotAfter) and formats the output as a list.
+            Gets a TLS certificate from www.mysite.com over port 443, selects three properties (Thumprint, Subject, NotAfter) and formats the output as a list.
         .EXAMPLE
-            Get-SslCertificate -Uri https://www.mysite.com/default.htm | Select Thumbprint, Subject, NotAfter | Format-List
+            Get-TlsCertificate -Uri https://www.mysite.com/default.htm | Select Thumbprint, Subject, NotAfter | Format-List
 
-            Gets an SSL certificate from https://www.mysite.com, selects three properties (Thumprint, Subject, NotAfter) and formats the output as a list.
+            Gets a TLS certificate from https://www.mysite.com, selects three properties (Thumprint, Subject, NotAfter) and formats the output as a list.
         .EXAMPLE
-            Get-SslCertificate -HostName www.mysite.com -IncludeChain | Select Subject, Thumbprint, NotAfter | Format-List
+            Get-TlsCertificate -HostName www.mysite.com -IncludeChain | Select Subject, Thumbprint, NotAfter | Format-List
 
-            Gets an SSL certificate from https://www.mysite.com including the full certificate chain and writes the full chain's thumbprint, and expiration as a list to the console.
+            Gets a TLS certificate from https://www.mysite.com including the full certificate chain and writes the full chain's thumbprint, and expiration as a list to the console.
+        .EXAMPLE
+            $targets = "www.mywebsite1.com", "www.mywebsite2.com", "www.mywebsite3.com", "www.mywebsite4.com"
+            $targets | Test-TcpConnection -Port 443 | Where Connected | Get-TlsCertificate | Select Subject, NotAfter | Format-List
+
+            Attempts to connect to an array of hostnames on TCP port 443 and if the target host is listening obtain the TLS certificate, select the subject and expiration, and output the results as a list.
         .OUTPUTS
             System.Security.Cryptography.X509Certificates.X509Certificate2
         .LINK
+            Test-TcpConnection
             Select-Object
             Format-List
             https://github.com/anthonyg-1/PSTcpIp
@@ -338,8 +338,8 @@ function Get-SslCertificate {
     [CmdletBinding()]
     [OutputType([System.Security.Cryptography.X509Certificates.X509Certificate2])]
     param(
-        [Parameter(Mandatory = $false, Position = 0, ParameterSetName = "HostName")][ValidateLength(1, 250)][Alias('ComputerName', 'IPAddress', 'Name', 'h', 'i')][String]$HostName,
-        [Parameter(Mandatory = $false, Position = 1, ParameterSetName = "HostName")][ValidateRange(1, 65535)][Alias('PortNumber', 'p')][Int]$Port = 443,
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "HostName")][ValidateLength(1, 250)][Alias('ComputerName', 'IPAddress', 'Name', 'h', 'i')][String]$HostName,
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, Position = 1, ParameterSetName = "HostName")][ValidateRange(1, 65535)][Alias('PortNumber', 'p')][Int]$Port = 443,
         [Parameter(Mandatory = $false, Position = 0, ParameterSetName = "Uri")][Uri]$Uri,
         [Parameter(Mandatory = $false, Position = 2)][ValidateSet("Tls", "Tls11", "Tls12", "Tls13")][String]$TlsVersion = "Tls12",
         [Parameter(Mandatory = $false, Position = 3)][Switch]$IncludeChain
@@ -376,7 +376,7 @@ function Get-SslCertificate {
         }
 
         if ($isIp) {
-            $targetHost = $connectionTestResult.Destination
+            $targetHost = $connectionTestResult.HostName
         }
 
         if ($null -eq $targetHost) {
@@ -392,6 +392,7 @@ function Get-SslCertificate {
         }
 
         [X509Certificate2]$sslCert = $null
+        [bool]$handshakeSucceeded = $false
         try {
             $tcpClient = [TcpClient]::new($targetHost, $Port)
             $sslStream = [SslStream]::new($tcpClient.GetStream())
@@ -404,32 +405,35 @@ function Get-SslCertificate {
             $sslStream.Dispose()
             $tcpClient.Close()
             $tcpClient.Dispose()
+
+            $handshakeSucceeded = $true
         }
         catch {
-            $cryptographicExceptionMessage = "Unable to establish SSL session with: {0}." -f $targetHost
+            $cryptographicExceptionMessage = "Unable to establish TLS session with: {0}." -f $targetHost
             $CryptographicException = New-Object -TypeName CryptographicException -ArgumentList $cryptographicExceptionMessage
-            Write-Error -Exception $CryptographicException -Category SecurityError -ErrorAction Stop
+            Write-Error -Exception $CryptographicException -Category SecurityError -ErrorAction Continue
         }
 
-        if ($PSBoundParameters.ContainsKey("IncludeChain")) {
-            $chain = [X509Chain]::new()
-            $chain.Build($sslCert) | Out-Null
-            $allCertsInChain = $chain.ChainElements | Select-Object -ExpandProperty Certificate
+        if ($handshakeSucceeded) {
+            if ($PSBoundParameters.ContainsKey("IncludeChain")) {
+                $chain = [X509Chain]::new()
+                $chain.Build($sslCert) | Out-Null
+                $allCertsInChain = $chain.ChainElements | Select-Object -ExpandProperty Certificate
 
-            return $allCertsInChain
-        }
-        else {
-            return $sslCert
+                return $allCertsInChain
+            }
+            else {
+                return $sslCert
+            }
         }
     }
 }
-
-function Get-TlsStatus {
+function Get-TlsInformation {
     <#
         .SYNOPSIS
             Gets TLS protocols, certificate and cipher information against a remote computer running TLS/SSL.
         .DESCRIPTION
-            Obtains the negotiated TLS protocols, certificate data (lifetime, validity, subject, serial number and other identifiable information, etc.) and cipher information against a remote target running TLS/SSL.
+            Obtains the negotiated TLS protocols, certificate data (lifetime, validity, subject, serial number, subject alternative names, and other identifiable information, etc.) and cipher information against a remote target running TLS/SSL.
         .PARAMETER HostName
             The target host to get TLS/SSL settings from.
         .PARAMETER Port
@@ -437,17 +441,26 @@ function Get-TlsStatus {
         .PARAMETER Uri
             Specifies the Uniform Resource Identifier (URI) of the internet resource as an alternative to the HostName and Port parameters. This parameter supports HTTPS only.
         .EXAMPLE
-            Get-TlsStatus -HostName mysite.com -Port 443
+            Get-TlsInformation -HostName mysite.com -Port 443
 
             Obtains TLS settings on mysite.com against TCP port 443.
         .EXAMPLE
-            Get-TlsStatus -Uri "https://www.mysite.com"
+            Get-TlsInformation -Uri "https://www.mysite.com"
 
             Tests TLS settings on "https://www.mysite.com".
-        .OUTPUTS
-            PSTcpIp.TlsSslStatus
+        .EXAMPLE
+            $targets = "www.mywebsite1.com", "www.mywebsite2.com", "www.mywebsite3.com", "www.mywebsite4.com"
+            $targets | Test-TcpConnection -Port 443 | Where Connected | Get-TlsInformation
 
-                This function returns a TlsSslStatus object. Example output against "https://www.microsoft.com/en-us" using the Uri parameter:
+            Attempts to connect to an array of hostnames on TCP port 443 and if the target host is listening obtain TLS information for the target.
+        .EXAMPLE
+            Get-TlsStatus -HostName www.mysite.com | Select -Expand SubjectAlternativeNames
+
+            Obtain a list of SANs (Subject Alternative Names) from ww.mysite.com.
+        .OUTPUTS
+            PSTcpIp.TlsInfo
+
+                This function returns a TlsInfo object. Example output against "https://www.microsoft.com/en-us" using the Uri parameter:
 
                 HostName                : www.microsoft.com
                 IPAddress               : 23.197.181.184
@@ -475,14 +488,17 @@ function Get-TlsStatus {
         .NOTES
             If StrictTransportSecurity returns "Unable to acquire HSTS value" or "No value specified for strict transport security (HSTS)" with the HostName parameter set, try the fully qualified web address with the Uri parameter.
         .LINK
-            Get-SslCertificate
+            Test-TcpConnection
+            Select-Object
+            Format-List
+            https://github.com/anthonyg-1/PSTcpIp
     #>
     [CmdletBinding()]
-    [OutputType([PSTcpIp.TlsSslStatus])]
+    [OutputType([PSTcpIp.TlsInfo])]
     param
     (
-        [Parameter(Mandatory = $false, Position = 0, ParameterSetName = "HostName")][ValidateLength(1, 250)][Alias('ComputerName', 'IPAddress', 'Name', 'h', 'i')][String]$HostName,
-        [Parameter(Mandatory = $false, Position = 1, ParameterSetName = "HostName")][ValidateRange(1, 65535)][Alias('PortNumber', 'p')][Int]$Port = 443,
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "HostName")][ValidateLength(1, 250)][Alias('ComputerName', 'IPAddress', 'Name', 'h', 'i')][String]$HostName,
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, Position = 1, ParameterSetName = "HostName")][ValidateRange(1, 65535)][Alias('PortNumber', 'p')][Int]$Port = 443,
         [Parameter(Mandatory = $false, Position = 0, ParameterSetName = "Uri")][Uri]$Uri
     )
     PROCESS {
@@ -520,7 +536,7 @@ function Get-TlsStatus {
         }
 
         if ($isIp) {
-            $targetHost = $connectionTestResult.Destination
+            $targetHost = $connectionTestResult.HostName
         }
 
         if ($null -eq $targetHost) {
@@ -535,7 +551,7 @@ function Get-TlsStatus {
             Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Stop
         }
 
-        $tlsStatus = New-Object -TypeName PSTcpIp.TlsSslStatus
+        $tlsStatus = New-Object -TypeName PSTcpIp.TlsInfo
         $tlsStatus.HostName = $targetHost
         try {
             $tlsStatus.IPAddress = $connectionTestResult.IPAddress
@@ -546,11 +562,10 @@ function Get-TlsStatus {
         $tlsStatus.Port = $targetPort
 
 
-        [X509Certificate2]$sslCert = $null;
-        [bool]$handshakeSucceeded = $false;
-
+        [X509Certificate2]$sslCert = $null
+        [bool]$handshakeSucceeded = $false
         try {
-            $sslCert = Get-SslCertificate -HostName $targetHost -Port $targetPort -ErrorAction Stop
+            $sslCert = Get-TlsCertificate -HostName $targetHost -Port $targetPort -ErrorAction Stop
             $tlsStatus.CertificateVerifies = $sslCert.Verify()
             $tlsStatus.ValidFrom = $sslCert.NotBefore;
             $tlsStatus.ValidTo = $sslCert.NotAfter;
@@ -563,10 +578,10 @@ function Get-TlsStatus {
         catch {
             $cryptographicExceptionMessage = "Unable to establish SSL handshake with the following host: {0}" -f $targetHost
             $CryptographicException = New-Object -TypeName CryptographicException -ArgumentList $cryptographicExceptionMessage
-            Write-Error -Exception $CryptographicException -Category ProtocolError -ErrorAction Stop
+            Write-Error -Exception $CryptographicException -Category ProtocolError -ErrorAction Continue
         }
 
-        If ($handshakeSucceeded) {
+        if ($handshakeSucceeded) {
             # Get HTTP Strict Transport Security values:
             [string]$strictTransportSecurityValue = "No value specified for strict transport security (HSTS)"
             try {
@@ -584,6 +599,11 @@ function Get-TlsStatus {
                 $strictTransportSecurityValue = "Unable to acquire HSTS value"
             }
             $tlsStatus.StrictTransportSecurity = $strictTransportSecurityValue
+
+
+            # Get list of Subject Alternative Names:
+            $sansList = ($sslCert.Extensions | Where-Object { $_.Oid.FriendlyName -eq "Subject Alternative Name" }).format($false).Split(",").Replace("DNS Name=", "").Trim()
+            $tlsStatus.SubjectAlternativeNames = $sansList
 
             $negotiatedCipherSuites = @();
 
@@ -638,8 +658,10 @@ function Get-TlsStatus {
             }
 
             $tlsStatus.NegotiatedCipherSuites = $negotiatedCipherSuites
+
+            return $tlsStatus
         }
-        return $tlsStatus
+
     }
 }
 
@@ -647,17 +669,22 @@ function Get-TlsStatus {
 
 
 Export-ModuleMember -Function Test-TcpConnection
-Export-ModuleMember -Function Get-SslCertificate
-Export-ModuleMember -Function Get-TlsStatus
+Export-ModuleMember -Function Get-TlsCertificate
+Export-ModuleMember -Function Get-TlsInformation
 
 New-Alias -Name ttc -Value Test-TcpConnection -Force
-New-Alias -Name gssl -Value Get-SslCertificate -Force
-New-Alias -Name Get-TlsCertificate -Value Get-SslCertificate -Force
-New-Alias -Name Get-TlsInfo -Value Get-TlsStatus -Force
-New-Alias -Name gtlss -Value Get-TlsStatus -Force
+New-Alias -Name gtls -Value Get-TlsCertificate -Force
+New-Alias -Name gssl -Value Get-TlsCertificate -Force
+New-Alias -Name Get-SslCertificate -Value Get-TlsCertificate -Force
+New-Alias -Name Get-TlsStatus -Value Get-TlsInformation -Force
+New-Alias -Name Get-TlsInfo -Value Get-TlsInformation -Force
+New-Alias -Name gtlsi -Value Get-TlsInformation -Force
+New-Alias -Name gtlss -Value Get-TlsInformation -Force
 
 Export-ModuleMember -Alias ttc
+Export-ModuleMember -Alias gtls
 Export-ModuleMember -Alias gssl
-Export-ModuleMember -Alias Get-TlsCertificate
+Export-ModuleMember -Alias Get-SslCertificate
+Export-ModuleMember -Alias Get-TlsStatus
+Export-ModuleMember -Alias gtlsi
 Export-ModuleMember -Alias gtlss
-Export-ModuleMember -Alias Get-TlsInfo
