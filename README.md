@@ -74,7 +74,7 @@ $targetHostNames | ForEach-Object {
     }
 } | Sort Expiration
 
-# Attempts to connect to an array of hostnames of TCP port 443 and if the target host is listening on TCP port 443, obtain the TLS certificate, select the subject and expiration, and output the results as a list.
+# Attempts to connect to an array of hostnames on TCP port 443 and if the target host is listening obtain the TLS certificate, select the subject and expiration, and output the results as a list.
 $targets = "www.mywebsite1.com", "www.mywebsite2.com", "www.mywebsite3.com", "www.mywebsite4.com"
 $targets | Test-TcpConnection -Port 443 | Where Connected | Get-TlsCertificate | Select Subject, NotAfter | Format-List
 ```
@@ -88,7 +88,7 @@ Get-TlsInformation -HostName mysite.com -Port 443
 # Gets TLS status on "https://www.mysite.com" 
 Get-TlsInformation -Uri "https://www.mysite.com"
 
-# Attempts to connect to an array of hostnames of TCP port 443 and if the target host is listening on TCP port 443, and obtain TLS information for the target
+# Attempts to connect to an array of hostnames on TCP port 443 and if the target host is listening and obtain TLS information for the target
 $targets = "www.mywebsite1.com", "www.mywebsite2.com", "www.mywebsite3.com", "www.mywebsite4.com"
 $targets | Test-TcpConnection -Port 443 | Where Connected | Get-TlsInformation
 
