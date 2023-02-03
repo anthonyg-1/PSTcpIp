@@ -42,26 +42,26 @@ Test-TcpConnection -ComputerName 'mywebserver' -Port $ports -Count 1 -Timeout 10
 
 ```powershell
 # Gets an SSL certificate from www.mysite.com over port 443 (default)
-Get-SslCertificate -HostName www.mysite.com
+Get-TlsCertificate -HostName www.mysite.com
 
 # Gets an SSL certificate from www.mysite.com over port 8181
-Get-SslCertificate -HostName www.mysite.com -Port 8181
+Get-TlsCertificate -HostName www.mysite.com -Port 8181
 
 # Gets an SSL certificate from www.mysite.com over port 443, selects three properties (Thumprint, Subject, NotAfter) and formats the output as a list
-Get-SslCertificate -HostName www.mysite.com -Port 443 | Select Thumbprint, Subject, NotAfter | Format-List
+Get-TlsCertificate -HostName www.mysite.com -Port 443 | Select Thumbprint, Subject, NotAfter | Format-List
 
 # Gets an SSL certificate from https://www.mysite.com, selects three properties (Thumprint, Subject, NotAfter) and formats the output as a list
-Get-SslCertificate -Uri "https://www.mysite.com" | Select Thumbprint, Subject, NotAfter | Format-List
+Get-TlsCertificate -Uri "https://www.mysite.com" | Select Thumbprint, Subject, NotAfter | Format-List
 
 # Gets an SSL certificate from https://www.mysite.com including the full certificate chain and writes the full chain's thumbprint, and expiration as a list to the console
-Get-SslCertificate -HostName www.mysite.com -IncludeChain | Select Subject, Thumbprint, NotAfter | Format-List
+Get-TlsCertificate -HostName www.mysite.com -IncludeChain | Select Subject, Thumbprint, NotAfter | Format-List
 
 # Generate an SSL certificate expiration report from a list of target host names
 $targetHostNames = "microsoft.com", "linkedin.com", "powershellgallery.com", "github.com", "kubernetes.io", "gitlab.com"
 $targetHostNames | ForEach-Object {
     $targetHost = $_
     try {
-        $sslCert = Get-SslCertificate -HostName $targetHost -ErrorAction Stop
+        $sslCert = Get-TlsCertificate -HostName $targetHost -ErrorAction Stop
 
         [PSCustomObject]@{
             HostName   = $targetHost
@@ -74,14 +74,24 @@ $targetHostNames | ForEach-Object {
     }
 } | Sort Expiration
 
+# Attempts to connect to an array of hostnames of TCP port 443 and if the target host is listening on TCP port 443, obtain the TLS certificate, select the subject and expiration, and output the results as a list.
+$targets = "www.mywebsite1.com", "www.mywebsite2.com", "www.mywebsite3.com", "www.mywebsite4.com"
+$targets | Test-TcpConnection -Port 443 | Where Connected | Get-TlsCertificate | Select Subject, NotAfter | Format-List
 ```
 
-### TLS/SSL version testing examples
+### TLS/SSL information retrieval examples
 
 ```powershell
 # Obtains TLS status on mysite.com against TCP port 443.
-Get-TlsStatus -HostName mysite.com -Port 443
+Get-TlsInformation -HostName mysite.com -Port 443
 
 # Gets TLS status on "https://www.mysite.com" 
-Get-TlsStatus -Uri "https://www.mysite.com"
+Get-TlsInformation -Uri "https://www.mysite.com"
+
+# Attempts to connect to an array of hostnames of TCP port 443 and if the target host is listening on TCP port 443, and obtain TLS information for the target
+$targets = "www.mywebsite1.com", "www.mywebsite2.com", "www.mywebsite3.com", "www.mywebsite4.com"
+$targets | Test-TcpConnection -Port 443 | Where Connected | Get-TlsInformation
+
+# Obtain a list of SANs (Subject Alternative Names) from ww.mysite.com
+Get-TlsInformation -HostName www.mysite.com | Select -Expand SubjectAlternativeNames
 ```
