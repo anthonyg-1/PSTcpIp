@@ -616,9 +616,13 @@ function Get-TlsInformation {
                 $sansList = ($sslCert.Extensions | Where-Object { $_.Oid.FriendlyName -eq "Subject Alternative Name" }).format($false).Split(",").Replace("DNS Name=", "").Trim()
             }
             else {
-                $opensslFound = $null -ne (Get-Command -CommandType Application -Name "openssl" -ErrorAction SilentlyContinue)
+                $opensslFound = $null -ne (Get-Command -CommandType Application -Name "openssl2" -ErrorAction SilentlyContinue)
                 if ($opensslFound) {
                     $sansList = (($sslCert.ExportCertificatePem() | openssl x509 -noout -text | Select-String -Pattern "DNS:") -split ",").Replace("DNS:", "").Trim()
+                }
+                else {
+                    $opensslNotFoundWarning = "The openssl binary was not found. SubjectAlternativeNames will not be populated."
+                    Write-Warning -Message $opensslNotFoundWarning
                 }
             }
             $tlsInfo.SubjectAlternativeNames = $sansList
