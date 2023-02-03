@@ -21,6 +21,12 @@ if (Test-Path -Path $PSScriptRoot) { Update-FormatData -PrependPath $formatFileP
 
 #region Load config data
 
+# Determine if OS is Windows or other (MacOS, Linux)
+[bool]$osIsWindows = $false
+if (($PSVersionTable["OS"]).ToLower() -like "*windows*") {
+    $osIsWindows = $true
+}
+
 $tcpPortsJsonFilePath = Join-Path -Path $PSScriptRoot -ChildPath 'ConfigData\TcpPorts.json'
 $protocolsJsonFilePath = Join-Path -Path $PSScriptRoot -ChildPath 'ConfigData\Protocols.json'
 
@@ -71,7 +77,11 @@ namespace PSTcpIp
 }
 "@
 
-$tlsStatusDefinition = @"
+
+[string]$tlsStatusDefinition = ""
+# Can only detect SANs (Subject Alternative Names) on Windows 10/11 at the time of authoring this:
+if ($osIsWindows) {
+    $tlsStatusDefinition = @"
 using System;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
@@ -105,6 +115,42 @@ namespace PSTcpIp
     }
 }
 "@
+}
+else {
+    $tlsStatusDefinition = @"
+using System;
+using System.Net;
+using System.Security.Cryptography.X509Certificates;
+namespace PSTcpIp
+{
+    public class TlsInfo
+    {
+        public string HostName { get; set; }
+        public IPAddress IPAddress { get; set; }
+        public int Port { get; set; }
+        public string SerialNumber { get; set; }
+        public string Thumbprint { get; set; }
+        public string Subject { get; set; }
+        public string Issuer { get; set; }
+        public DateTime ValidFrom { get; set; }
+        public DateTime ValidTo { get; set; }
+        public bool CertificateVerifies { get; set; }
+        public string SignatureAlgorithm { get; set; }
+        public string[] NegotiatedCipherSuites { get; set; }
+        public string CipherAlgorithm { get; set; }
+        public string CipherStrength { get; set; }
+        public string KeyExchangeAlgorithm { get; set; }
+        public string StrictTransportSecurity { get; set; }
+        public bool Ssl2 { get; set; }
+        public bool Ssl3 { get; set; }
+        public bool Tls { get; set; }
+        public bool Tls11 { get; set; }
+        public bool Tls12 { get; set; }
+        public bool Tls13 { get; set; }
+    }
+}
+"@
+}
 
 Add-Type -TypeDefinition $tcpConnectionStatusClassDef -ReferencedAssemblies System.Net.Primitives -ErrorAction Stop
 Add-Type -TypeDefinition $tlsStatusDefinition -ErrorAction Stop
@@ -456,7 +502,7 @@ function Get-TlsInformation {
         .EXAMPLE
             Get-TlsStatus -HostName www.mysite.com | Select -Expand SubjectAlternativeNames
 
-            Obtain a list of SANs (Subject Alternative Names) from ww.mysite.com.
+            Obtain a list of SANs (Subject Alternative Names) from ww.mysite.com. NOTE: This only works on Windows operating systems at this time.
         .OUTPUTS
             PSTcpIp.TlsInfo
 
@@ -600,10 +646,12 @@ function Get-TlsInformation {
             }
             $tlsStatus.StrictTransportSecurity = $strictTransportSecurityValue
 
-
-            # Get list of Subject Alternative Names:
-            $sansList = ($sslCert.Extensions | Where-Object { $_.Oid.FriendlyName -eq "Subject Alternative Name" }).format($false).Split(",").Replace("DNS Name=", "").Trim()
-            $tlsStatus.SubjectAlternativeNames = $sansList
+            # Can only detect SANs (Subject Alternative Names) on Windows 10/11 at the time of authoring this:
+            if ($osIsWindows) {
+                # Get list of Subject Alternative Names:
+                $sansList = ($sslCert.Extensions | Where-Object { $_.Oid.FriendlyName -eq "Subject Alternative Name" }).format($false).Split(",").Replace("DNS Name=", "").Trim()
+                $tlsStatus.SubjectAlternativeNames = $sansList
+            }
 
             $negotiatedCipherSuites = @();
 
