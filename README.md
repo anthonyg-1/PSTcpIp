@@ -95,6 +95,6 @@ Get-TlsInformation -Uri "https://www.mysite.com"
 $targets = "www.mywebsite1.com", "www.mywebsite2.com", "www.mywebsite3.com", "www.mywebsite4.com"
 $targets | Test-TcpConnection -Port 443 | Where Connected | Get-TlsInformation
 
-# Obtain a list of SANs (Subject Alternative Names) from ww.mysite.com
+# Obtain a list of SANs (Subject Alternative Names) from ww.mysite.com. NOTE: This only works on Windows operating systems at this time
 Get-TlsInformation -HostName www.mysite.com | Select -Expand SubjectAlternativeNames
 ```
