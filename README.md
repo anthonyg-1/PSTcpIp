@@ -2,7 +2,7 @@
 
 ## PSTcpIp
 
-This PowerShell module contains functions that faciliate testing network connectivity, TLS/SSL and other network tasks.
+This PowerShell module contains functions that provide TCP connectivity testing as well as TLS certificate retrieval and TLS endpoint security posture assessment.
 
 ### Tested on
 :desktop_computer: `Windows 10/11`
