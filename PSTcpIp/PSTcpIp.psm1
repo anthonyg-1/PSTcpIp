@@ -334,6 +334,10 @@ function Get-TlsCertificate {
             $targets | Test-TcpConnection -Port 443 | Where Connected | Get-TlsCertificate | Select Subject, NotAfter | Format-List
 
             Attempts to connect to an array of hostnames on TCP port 443 and if the target host is listening obtain the TLS certificate, select the subject and expiration, and output the results as a list.
+        .INPUTS
+            System.String
+
+                A string value is received by the HostName parameter
         .OUTPUTS
             System.Security.Cryptography.X509Certificates.X509Certificate2
         .LINK
@@ -345,9 +349,9 @@ function Get-TlsCertificate {
     [CmdletBinding()]
     [OutputType([System.Security.Cryptography.X509Certificates.X509Certificate2])]
     param(
-        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "HostName")][ValidateLength(1, 250)][Alias('ComputerName', 'IPAddress', 'Name', 'h', 'i')][String]$HostName,
+        [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "HostName")][ValidateLength(1, 250)][Alias('ComputerName', 'IPAddress', 'Name', 'h', 'i')][String]$HostName,
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, Position = 1, ParameterSetName = "HostName")][ValidateRange(1, 65535)][Alias('PortNumber', 'p')][Int]$Port = 443,
-        [Parameter(Mandatory = $false, Position = 0, ParameterSetName = "Uri")][Uri]$Uri,
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "Uri")][Uri]$Uri,
         [Parameter(Mandatory = $false, Position = 2)][ValidateSet("Tls", "Tls11", "Tls12", "Tls13")][String]$TlsVersion = "Tls12",
         [Parameter(Mandatory = $false, Position = 3)][Switch]$IncludeChain
     )
@@ -464,6 +468,10 @@ function Get-TlsInformation {
             Get-TlsStatus -HostName www.mysite.com | Select -Expand SubjectAlternativeNames
 
             Obtain a list of SANs (Subject Alternative Names) from ww.mysite.com.
+        .INPUTS
+            System.String
+
+                A string value is received by the HostName parameter
         .OUTPUTS
             PSTcpIp.TlsInfo
 
@@ -505,9 +513,9 @@ function Get-TlsInformation {
     [OutputType([PSTcpIp.TlsInfo])]
     param
     (
-        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "HostName")][ValidateLength(1, 250)][Alias('ComputerName', 'IPAddress', 'Name', 'h', 'i')][String]$HostName,
+        [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "HostName")][ValidateLength(1, 250)][Alias('ComputerName', 'IPAddress', 'Name', 'h', 'i')][String]$HostName,
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, Position = 1, ParameterSetName = "HostName")][ValidateRange(1, 65535)][Alias('PortNumber', 'p')][Int]$Port = 443,
-        [Parameter(Mandatory = $false, Position = 0, ParameterSetName = "Uri")][Uri]$Uri
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "Uri")][Uri]$Uri
     )
     PROCESS {
         [string]$targetHost = ""
