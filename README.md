@@ -105,5 +105,5 @@ $targets | Test-TcpConnection -Port 443 | Where Connected | Get-TlsInformation
 Get-TlsInformation -HostName www.mysite.com | Select -Expand SubjectAlternativeNames
 
 # Gets TLS security information from https://mysite.com using the aliased version of Get-TlsInformation
-gtls -u https://mysite.com/
+gtls -u "https://mysite.com/"
 ```
