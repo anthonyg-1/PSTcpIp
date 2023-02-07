@@ -39,6 +39,9 @@ Test-TcpConnection -ComputerName 'mywebserver' -Port $ports -Count 1 -Timeout 10
 
 # Determine the listening TCP ports on mywebsite.org
 Test-TcpConnection -HostName mywebsite.org | Where Connected
+
+# Test connectivity to www.mysite1.com, www.mysite2.com over ports 80 and 443 using the aliased version of Test-TcpConnection
+ttc -h www.mysite1.com, www.mysite2.com -p 80, 443
 ```
 
 ### TLS/SSL certificate retrieval examples
@@ -80,6 +83,9 @@ $targetHostNames | ForEach-Object {
 # Attempts to connect to an array of hostnames on TCP port 443 and if the target host is listening obtain the TLS certificate, select the subject and expiration, and output the results as a list.
 $targets = "www.mywebsite1.com", "www.mywebsite2.com", "www.mywebsite3.com", "www.mywebsite4.com"
 $targets | Test-TcpConnection -Port 443 | Where Connected | Get-TlsCertificate | Select Subject, NotAfter | Format-List
+
+# Gets an SSL certificate from www.mysite.com over port 443 using the aliased version of Get-TlsCertificate
+gtls -h www.mysite.com
 ```
 
 ### TLS/SSL information retrieval examples
@@ -97,4 +103,7 @@ $targets | Test-TcpConnection -Port 443 | Where Connected | Get-TlsInformation
 
 # Obtain a list of SANs (Subject Alternative Names) from ww.mysite.com.
 Get-TlsInformation -HostName www.mysite.com | Select -Expand SubjectAlternativeNames
+
+# Gets TLS security information from https://mysite.com using the aliased version of Get-TlsInformation
+gtls -u https://mysite.com/
 ```
