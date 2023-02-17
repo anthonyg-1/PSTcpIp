@@ -119,6 +119,35 @@ Add-Type -TypeDefinition $tlsStatusDefinition -ErrorAction Stop
 #endregion
 
 
+#region Private Functions
+
+function Get-WebServerCertificate([string]$TargetHost, [int]$Port = 443) {
+    [X509Certificate2]$sslCert = $null
+    try {
+        $tcpClient = [TcpClient]::new($TargetHost, $Port)
+        $sslStream = [SslStream]::new($tcpClient.GetStream())
+
+        $sslStream.AuthenticateAsClient($TargetHost)
+
+        $sslCert = [X509Certificate2]::new($sslStream.RemoteCertificate)
+
+        $sslStream.Close()
+        $sslStream.Dispose()
+        $tcpClient.Close()
+        $tcpClient.Dispose()
+    }
+    catch {
+        $cryptographicExceptionMessage = "Unable to establish TLS session with the following host: {0}." -f $targetHost
+        $CryptographicException = New-Object -TypeName CryptographicException -ArgumentList $cryptographicExceptionMessage
+        throw $CryptographicException
+    }
+
+    return $sslCert
+}
+
+#endregion
+
+
 #region Exported Functions
 
 function Test-TcpConnection {
@@ -405,22 +434,11 @@ function Get-TlsCertificate {
         [X509Certificate2]$sslCert = $null
         [bool]$handshakeSucceeded = $false
         try {
-            $tcpClient = [TcpClient]::new($targetHost, $Port)
-            $sslStream = [SslStream]::new($tcpClient.GetStream())
-
-            $sslStream.AuthenticateAsClient($targetHost)
-
-            $sslCert = [X509Certificate2]::new($sslStream.RemoteCertificate)
-
-            $sslStream.Close()
-            $sslStream.Dispose()
-            $tcpClient.Close()
-            $tcpClient.Dispose()
-
+            $sslCert = Get-WebServerCertificate -TargetHost $targetHost -Port $Port
             $handshakeSucceeded = $true
         }
         catch {
-            $cryptographicExceptionMessage = "Unable to establish TLS session with: {0}." -f $targetHost
+            $cryptographicExceptionMessage = $_.Exception.Message
             $CryptographicException = New-Object -TypeName CryptographicException -ArgumentList $cryptographicExceptionMessage
             Write-Error -Exception $CryptographicException -Category SecurityError -ErrorAction Continue
         }
@@ -581,7 +599,7 @@ function Get-TlsInformation {
         [X509Certificate2]$sslCert = $null
         [bool]$handshakeSucceeded = $false
         try {
-            $sslCert = Get-TlsCertificate -HostName $targetHost -Port $targetPort -ErrorAction Stop
+            $sslCert = Get-WebServerCertificate -TargetHost $targetHost -Port $targetPort -ErrorAction Stop
             $tlsInfo.CertificateVerifies = $sslCert.Verify()
             $tlsInfo.ValidFrom = $sslCert.NotBefore;
             $tlsInfo.ValidTo = $sslCert.NotAfter;
@@ -592,9 +610,9 @@ function Get-TlsInformation {
             $handshakeSucceeded = $true
         }
         catch {
-            $cryptographicExceptionMessage = "Unable to establish SSL handshake with the following host: {0}" -f $targetHost
+            $cryptographicExceptionMessage = $_.Exception.Message
             $CryptographicException = New-Object -TypeName CryptographicException -ArgumentList $cryptographicExceptionMessage
-            Write-Error -Exception $CryptographicException -Category ProtocolError -ErrorAction Continue
+            Write-Error -Exception $CryptographicException -Category SecurityError -ErrorAction Continue
         }
 
         if ($handshakeSucceeded) {
