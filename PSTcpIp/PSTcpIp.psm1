@@ -21,12 +21,6 @@ if (Test-Path -Path $PSScriptRoot) { Update-FormatData -PrependPath $formatFileP
 
 #region Load config data
 
-# Determine if OS is Windows or other (MacOS, Linux) as some X509Certificate2 properties will be populatd on Windows but not on Linux or MacOS.
-[bool]$osIsWindows = $false
-if (($PSVersionTable["OS"]).ToLower() -like "*windows*") {
-    $osIsWindows = $true
-}
-
 $tcpPortsJsonFilePath = Join-Path -Path $PSScriptRoot -ChildPath 'ConfigData\TcpPorts.json'
 $protocolsJsonFilePath = Join-Path -Path $PSScriptRoot -ChildPath 'ConfigData\Protocols.json'
 
@@ -637,7 +631,7 @@ function Get-TlsInformation {
             # If OS is Windows, the X509Certificate2.Extensions property is populated and thus we can infer SANS from that.
             # Else, we default to openssl to obtain the list of SANs on the retrieved certificate:
             $sansList = @()
-            if ($osIsWindows) {
+            if ($IsWindows) {
                 # Get list of Subject Alternative Names:
                 $sansList = ($sslCert.Extensions | Where-Object { $_.Oid.FriendlyName -eq "Subject Alternative Name" }).format($false).Split(",").Replace("DNS Name=", "").Trim()
             }
