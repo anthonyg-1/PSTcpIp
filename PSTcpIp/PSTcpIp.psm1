@@ -591,11 +591,13 @@ function Get-TlsInformation {
         $tlsInfo.Port = $targetPort
 
 
+        [bool]$certIsVerified = $false
         [X509Certificate2]$sslCert = $null
         [bool]$handshakeSucceeded = $false
         try {
             $sslCert = Get-WebServerCertificate -TargetHost $targetHost -Port $targetPort -ErrorAction Stop
-            $tlsInfo.CertificateVerifies = $sslCert.Verify()
+            $certIsVerified = $sslCert.Verify()
+            $tlsInfo.CertificateVerifies = $certIsVerified
             $tlsInfo.ValidFrom = $sslCert.NotBefore;
             $tlsInfo.ValidTo = $sslCert.NotAfter;
             $tlsInfo.SerialNumber = $sslCert.GetSerialNumberString()
@@ -700,6 +702,11 @@ function Get-TlsInformation {
             }
 
             $tlsInfo.NegotiatedCipherSuites = $negotiatedCipherSuites
+
+            if (-not($certIsVerified)) {
+                $warningMessage = "Unable to obtain TLS information from {0} due to potential TLS man-in-the-middle proxy." -f $targetHost
+                Write-Warning -Message $warningMessage
+            }
 
             return $tlsInfo
         }
