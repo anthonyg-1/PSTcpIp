@@ -119,7 +119,8 @@ function Get-WebServerCertificate([string]$TargetHost, [int]$Port = 443) {
     [X509Certificate2]$sslCert = $null
     try {
         $tcpClient = [TcpClient]::new($TargetHost, $Port)
-        $sslStream = [SslStream]::new($tcpClient.GetStream())
+        $callback = { param($certSender, $cert, $chain, $errors) return $true }
+        $sslStream = [SslStream]::new($tcpClient.GetStream(), $false, $callback)
 
         $sslStream.AuthenticateAsClient($TargetHost)
 
