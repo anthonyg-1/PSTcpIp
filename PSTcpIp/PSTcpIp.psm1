@@ -657,7 +657,8 @@ function Get-TlsInformation {
 
                 try {
                     $netStream = [NetworkStream]::new($socket, $true)
-                    $sslStream = [SslStream]::new($netStream, $true)
+                    $callback = { param($certSender, $cert, $chain, $errors) return $true }
+                    $sslStream = [SslStream]::new($netStream, $false, $callback)
 
                     $sslStream.AuthenticateAsClient($targetHost, $null, $protocol, $false)
 
