@@ -613,7 +613,7 @@ function Get-TlsInformation {
             # Get HTTP Strict Transport Security values:
             [string]$strictTransportSecurityValue = "No value specified for strict transport security (HSTS)"
             try {
-                $webRequestResponse = Invoke-WebRequest -Uri $targetUri -MaximumRedirection 0 -ErrorAction Stop
+                $webRequestResponse = Invoke-WebRequest -Uri $targetUri -MaximumRedirection 0 -SkipCertificateCheck -ErrorAction Stop
 
                 [HashTable]$responseHeaders = $webRequestResponse.Headers
 
