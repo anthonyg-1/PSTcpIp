@@ -329,8 +329,6 @@ function Get-TlsCertificate {
             The port for the target host. This parameter is only applicable when using the HostName parameter. Default value is 443.
         .PARAMETER Uri
             Specifies the Uniform Resource Identifier (URI) of the internet resource to which the request for the TLS certificate is sent. This parameter supports HTTPS only.
-        .PARAMETER TlsVersion
-            Specifies the TLS version for the target endpoint. Works with both the HostName and Uri parameters. Default value is Tls12.
         .PARAMETER IncludeChain
             Instructs the function to return the x509 certificate chain for the given certificate as a list starting with the end-entity certificate followed by one or more CA certificates.
         .EXAMPLE
@@ -376,8 +374,7 @@ function Get-TlsCertificate {
         [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "HostName")][ValidateLength(1, 250)][Alias('ComputerName', 'IPAddress', 'Name', 'h', 'i')][String]$HostName,
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, Position = 1, ParameterSetName = "HostName")][ValidateRange(1, 65535)][Alias('PortNumber', 'p')][Int]$Port = 443,
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "Uri")][Uri]$Uri,
-        [Parameter(Mandatory = $false, Position = 2)][ValidateSet("Tls", "Tls11", "Tls12", "Tls13")][String]$TlsVersion = "Tls12",
-        [Parameter(Mandatory = $false, Position = 3)][Switch]$IncludeChain
+        [Parameter(Mandatory = $false, Position = 2)][Switch]$IncludeChain
     )
     PROCESS {
         [string]$targetHost = ""
@@ -452,6 +449,7 @@ function Get-TlsCertificate {
         }
     }
 }
+
 function Get-TlsInformation {
     <#
         .SYNOPSIS
