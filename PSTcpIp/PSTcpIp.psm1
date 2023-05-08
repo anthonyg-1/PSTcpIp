@@ -631,7 +631,12 @@ function Get-TlsInformation {
             $sansList = @()
             if ($IsWindows) {
                 # Get list of Subject Alternative Names:
-                $sansList = ($sslCert.Extensions | Where-Object { $_.Oid.FriendlyName -eq "Subject Alternative Name" }).format($false).Split(",").Replace("DNS Name=", "").Trim()
+                try {
+                    $sansList = ($sslCert.Extensions | Where-Object { $_.Oid.FriendlyName -eq "Subject Alternative Name" }).format($false).Split(",").Replace("DNS Name=", "").Trim()
+                }
+                catch {
+                    $sansList += "Subject alternative names not found on this certificate."
+                }
             }
             else {
                 $opensslFound = $null -ne (Get-Command -CommandType Application -Name "openssl" -ErrorAction SilentlyContinue)
@@ -671,7 +676,6 @@ function Get-TlsInformation {
                     if (-not($tlsInfo.CipherStrength)) {
                         $tlsInfo.CipherStrength = $sslStream.CipherStrength
                     }
-
                     if (-not($tlsInfo.KeyExchangeAlgorithm)) {
                         if ($sslStream.KeyExchangeAlgorithm.ToString() -eq "44550") {
                             $tlsInfo.KeyExchangeAlgorithm = "ECDH Ephemeral"
