@@ -14,7 +14,7 @@ variables:
       value: 'PSTcpIp'
 
 pool:
-  vmImage: 'windows-latest'
+  vmImage: 'ubuntu-latest'
 
 jobs:
   - job: PowerShell_CICD
