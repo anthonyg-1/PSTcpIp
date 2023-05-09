@@ -35,6 +35,11 @@ jobs:
           PathtoPublish: '$(Build.ArtifactStagingDirectory)/$(ModuleName)'
           ArtifactName: '$(ModuleName)'
           publishLocation: 'Container'
+      - task: PublishPackageToPowerShellGallery@0
+        inputs:
+          apiKey: '$(PSGalleryApiKey)'
+          path: '$(Build.ArtifactStagingDirectory)/$(ModuleName)'
+          setVersionNumberInManifest: false
       - task: PSGalleryPackager@0
         inputs:
           apiKey: '$(PSGalleryApiKey)'
