@@ -107,3 +107,13 @@ Get-TlsInformation -HostName www.mysite.com | Select -Expand SubjectAlternativeN
 # Gets TLS security information from https://mysite.com using the aliased version of Get-TlsInformation
 gtls -u "https://mysite.com/"
 ```
+
+### Active Directory server security testing
+
+```powershell
+# Get all Server 2019 instances from Active Directory and determine which ones are listening on port 443:
+Get-ADComputer -Filter {OperatingSystem -like "*2019*"} | Test-TcpConnection -Port 443 -Timeout 100 | Where Connected
+
+# Get an expiration report of LDAPS certificates from Active Directory domain controllers:
+Get-ADDomainController -Filter * | Test-TcpConnection -Port 636 | Where Connected | Get-TlsCertificate | Select Subject, NotAfter
+```
