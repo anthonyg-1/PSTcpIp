@@ -190,6 +190,16 @@ function Test-TcpConnection {
         Test-TcpConnection -HostName mywebsite.org | Where Connected
 
         Determine the listening TCP ports on mywebsite.org.
+    .EXAMPLE
+        #requires -Module ActiveDirectory
+        Get-ADComputer -Filter {OperatingSystem -like "*2019*"} | Test-TcpConnection -Port 443 -Timeout 100 | Where Connected
+
+        GetS all Windows Server 2019 instances from Active Directory and determine which ones are listening on port 443.
+    .EXAMPLE
+        #requires -Module ActiveDirectory
+        Get-ADDomainController -Filter * | Test-TcpConnection -Port 636 | Where Connected | Get-TlsCertificate | Select Subject, NotAfter
+
+        Get an expiration report of LDAPS certificates from Active Directory domain controllers.
     .INPUTS
         System.String
 
