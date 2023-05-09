@@ -25,18 +25,18 @@ jobs:
       - task: CopyFiles@2
         displayName: 'Copy Module Source to Staging'
         inputs:
-          SourceFolder: '$(Build.SourcesDirectory)\$(ModuleName)\'
+          SourceFolder: '$(Build.SourcesDirectory)/$(ModuleName)/'
           Contents: '**'
-          TargetFolder: '$(Build.ArtifactStagingDirectory)\$(ModuleName)\'
+          TargetFolder: '$(Build.ArtifactStagingDirectory)/$(ModuleName)/'
           CleanTargetFolder: true
           OverWrite: true
       - task: PublishBuildArtifacts@1
         inputs:
-          PathtoPublish: '$(Build.ArtifactStagingDirectory)\$(ModuleName)'
+          PathtoPublish: '$(Build.ArtifactStagingDirectory)/$(ModuleName)'
           ArtifactName: '$(ModuleName)'
           publishLocation: 'Container'
       - task: PSGalleryPackager@0
         inputs:
           apiKey: '$(PSGalleryApiKey)'
-          path: '$(Build.ArtifactStagingDirectory)\$(ModuleName)'
+          path: '$(Build.ArtifactStagingDirectory)/$(ModuleName)'
         condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
