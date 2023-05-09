@@ -371,9 +371,9 @@ function Get-TlsCertificate {
     [CmdletBinding()]
     [OutputType([System.Security.Cryptography.X509Certificates.X509Certificate2])]
     param(
-        [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "HostName")][ValidateLength(1, 250)][Alias('ComputerName', 'IPAddress', 'Name', 'h', 'i')][String]$HostName,
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "HostName")][ValidateLength(1, 250)][Alias('ComputerName', 'IPAddress', 'Name', 'h', 'i')][String]$HostName,
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, Position = 1, ParameterSetName = "HostName")][ValidateRange(1, 65535)][Alias('PortNumber', 'p')][Int]$Port = 443,
-        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "Uri")][Uri]$Uri,
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "Uri")][Uri]$Uri,
         [Parameter(Mandatory = $false, Position = 2)][Switch]$IncludeChain
     )
     PROCESS {
@@ -524,9 +524,9 @@ function Get-TlsInformation {
     [OutputType([PSTcpIp.TlsInfo])]
     param
     (
-        [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "HostName")][ValidateLength(1, 250)][Alias('ComputerName', 'IPAddress', 'Name', 'h', 'i')][String]$HostName,
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "HostName")][ValidateLength(1, 250)][Alias('ComputerName', 'IPAddress', 'Name', 'h', 'i')][String]$HostName,
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, Position = 1, ParameterSetName = "HostName")][ValidateRange(1, 65535)][Alias('PortNumber', 'p')][Int]$Port = 443,
-        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "Uri")][Uri]$Uri
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "Uri")][Uri]$Uri
     )
     PROCESS {
         [string]$targetHost = ""
