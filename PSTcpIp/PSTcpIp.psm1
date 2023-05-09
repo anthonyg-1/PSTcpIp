@@ -217,6 +217,9 @@ function Test-TcpConnection {
      .LINK
         Where-Object
         https://github.com/anthonyg-1/PSTcpIp
+        Get-ADDomainController
+        Get-ADComputer
+        Get-TlsCertificate
 	#>
     [CmdletBinding(DefaultParameterSetName = 'Default')]
     [Alias('ttc')]
@@ -378,7 +381,7 @@ function Get-TlsCertificate {
             Format-List
             https://github.com/anthonyg-1/PSTcpIp
     #>
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = 'HostName')]
     [OutputType([System.Security.Cryptography.X509Certificates.X509Certificate2])]
     param(
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "HostName")][ValidateLength(1, 250)][Alias('ComputerName', 'IPAddress', 'Name', 'h', 'i')][String]$HostName,
@@ -530,7 +533,7 @@ function Get-TlsInformation {
             Format-List
             https://github.com/anthonyg-1/PSTcpIp
     #>
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = 'Uri')]
     [OutputType([PSTcpIp.TlsInfo])]
     param
     (
