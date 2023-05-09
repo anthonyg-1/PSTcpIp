@@ -38,7 +38,7 @@ jobs:
       - task: PowerShell@2
         inputs:
           targetType: 'inline'
-          script: 'Publish-Module -Name PSTcpIP -Path $(Build.ArtifactStagingDirectory)/$(ModuleName) -Repository PSGallery -NuGetApiKey $(PSGalleryApiKey)'
+          script: 'Publish-Module -Path $(Build.ArtifactStagingDirectory)/$(ModuleName) -Repository PSGallery -NuGetApiKey $(PSGalleryApiKey)'
       #- task: PSGalleryPackager@0
        # inputs:
         #  apiKey: '$(PSGalleryApiKey)'
