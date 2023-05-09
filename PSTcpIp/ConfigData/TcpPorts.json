@@ -564,6 +564,10 @@
         "description": "WinRM"
     },
     {
+        "port": "5986",
+        "description": "WinRM/SSL"
+    },
+    {
         "port": "5900",
         "description": "VNC"
     },
