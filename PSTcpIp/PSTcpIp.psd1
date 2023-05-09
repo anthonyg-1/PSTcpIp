@@ -16,7 +16,7 @@
     Author            = 'Anthony Guimelli'
 
     # Minimum version of the PowerShell engine required by this module.
-    PowerShellVersion = "7.1"
+    PowerShellVersion = "7.0"
 
     # Description of the functionality provided by this module
     Description       = 'Provides cmdlets to perform various TCPIP and TLS/SSL related tasks.'
