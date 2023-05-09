@@ -40,11 +40,12 @@
                                 <PropertyName>Connected</PropertyName>
                             </TableColumnItem>
                             <TableColumnItem>
-                              <PropertyName>HostNameResolved</PropertyName>
+                                <PropertyName>HostNameResolved</PropertyName>
                             </TableColumnItem>
                         </TableColumnItems>
                     </TableRowEntry>
                 </TableRowEntries>
+                <AutoSize />
             </TableControl>
         </View>
     </ViewDefinitions>
