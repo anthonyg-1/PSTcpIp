@@ -35,13 +35,12 @@ jobs:
           PathtoPublish: '$(Build.ArtifactStagingDirectory)/$(ModuleName)'
           ArtifactName: '$(ModuleName)'
           publishLocation: 'Container'
-      - task: PublishPackageToPowerShellGallery@0
+      - task: PowerShell@2
         inputs:
-          apiKey: '$(PSGalleryApiKey)'
-          path: '$(Build.ArtifactStagingDirectory)/$(ModuleName)'
-          setVersionNumberInManifest: false
-      - task: PSGalleryPackager@0
-        inputs:
-          apiKey: '$(PSGalleryApiKey)'
-          path: '$(Build.ArtifactStagingDirectory)/$(ModuleName)'
-        condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+          targetType: 'inline'
+          script: 'Publish-Module -Name PSTcpIP -Path $(Build.ArtifactStagingDirectory)/$(ModuleName) -Repository PSGallery -NuGetApiKey $(PSGalleryApiKey)'
+      #- task: PSGalleryPackager@0
+       # inputs:
+        #  apiKey: '$(PSGalleryApiKey)'
+         # path: '$(Build.ArtifactStagingDirectory)/$(ModuleName)'
+        #condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
