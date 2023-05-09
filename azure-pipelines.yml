@@ -39,8 +39,3 @@ jobs:
         inputs:
           targetType: 'inline'
           script: 'Publish-Module -Path $(Build.ArtifactStagingDirectory)/$(ModuleName) -Repository PSGallery -NuGetApiKey $(PSGalleryApiKey)'
-      #- task: PSGalleryPackager@0
-       # inputs:
-        #  apiKey: '$(PSGalleryApiKey)'
-         # path: '$(Build.ArtifactStagingDirectory)/$(ModuleName)'
-        #condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
