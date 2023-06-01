@@ -645,7 +645,9 @@ function Get-TlsInformation {
             if ($IsWindows) {
                 # Get list of Subject Alternative Names:
                 try {
-                    $sansList = ($sslCert.Extensions | Where-Object { $_.Oid.FriendlyName -eq "Subject Alternative Name" }).format($false).Split(",").Replace("DNS Name=", "").Trim()
+                    $sansList = ($sslCert.Extensions | Where-Object { $_.Oid.FriendlyName -eq "Subject Alternative Name" }).format($false).Split(",") | ForEach-Object {
+                        $_.Replace("DNS Name=", "").Trim()
+                    }
                 }
                 catch {
                     $sansList += "Subject alternative names not found on this certificate."
@@ -654,7 +656,9 @@ function Get-TlsInformation {
             else {
                 $opensslFound = $null -ne (Get-Command -CommandType Application -Name "openssl" -ErrorAction SilentlyContinue)
                 if ($opensslFound) {
-                    $sansList = (($sslCert.ExportCertificatePem() | openssl x509 -noout -text | Select-String -Pattern "DNS:") -split ",").Replace("DNS:", "").Trim()
+                    $sansList = (($sslCert.ExportCertificatePem() | openssl x509 -noout -text | Select-String -Pattern "DNS:") -split ",") | ForEach-Object {
+                        $_.Replace("DNS:", "").Trim()
+                    }
                 }
                 else {
                     $opensslNotFoundWarning = "The openssl binary was not found. SubjectAlternativeNames will not be populated."
