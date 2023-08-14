@@ -122,4 +122,7 @@ Get-ADDomainController -Filter * | Test-TcpConnection -Port 636 | Where Connecte
 ```powershell
 # Retrieves the HTTP response headers from the specified web endpoint:
 Get-HttpResponseHeader -Uri "https://mysite.com/"
+
+# Retrieves the HTTP response headers with the results as a Hashtable from the specified web endpoint:
+Get-HttpResponseHeader -Uri "https://mysite.com/" -AsHashtable
 ```
