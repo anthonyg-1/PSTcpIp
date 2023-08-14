@@ -2,7 +2,7 @@
 
 ## PSTcpIp
 
-This PowerShell module contains functions that provide TCP connectivity testing as well as TLS certificate retrieval and TLS endpoint security posture assessment.
+This PowerShell module contains functions that provide TCP connectivity testing as well as TLS certificate retrieval, TLS endpoint security posture and HTTP response header assessment.
 
 ### Tested on
 :desktop_computer: `Windows 10/11`
@@ -116,4 +116,10 @@ Get-ADComputer -Filter {OperatingSystem -like "*2019*"} | Test-TcpConnection -Po
 
 # Get an expiration report of LDAPS certificates from Active Directory domain controllers:
 Get-ADDomainController -Filter * | Test-TcpConnection -Port 636 | Where Connected | Get-TlsCertificate | Select Subject, NotAfter
+```
+
+### HTTP response header retrieval
+```powershell
+# Retrieves the HTTP response headers from the specified web endpoint:
+Get-HttpResponseHeader -Uri "https://mysite.com/"
 ```
