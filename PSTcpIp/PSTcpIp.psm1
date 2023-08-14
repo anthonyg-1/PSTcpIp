@@ -725,12 +725,88 @@ function Get-TlsInformation {
     }
 }
 
+function Get-HttpResponseHeader {
+    <#
+    .SYNOPSIS
+        Retrieves the response headers from a web endpoint.
+    .DESCRIPTION
+        Retrieves HTTP response headers from a web endpoint. An HTTP response header is a type of HTTP header that is used in the response that typically contains metadata about the target web endpoint.
+    .PARAMETER Uri
+        Specifies the Uniform Resource Identifier (URI) of the web endpoint. This parameter is mandatory and can be provided through the pipeline or by property name.
+    .PARAMETER AsHashtable
+        Instructs the function to return the results as a Hashtable as opposed to the default of PSCustomObject.
+    .EXAMPLE
+        Get-HttpResponseHeader -Uri "https://example.com"
+
+        Retrieves the HTTP response headers from the specified web endpoint.
+    .EXAMPLE
+        Get-HttpResponseHeader -Uri "https://example.com" -AsHashtable
+
+        Retrieves the HTTP response headers with the results as a Hashtable from the specified web endpoint.
+    .EXAMPLE
+        "https://example.com" | Get-HttpResponseHeader
+
+        Retrieves the HTTP response headers from the web endpoint provided through the pipeline.
+    .EXAMPLE
+        gwrh -u "https://example.com"
+
+        Retrieves the HTTP response headers from the specified web endpoint.
+    .INPUTS
+        System.Uri
+    .OUTPUTS
+        System.Management.Automation.PSCustomObject
+    .LINK
+        https://developer.mozilla.org/en-US/docs/Glossary/Response_heade
+    #>
+    [CmdletBinding()]
+    [Alias('gwrh')]
+    [OutputType([PSCustomObject])]
+    Param
+    (
+        [Parameter(Mandatory = $true,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true,
+            Position = 0)][Alias('u')][ValidateNotNullOrEmpty()][System.Uri]$Uri,
+
+        [Parameter(Mandatory = $false,
+            Position = 1)][Alias('ht')][Switch]$AsHashtable
+    )
+    PROCESS {
+        try {
+            # Get response headers:
+            $responseHeaders = Invoke-WebRequest -Uri $Uri.AbsoluteUri | Select-Object -ExpandProperty Headers -ErrorAction Stop
+
+            # Create sorted table:
+            $sortedHeaders = $responseHeaders.GetEnumerator() | Sort-Object -Property Key
+
+            # Create empty sorted hash table and populate (can't send PSCustomObject a table that's has GetEnumerator() called on it:
+            $headersToReturn = [ordered]@{}
+            $sortedHeaders | ForEach-Object { $headersToReturn.Add($_.Key, $_.Value) }
+
+            # Return collection of headers with header name as key:
+            $headerCollection = $null
+            if ($PSBoundParameters.ContainsKey("AsHashtable")) {
+                $headerCollection = $headersToReturn
+            }
+            else {
+                $headerCollection = New-Object -TypeName PSCustomObject -Property $headersToReturn
+            }
+
+            return $headerCollection
+        }
+        catch {
+            Write-Error -Exception $_.Exception -ErrorAction Stop
+        }
+    }
+}
+
 #endregion
 
 
 Export-ModuleMember -Function Test-TcpConnection
 Export-ModuleMember -Function Get-TlsCertificate
 Export-ModuleMember -Function Get-TlsInformation
+Export-ModuleMember -Function Get-HttpResponseHeader
 
 New-Alias -Name ttc -Value Test-TcpConnection -Force
 New-Alias -Name gtls -Value Get-TlsCertificate -Force
@@ -740,6 +816,7 @@ New-Alias -Name Get-TlsStatus -Value Get-TlsInformation -Force
 New-Alias -Name Get-TlsInfo -Value Get-TlsInformation -Force
 New-Alias -Name gtlsi -Value Get-TlsInformation -Force
 New-Alias -Name gtlss -Value Get-TlsInformation -Force
+New-Alias -Name gwrh -Value Get-HttpResponseHeader -Force
 
 Export-ModuleMember -Alias ttc
 Export-ModuleMember -Alias gtls
@@ -748,3 +825,4 @@ Export-ModuleMember -Alias Get-SslCertificate
 Export-ModuleMember -Alias Get-TlsStatus
 Export-ModuleMember -Alias gtlsi
 Export-ModuleMember -Alias gtlss
+Export-ModuleMember -Alias gwrh
