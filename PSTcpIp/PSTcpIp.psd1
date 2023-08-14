@@ -7,7 +7,7 @@
     RootModule        = 'PSTcpIp.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '4.2.12'
+    ModuleVersion     = '4.3.0'
 
     # ID used to uniquely identify this module
     GUID              = '99675863-c68e-46fd-b669-0d4942004b28'
@@ -23,7 +23,7 @@
 
     PrivateData       = @{
         PSData = @{
-            Tags       = @("TCPIP", "TCP", "network", "TLS", "SSL")
+            Tags       = @("TCPIP", "TCP", "network", "TLS", "SSL", "HTTP")
             LicenseUri = "https://github.com/anthonyg-1/PSTcpIp/blob/main/LICENSE"
             ProjectUri = "https://github.com/anthonyg-1/PSTcpIp"
         }
