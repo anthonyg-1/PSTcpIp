@@ -734,15 +734,11 @@ function Get-HttpResponseHeader {
     .PARAMETER Uri
         Specifies the Uniform Resource Identifier (URI) of the web endpoint. This parameter is mandatory and can be provided through the pipeline or by property name.
     .PARAMETER AsHashtable
-        Instructs the function to return the results as a Hashtable as opposed to the default of PSCustomObject.
+        Instructs the function to return the results as an ordered Hashtable as opposed to the default of PSCustomObject.
     .EXAMPLE
         Get-HttpResponseHeader -Uri "https://example.com"
 
         Retrieves the HTTP response headers from the specified web endpoint.
-    .EXAMPLE
-        Get-HttpResponseHeader -Uri "https://example.com" -AsHashtable
-
-        Retrieves the HTTP response headers with the results as a Hashtable from the specified web endpoint.
     .EXAMPLE
         "https://example.com" | Get-HttpResponseHeader
 
@@ -754,7 +750,7 @@ function Get-HttpResponseHeader {
     .INPUTS
         System.Uri
     .OUTPUTS
-        System.Management.Automation.PSCustomObject
+        System.Management.Automation.PSCustomObject or System.Collections.Specialized.OrderedDictionary
     .LINK
         https://developer.mozilla.org/en-US/docs/Glossary/Response_heade
     #>
