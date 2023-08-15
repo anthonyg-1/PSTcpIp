@@ -463,6 +463,91 @@ function Get-TlsCertificate {
     }
 }
 
+function Get-HttpResponseHeader {
+    <#
+    .SYNOPSIS
+        Retrieves the response headers from a web endpoint.
+    .DESCRIPTION
+        Retrieves HTTP response headers from a web endpoint. An HTTP response header is a type of HTTP header that is used in the response that typically contains metadata about the target web endpoint.
+    .PARAMETER Uri
+        Specifies the Uniform Resource Identifier (URI) of the web endpoint. This parameter is mandatory and can be provided through the pipeline or by property name.
+    .PARAMETER AsHashtable
+        Instructs the function to return the results as an ordered Hashtable as opposed to the default of PSCustomObject.
+    .EXAMPLE
+        Get-HttpResponseHeader -Uri "https://example.com"
+
+        Retrieves the HTTP response headers from the specified web endpoint.
+    .EXAMPLE
+        "https://example.com" | Get-HttpResponseHeader
+
+        Retrieves the HTTP response headers from the web endpoint provided through the pipeline.
+    .EXAMPLE
+        gwrh -u "https://example.com"
+
+        Retrieves the HTTP response headers from the specified web endpoint.
+    .INPUTS
+        System.Uri
+    .OUTPUTS
+        System.Management.Automation.PSCustomObject or System.Collections.Specialized.OrderedDictionary
+    .LINK
+        https://developer.mozilla.org/en-US/docs/Glossary/Response_heade
+    #>
+    [CmdletBinding()]
+    [Alias('gwrh')]
+    [OutputType([System.Management.Automation.PSCustomObject], [System.Collections.Specialized.OrderedDictionary])]
+    Param
+    (
+        [Parameter(Mandatory = $true,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true,
+            Position = 0)][Alias('u')][ValidateNotNullOrEmpty()][System.Uri]$Uri,
+
+        [Parameter(Mandatory = $false,
+            Position = 1)][Alias('ht')][Switch]$AsHashtable
+    )
+    PROCESS {
+        [bool]$isValidUri = [System.Uri]::IsWellFormedUriString($Uri, 1)
+
+        if (-not($isValidUri)) {
+            $ArgumentException = [ArgumentException]::new("Invalid data passed to Uri parameter.")
+            Write-Error -Exception $ArgumentException -Category InvalidArgument -ErrorAction Stop
+        }
+
+        [bool]$canConnect = Test-TcpConnection -DNSHostName $Uri.DnsSafeHost -Port $Uri.Port -Quiet
+        if (-not($canConnect)) {
+            $webExceptionMessage = "Unable to connect to the following endpoint: $Uri"
+            $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
+            Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Stop
+        }
+
+        try {
+            # Get response headers:
+            $responseHeaders = Invoke-WebRequest -Uri $Uri.AbsoluteUri -MaximumRedirection 0 -SkipCertificateCheck -ErrorAction Stop | Select-Object -ExpandProperty Headers -ErrorAction Stop
+
+            # Create sorted table:
+            $sortedHeaders = $responseHeaders.GetEnumerator() | Sort-Object -Property Key
+
+            # Create empty sorted hash table and populate (can't send PSCustomObject a table that's has GetEnumerator() called on it:
+            $headersToReturn = [ordered]@{}
+            $sortedHeaders | ForEach-Object { $headersToReturn.Add($_.Key, $_.Value) }
+
+            # Return collection of headers with header name as key:
+            $headerCollection = $null
+            if ($PSBoundParameters.ContainsKey("AsHashtable")) {
+                $headerCollection = $headersToReturn
+            }
+            else {
+                $headerCollection = New-Object -TypeName PSCustomObject -Property $headersToReturn
+            }
+
+            return $headerCollection
+        }
+        catch {
+            Write-Error -Exception $_.Exception -ErrorAction Stop
+        }
+    }
+}
+
 function Get-TlsInformation {
     <#
         .SYNOPSIS
@@ -624,9 +709,7 @@ function Get-TlsInformation {
             # Get HTTP Strict Transport Security values:
             [string]$strictTransportSecurityValue = "No value specified for strict transport security (HSTS)"
             try {
-                $webRequestResponse = Invoke-WebRequest -Uri $targetUri -MaximumRedirection 0 -SkipCertificateCheck -ErrorAction Stop
-
-                [HashTable]$responseHeaders = $webRequestResponse.Headers
+                [Hashtable]$responseHeaders = Get-HttpResponseHeader -Uri $targetUri -AsHashtable
 
                 $strictTransportSecurityValue = $responseHeaders['Strict-Transport-Security']
 
@@ -725,98 +808,14 @@ function Get-TlsInformation {
     }
 }
 
-function Get-HttpResponseHeader {
-    <#
-    .SYNOPSIS
-        Retrieves the response headers from a web endpoint.
-    .DESCRIPTION
-        Retrieves HTTP response headers from a web endpoint. An HTTP response header is a type of HTTP header that is used in the response that typically contains metadata about the target web endpoint.
-    .PARAMETER Uri
-        Specifies the Uniform Resource Identifier (URI) of the web endpoint. This parameter is mandatory and can be provided through the pipeline or by property name.
-    .PARAMETER AsHashtable
-        Instructs the function to return the results as an ordered Hashtable as opposed to the default of PSCustomObject.
-    .EXAMPLE
-        Get-HttpResponseHeader -Uri "https://example.com"
-
-        Retrieves the HTTP response headers from the specified web endpoint.
-    .EXAMPLE
-        "https://example.com" | Get-HttpResponseHeader
-
-        Retrieves the HTTP response headers from the web endpoint provided through the pipeline.
-    .EXAMPLE
-        gwrh -u "https://example.com"
-
-        Retrieves the HTTP response headers from the specified web endpoint.
-    .INPUTS
-        System.Uri
-    .OUTPUTS
-        System.Management.Automation.PSCustomObject or System.Collections.Specialized.OrderedDictionary
-    .LINK
-        https://developer.mozilla.org/en-US/docs/Glossary/Response_heade
-    #>
-    [CmdletBinding()]
-    [Alias('gwrh')]
-    [OutputType([System.Management.Automation.PSCustomObject], [System.Collections.Specialized.OrderedDictionary])]
-    Param
-    (
-        [Parameter(Mandatory = $true,
-            ValueFromPipeline = $true,
-            ValueFromPipelineByPropertyName = $true,
-            Position = 0)][Alias('u')][ValidateNotNullOrEmpty()][System.Uri]$Uri,
-
-        [Parameter(Mandatory = $false,
-            Position = 1)][Alias('ht')][Switch]$AsHashtable
-    )
-    PROCESS {
-        [bool]$isValidUri = [System.Uri]::IsWellFormedUriString($Uri, 1)
-
-        if (-not($isValidUri)) {
-            $ArgumentException = [ArgumentException]::new("Invalid data passed to Uri parameter.")
-            Write-Error -Exception $ArgumentException -Category InvalidArgument -ErrorAction Stop
-        }
-
-        [bool]$canConnect = Test-TcpConnection -DNSHostName $Uri.DnsSafeHost -Port $Uri.Port -Quiet
-        if (-not($canConnect)) {
-            $webExceptionMessage = "Unable to connect to the following endpoint: $Uri"
-            $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
-            Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Stop
-        }
-
-        try {
-            # Get response headers:
-            $responseHeaders = Invoke-WebRequest -Uri $Uri.AbsoluteUri | Select-Object -ExpandProperty Headers -ErrorAction Stop
-
-            # Create sorted table:
-            $sortedHeaders = $responseHeaders.GetEnumerator() | Sort-Object -Property Key
-
-            # Create empty sorted hash table and populate (can't send PSCustomObject a table that's has GetEnumerator() called on it:
-            $headersToReturn = [ordered]@{}
-            $sortedHeaders | ForEach-Object { $headersToReturn.Add($_.Key, $_.Value) }
-
-            # Return collection of headers with header name as key:
-            $headerCollection = $null
-            if ($PSBoundParameters.ContainsKey("AsHashtable")) {
-                $headerCollection = $headersToReturn
-            }
-            else {
-                $headerCollection = New-Object -TypeName PSCustomObject -Property $headersToReturn
-            }
-
-            return $headerCollection
-        }
-        catch {
-            Write-Error -Exception $_.Exception -ErrorAction Stop
-        }
-    }
-}
-
 #endregion
 
 
 Export-ModuleMember -Function Test-TcpConnection
 Export-ModuleMember -Function Get-TlsCertificate
-Export-ModuleMember -Function Get-TlsInformation
 Export-ModuleMember -Function Get-HttpResponseHeader
+Export-ModuleMember -Function Get-TlsInformation
+
 
 New-Alias -Name ttc -Value Test-TcpConnection -Force
 New-Alias -Name gtls -Value Get-TlsCertificate -Force
@@ -825,14 +824,15 @@ New-Alias -Name Get-SslCertificate -Value Get-TlsCertificate -Force
 New-Alias -Name Get-TlsStatus -Value Get-TlsInformation -Force
 New-Alias -Name Get-TlsInfo -Value Get-TlsInformation -Force
 New-Alias -Name gtlsi -Value Get-TlsInformation -Force
-New-Alias -Name gtlss -Value Get-TlsInformation -Force
 New-Alias -Name gwrh -Value Get-HttpResponseHeader -Force
+New-Alias -Name gtlss -Value Get-TlsInformation -Force
+
 
 Export-ModuleMember -Alias ttc
 Export-ModuleMember -Alias gtls
 Export-ModuleMember -Alias gssl
 Export-ModuleMember -Alias Get-SslCertificate
 Export-ModuleMember -Alias Get-TlsStatus
+Export-ModuleMember -Alias gwrh
 Export-ModuleMember -Alias gtlsi
 Export-ModuleMember -Alias gtlss
-Export-ModuleMember -Alias gwrh
