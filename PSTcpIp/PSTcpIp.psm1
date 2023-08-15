@@ -760,7 +760,7 @@ function Get-HttpResponseHeader {
     #>
     [CmdletBinding()]
     [Alias('gwrh')]
-    [OutputType([PSCustomObject])]
+    [OutputType([System.Management.Automation.PSCustomObject], [System.Collections.Specialized.OrderedDictionary])]
     Param
     (
         [Parameter(Mandatory = $true,
