@@ -768,6 +768,20 @@ function Get-HttpResponseHeader {
             Position = 1)][Alias('ht')][Switch]$AsHashtable
     )
     PROCESS {
+        [bool]$isValidUri = [System.Uri]::IsWellFormedUriString($Uri, 1)
+
+        if (-not($isValidUri)) {
+            $ArgumentException = [ArgumentException]::new("Invalid data passed to Uri parameter.")
+            Write-Error -Exception $ArgumentException -Category InvalidArgument -ErrorAction Stop
+        }
+
+        [bool]$canConnect = Test-TcpConnection -DNSHostName $Uri.DnsSafeHost -Port $Uri.Port -Quiet
+        if (-not($canConnect)) {
+            $webExceptionMessage = "Unable to connect to the following endpoint: $Uri"
+            $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
+            Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Stop
+        }
+
         try {
             # Get response headers:
             $responseHeaders = Invoke-WebRequest -Uri $Uri.AbsoluteUri | Select-Object -ExpandProperty Headers -ErrorAction Stop
