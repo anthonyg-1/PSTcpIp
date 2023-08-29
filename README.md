@@ -10,7 +10,7 @@ This PowerShell module contains functions that provide TCP connectivity testing 
 :apple: `MacOS`
 
 ### Requirements
-Requires PowerShell 7 or above.
+Requires PowerShell 7.2 or above.
 
 ### Installation
 
