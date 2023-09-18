@@ -144,12 +144,12 @@ function Get-WebServerCertificate([string]$TargetHost, [int]$Port = 443, [int]$T
                 $tcpClient.Close()
                 $tcpClient.Dispose()
             }
+
+            Write-Output -InputObject $sslCert
         }
         catch {
             throw $CryptographicException
         }
-
-        Write-Output -InputObject $sslCert
     }
 
     $certRetrievalJob = Start-Job -ScriptBlock $getCertScriptBlock
@@ -164,7 +164,7 @@ function Get-WebServerCertificate([string]$TargetHost, [int]$Port = 443, [int]$T
         return $getCertJobResult
     }
     else {
-        Write-Error -Exception $CryptographicException -ErrorAction Stop
+        throw $CryptographicException
     }
 }
 
