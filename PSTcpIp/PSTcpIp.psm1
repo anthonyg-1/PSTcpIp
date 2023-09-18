@@ -115,29 +115,57 @@ Add-Type -TypeDefinition $tlsStatusDefinition -ErrorAction Stop
 
 #region Private Functions
 
-function Get-WebServerCertificate([string]$TargetHost, [int]$Port = 443) {
-    [X509Certificate2]$sslCert = $null
-    try {
-        $tcpClient = [TcpClient]::new($TargetHost, $Port)
-        $callback = { param($certSender, $cert, $chain, $errors) return $true }
-        $sslStream = [SslStream]::new($tcpClient.GetStream(), $false, $callback)
 
-        $sslStream.AuthenticateAsClient($TargetHost)
 
-        $sslCert = [X509Certificate2]::new($sslStream.RemoteCertificate)
+function Get-WebServerCertificate([string]$TargetHost, [int]$Port = 443, [int]$Timeout = 30) {
+    $cryptographicExceptionMessage = "Unable to establish TLS session with the following host: {0}." -f $TargetHost
+    $CryptographicException = [System.Security.Cryptography.CryptographicException]::new($cryptographicExceptionMessage)
 
-        $sslStream.Close()
-        $sslStream.Dispose()
-        $tcpClient.Close()
-        $tcpClient.Dispose()
+    $getCertScriptBlock = {
+        [System.Net.Sockets.TcpClient]$tcpClient = $null
+        [System.Net.Security.SslStream]$sslStream = $null
+        [System.Security.Cryptography.X509Certificates.X509Certificate2]$sslCert = $null
+
+        try {
+            $tcpClient = [System.Net.Sockets.TcpClient]::new($using:TargetHost, $using:Port)
+            $callback = { param($certSender, $cert, $chain, $errors) return $true }
+            $sslStream = [System.Net.Security.SslStream]::new($tcpClient.GetStream(), $false, $callback)
+
+            $sslStream.AuthenticateAsClient($using:TargetHost)
+
+            $sslCert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($sslStream.RemoteCertificate)
+
+            if ($null -ne $sslStream) {
+                $sslStream.Close()
+                $sslStream.Dispose()
+            }
+
+            if ($null -ne $tcpClient) {
+                $tcpClient.Close()
+                $tcpClient.Dispose()
+            }
+        }
+        catch {
+            throw $CryptographicException
+        }
+
+        Write-Output -InputObject $sslCert
     }
-    catch {
-        $cryptographicExceptionMessage = "Unable to establish TLS session with the following host: {0}." -f $targetHost
-        $CryptographicException = New-Object -TypeName CryptographicException -ArgumentList $cryptographicExceptionMessage
-        throw $CryptographicException
-    }
 
-    return $sslCert
+    $certRetrievalJob = Start-Job -ScriptBlock $getCertScriptBlock
+
+    Wait-Job -Job $certRetrievalJob -Timeout $Timeout | Out-Null
+
+    $getCertJobResult = Receive-Job -Job $certRetrievalJob
+
+    Remove-Job -Job $certRetrievalJob -Force
+
+    if ($null -ne $getCertJobResult) {
+        return $getCertJobResult
+    }
+    else {
+        Write-Error -Exception $CryptographicException -ErrorAction Stop
+    }
 }
 
 #endregion
