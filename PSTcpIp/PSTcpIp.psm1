@@ -417,6 +417,9 @@ function Get-TlsCertificate {
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "Uri")][Uri]$Uri,
         [Parameter(Mandatory = $false, Position = 2)][Switch]$IncludeChain
     )
+    BEGIN {
+        $ErrorActionPreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
+    }
     PROCESS {
         [string]$targetHost = ""
         [string]$targetPort = ""
@@ -654,6 +657,9 @@ function Get-TlsInformation {
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, Position = 1, ParameterSetName = "HostName")][ValidateRange(1, 65535)][Alias('PortNumber', 'p')][Int]$Port = 443,
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "Uri")][Uri]$Uri
     )
+    BEGIN {
+        $ErrorActionPreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
+    }
     PROCESS {
         [string]$targetHost = ""
         [string]$targetPort = ""
@@ -717,7 +723,7 @@ function Get-TlsInformation {
         [X509Certificate2]$sslCert = $null
         [bool]$handshakeSucceeded = $false
         try {
-            $sslCert = Get-WebServerCertificate -TargetHost $targetHost -Port $targetPort -ErrorAction Stop
+            $sslCert = Get-WebServerCertificate -TargetHost $targetHost -Port $targetPort
             $tlsInfo.CertificateVerifies = $sslCert.Verify()
             $tlsInfo.ValidFrom = $sslCert.NotBefore;
             $tlsInfo.ValidTo = $sslCert.NotAfter;
