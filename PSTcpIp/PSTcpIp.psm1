@@ -89,8 +89,8 @@ namespace PSTcpIp
         public string Issuer { get; set; }
         public DateTime ValidFrom { get; set; }
         public DateTime ValidTo { get; set; }
-        public int CertificateValidityInYears { get; set; }
-        public int CertificateValidityInDays { get; set; }
+        public int CertificateValidityPeriodInYears { get; set; }
+        public int CertificateValidityPeriodInDays { get; set; }
         public bool CertificateIsExpired { get; set; }
         public bool CertificateVerifies { get; set; }
         public string SignatureAlgorithm { get; set; }
@@ -631,8 +631,8 @@ function Get-TlsInformation {
                 Issuer                     : CN=Microsoft Azure RSA TLS Issuing CA 07, O=Microsoft Corporation, C=US
                 ValidFrom                  : 9/14/2023 1:24:20 PM
                 ValidTo                    : 9/8/2024 1:24:20 PM
-                CertificateValidityInYears : 1
-                CertificateValidityInDays  : 360
+                CertificateValidityPeriodInYears : 1
+                CertificateValidityPeriodInDays  : 360
                 CertificateIsExpired       : False
                 CertificateVerifies        : True
                 SignatureAlgorithm         : sha384RSA
@@ -730,8 +730,8 @@ function Get-TlsInformation {
                 $tlsInfo.CertificateVerifies = $sslCert.Verify()
                 $tlsInfo.ValidFrom = $sslCert.NotBefore
                 $tlsInfo.ValidTo = $sslCert.NotAfter
-                $tlsInfo.CertificateValidityInYears = [Math]::Round((($sslCert.NotAfter - $sslCert.NotBefore).Days * 0.00273973), 1)
-                $tlsInfo.CertificateValidityInDays = ($sslCert.NotAfter - $sslCert.NotBefore).Days
+                $tlsInfo.CertificateValidityPeriodInYears = [Math]::Round((($sslCert.NotAfter - $sslCert.NotBefore).Days * 0.00273973), 1)
+                $tlsInfo.CertificateValidityPeriodInDays = ($sslCert.NotAfter - $sslCert.NotBefore).Days
                 $tlsInfo.CertificateIsExpired = ($sslCert.NotAfter -le (Get-Date))
                 $tlsInfo.SerialNumber = $sslCert.GetSerialNumberString()
                 $tlsInfo.Thumbprint = $sslCert.Thumbprint
