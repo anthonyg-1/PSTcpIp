@@ -90,6 +90,8 @@ namespace PSTcpIp
         public DateTime ValidFrom { get; set; }
         public DateTime ValidTo { get; set; }
         public int CertificateValidityInYears { get; set; }
+        public int CertificateValidityInDays { get; set; }
+        public bool CertificateIsExpired { get; set; }
         public bool CertificateVerifies { get; set; }
         public string SignatureAlgorithm { get; set; }
         public string[] NegotiatedCipherSuites { get; set; }
@@ -630,6 +632,8 @@ function Get-TlsInformation {
                 ValidFrom                  : 9/14/2023 1:24:20 PM
                 ValidTo                    : 9/8/2024 1:24:20 PM
                 CertificateValidityInYears : 1
+                CertificateValidityInDays  : 360
+                CertificateIsExpired       : False
                 CertificateVerifies        : True
                 SignatureAlgorithm         : sha384RSA
                 NegotiatedCipherSuites     : {TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384}
@@ -727,6 +731,8 @@ function Get-TlsInformation {
                 $tlsInfo.ValidFrom = $sslCert.NotBefore
                 $tlsInfo.ValidTo = $sslCert.NotAfter
                 $tlsInfo.CertificateValidityInYears = [Math]::Round((($sslCert.NotAfter - $sslCert.NotBefore).Days * 0.00273973), 1)
+                $tlsInfo.CertificateValidityInDays = ($sslCert.NotAfter - $sslCert.NotBefore).Days
+                $tlsInfo.CertificateIsExpired = ($sslCert.NotAfter -le (Get-Date))
                 $tlsInfo.SerialNumber = $sslCert.GetSerialNumberString()
                 $tlsInfo.Thumbprint = $sslCert.Thumbprint
                 $tlsInfo.Subject = $sslCert.Subject
