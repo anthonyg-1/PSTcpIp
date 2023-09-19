@@ -89,6 +89,7 @@ namespace PSTcpIp
         public string Issuer { get; set; }
         public DateTime ValidFrom { get; set; }
         public DateTime ValidTo { get; set; }
+        public int CertificateValidityInYears { get; set; }
         public bool CertificateVerifies { get; set; }
         public string SignatureAlgorithm { get; set; }
         public string[] NegotiatedCipherSuites { get; set; }
@@ -619,30 +620,30 @@ function Get-TlsInformation {
 
                 This function returns a TlsInfo object. Example output against "https://www.microsoft.com/en-us" using the Uri parameter:
 
-                HostName                : www.microsoft.com
-                IPAddress               : 23.33.242.16
-                Port                    : 443
-                SerialNumber            : 330059F8B6DA8689706FFA1BD900000059F8B6
-                Thumbprint              : 2D6E2AE5B36F22076A197D50009DEE66396AA99C
-                Subject                 : CN=www.microsoft.com, O=Microsoft Corporation, L=Redmond, S=WA, C=US
-                Issuer                  : CN=Microsoft Azure TLS Issuing CA 06, O=Microsoft Corporation, C=US
-                ValidFrom               : 10/4/2022 7:23:11 PM
-                ValidTo                 : 9/29/2023 7:23:11 PM
-                CertificateVerifies     : True
-                SignatureAlgorithm      : sha384RSA
-                NegotiatedCipherSuites  : {TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384, TLS_AES_256_GCM_SHA384}
-                CipherAlgorithm         : Aes256
-                CipherStrength          : 256
-                KeyExchangeAlgorithm    : DiffieHellman
-                StrictTransportSecurity : Strict-Transport-Security not found in header
-                SubjectAlternativeNames : {wwwqa.microsoft.com, www.microsoft.com, staticview.microsoft.com, i.s-microsoft.com…}
-                Ssl2                    : False
-                Ssl3                    : False
-                Tls                     : False
-                Tls11                   : False
-                Tls12                   : True
-                Tls13                   : True
-
+                HostName                   : www.microsoft.com
+                IPAddress                  : 23.47.169.232
+                Port                       : 443
+                SerialNumber               : 330003E2CD1066AD8DB81C060800000003E2CD
+                Thumbprint                 : E1579BA55125CEC3A78E39F55CF81DA8BFA94F88
+                Subject                    : CN=www.microsoft.com, O=Microsoft Corporation, L=Redmond, S=WA, C=US
+                Issuer                     : CN=Microsoft Azure RSA TLS Issuing CA 07, O=Microsoft Corporation, C=US
+                ValidFrom                  : 9/14/2023 1:24:20 PM
+                ValidTo                    : 9/8/2024 1:24:20 PM
+                CertificateValidityInYears : 1
+                CertificateVerifies        : True
+                SignatureAlgorithm         : sha384RSA
+                NegotiatedCipherSuites     : {TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384}
+                CipherAlgorithm            : Aes256
+                CipherStrength             : 256
+                KeyExchangeAlgorithm       : ECDH Ephemeral
+                StrictTransportSecurity    : Strict-Transport-Security not found in header
+                SubjectAlternativeNames    : {wwwqa.microsoft.com, www.microsoft.com, staticview.microsoft.com, i.s-microsoft.comΓÇª}
+                Ssl2                       : False
+                Ssl3                       : False
+                Tls                        : False
+                Tls11                      : False
+                Tls12                      : True
+                Tls13                      : False
         .NOTES
             If StrictTransportSecurity returns "Unable to acquire HSTS value" or "No value specified for strict transport security (HSTS)" with the HostName parameter set, try the fully qualified web address with the Uri parameter.
         .LINK
@@ -723,8 +724,9 @@ function Get-TlsInformation {
             try {
                 $sslCert = Get-WebServerCertificate -TargetHost $targetHost -Port $targetPort
                 $tlsInfo.CertificateVerifies = $sslCert.Verify()
-                $tlsInfo.ValidFrom = $sslCert.NotBefore;
-                $tlsInfo.ValidTo = $sslCert.NotAfter;
+                $tlsInfo.ValidFrom = $sslCert.NotBefore
+                $tlsInfo.ValidTo = $sslCert.NotAfter
+                $tlsInfo.CertificateValidityInYears = [Math]::Round((($sslCert.NotAfter - $sslCert.NotBefore).Days * 0.00273973), 1)
                 $tlsInfo.SerialNumber = $sslCert.GetSerialNumberString()
                 $tlsInfo.Thumbprint = $sslCert.Thumbprint
                 $tlsInfo.Subject = $sslCert.Subject
