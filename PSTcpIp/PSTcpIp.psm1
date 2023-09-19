@@ -461,35 +461,36 @@ function Get-TlsCertificate {
             Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Stop
         }
 
-        if (-not($connectionTestResult.Connected)) {
+        if ($connectionTestResult.Connected) {
+            [X509Certificate2]$sslCert = $null
+            [bool]$handshakeSucceeded = $false
+            try {
+                $sslCert = Get-WebServerCertificate -TargetHost $targetHost -Port $Port
+                $handshakeSucceeded = $true
+            }
+            catch {
+                $cryptographicExceptionMessage = $_.Exception.Message
+                $CryptographicException = New-Object -TypeName CryptographicException -ArgumentList $cryptographicExceptionMessage
+                Write-Error -Exception $CryptographicException -Category SecurityError -ErrorAction Continue
+            }
+
+            if ($handshakeSucceeded) {
+                if ($PSBoundParameters.ContainsKey("IncludeChain")) {
+                    $chain = [X509Chain]::new()
+                    $chain.Build($sslCert) | Out-Null
+                    $allCertsInChain = $chain.ChainElements | Select-Object -ExpandProperty Certificate
+
+                    return $allCertsInChain
+                }
+                else {
+                    return $sslCert
+                }
+            }
+        }
+        else {
             $webExceptionMessage = "Unable to connect to {0} over the following port: {1}" -f $targetHost, $targetPort
             $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
-            Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Stop
-        }
-
-        [X509Certificate2]$sslCert = $null
-        [bool]$handshakeSucceeded = $false
-        try {
-            $sslCert = Get-WebServerCertificate -TargetHost $targetHost -Port $Port
-            $handshakeSucceeded = $true
-        }
-        catch {
-            $cryptographicExceptionMessage = $_.Exception.Message
-            $CryptographicException = New-Object -TypeName CryptographicException -ArgumentList $cryptographicExceptionMessage
-            Write-Error -Exception $CryptographicException -Category SecurityError -ErrorAction Continue
-        }
-
-        if ($handshakeSucceeded) {
-            if ($PSBoundParameters.ContainsKey("IncludeChain")) {
-                $chain = [X509Chain]::new()
-                $chain.Build($sslCert) | Out-Null
-                $allCertsInChain = $chain.ChainElements | Select-Object -ExpandProperty Certificate
-
-                return $allCertsInChain
-            }
-            else {
-                return $sslCert
-            }
+            Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Continue
         }
     }
 }
@@ -545,36 +546,37 @@ function Get-HttpResponseHeader {
         }
 
         [bool]$canConnect = Test-TcpConnection -DNSHostName $Uri.DnsSafeHost -Port $Uri.Port -Quiet
-        if (-not($canConnect)) {
+        if ($canConnect) {
+            try {
+                # Get response headers:
+                $responseHeaders = Invoke-WebRequest -Uri $Uri.AbsoluteUri -MaximumRedirection 0 -SkipCertificateCheck -ErrorAction Stop | Select-Object -ExpandProperty Headers -ErrorAction Stop
+
+                # Create sorted table:
+                $sortedHeaders = $responseHeaders.GetEnumerator() | Sort-Object -Property Key
+
+                # Create empty sorted hash table and populate (can't send PSCustomObject a table that's has GetEnumerator() called on it:
+                $headersToReturn = [ordered]@{}
+                $sortedHeaders | ForEach-Object { $headersToReturn.Add($_.Key, $_.Value) }
+
+                # Return collection of headers with header name as key:
+                $headerCollection = $null
+                if ($PSBoundParameters.ContainsKey("AsHashtable")) {
+                    $headerCollection = $headersToReturn
+                }
+                else {
+                    $headerCollection = New-Object -TypeName PSCustomObject -Property $headersToReturn
+                }
+
+                return $headerCollection
+            }
+            catch {
+                Write-Error -Exception $_.Exception -ErrorAction Stop
+            }
+        }
+        else {
             $webExceptionMessage = "Unable to connect to the following endpoint: $Uri"
             $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
-            Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Stop
-        }
-
-        try {
-            # Get response headers:
-            $responseHeaders = Invoke-WebRequest -Uri $Uri.AbsoluteUri -MaximumRedirection 0 -SkipCertificateCheck -ErrorAction Stop | Select-Object -ExpandProperty Headers -ErrorAction Stop
-
-            # Create sorted table:
-            $sortedHeaders = $responseHeaders.GetEnumerator() | Sort-Object -Property Key
-
-            # Create empty sorted hash table and populate (can't send PSCustomObject a table that's has GetEnumerator() called on it:
-            $headersToReturn = [ordered]@{}
-            $sortedHeaders | ForEach-Object { $headersToReturn.Add($_.Key, $_.Value) }
-
-            # Return collection of headers with header name as key:
-            $headerCollection = $null
-            if ($PSBoundParameters.ContainsKey("AsHashtable")) {
-                $headerCollection = $headersToReturn
-            }
-            else {
-                $headerCollection = New-Object -TypeName PSCustomObject -Property $headersToReturn
-            }
-
-            return $headerCollection
-        }
-        catch {
-            Write-Error -Exception $_.Exception -ErrorAction Stop
+            Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Continue
         }
     }
 }
@@ -704,141 +706,142 @@ function Get-TlsInformation {
             Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Stop
         }
 
-        if (-not($connectionTestResult.Connected)) {
-            $webExceptionMessage = "Unable to connect to {0} over the following port: {1}" -f $targetHost, $targetPort
-            $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
-            Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Stop
-        }
-
-        $tlsInfo = New-Object -TypeName PSTcpIp.TlsInfo
-        $tlsInfo.HostName = $targetHost
-        try {
-            $tlsInfo.IPAddress = $connectionTestResult.IPAddress
-        }
-        catch {
-            $tlsInfo.IPAddress = $null
-        }
-        $tlsInfo.Port = $targetPort
-
-        [X509Certificate2]$sslCert = $null
-        [bool]$handshakeSucceeded = $false
-        try {
-            $sslCert = Get-WebServerCertificate -TargetHost $targetHost -Port $targetPort
-            $tlsInfo.CertificateVerifies = $sslCert.Verify()
-            $tlsInfo.ValidFrom = $sslCert.NotBefore;
-            $tlsInfo.ValidTo = $sslCert.NotAfter;
-            $tlsInfo.SerialNumber = $sslCert.GetSerialNumberString()
-            $tlsInfo.Thumbprint = $sslCert.Thumbprint
-            $tlsInfo.Subject = $sslCert.Subject
-            $tlsInfo.Issuer = $sslCert.Issuer
-            $handshakeSucceeded = $true
-        }
-        catch {
-            $cryptographicExceptionMessage = $_.Exception.Message
-            $CryptographicException = New-Object -TypeName CryptographicException -ArgumentList $cryptographicExceptionMessage
-            Write-Error -Exception $CryptographicException -Category SecurityError -ErrorAction Continue
-        }
-
-        if ($handshakeSucceeded) {
-            # Get HTTP Strict Transport Security values:
-            [string]$strictTransportSecurityValue = "No value specified for strict transport security (HSTS)"
+        [bool]$canConnect = $connectionTestResult.Connected
+        if ($canConnect) {
+            $tlsInfo = New-Object -TypeName PSTcpIp.TlsInfo
+            $tlsInfo.HostName = $targetHost
             try {
-                [Hashtable]$responseHeaders = Get-HttpResponseHeader -Uri $targetUri -AsHashtable
-
-                $strictTransportSecurityValue = $responseHeaders['Strict-Transport-Security']
-
-                if ($strictTransportSecurityValue.Length -lt 1) {
-                    $strictTransportSecurityValue = "Strict-Transport-Security not found in header"
-                }
+                $tlsInfo.IPAddress = $connectionTestResult.IPAddress
             }
             catch {
-                $strictTransportSecurityValue = "Unable to acquire HSTS value"
+                $tlsInfo.IPAddress = $null
             }
-            $tlsInfo.StrictTransportSecurity = $strictTransportSecurityValue
+            $tlsInfo.Port = $targetPort
 
-            # If OS is Windows, the X509Certificate2.Extensions property is populated and thus we can infer SANS from that.
-            # Else, we default to openssl to obtain the list of SANs on the retrieved certificate:
-            $sansList = @()
-            if ($IsWindows) {
-                # Get list of Subject Alternative Names:
+            [X509Certificate2]$sslCert = $null
+            [bool]$handshakeSucceeded = $false
+            try {
+                $sslCert = Get-WebServerCertificate -TargetHost $targetHost -Port $targetPort
+                $tlsInfo.CertificateVerifies = $sslCert.Verify()
+                $tlsInfo.ValidFrom = $sslCert.NotBefore;
+                $tlsInfo.ValidTo = $sslCert.NotAfter;
+                $tlsInfo.SerialNumber = $sslCert.GetSerialNumberString()
+                $tlsInfo.Thumbprint = $sslCert.Thumbprint
+                $tlsInfo.Subject = $sslCert.Subject
+                $tlsInfo.Issuer = $sslCert.Issuer
+                $handshakeSucceeded = $true
+            }
+            catch {
+                $cryptographicExceptionMessage = $_.Exception.Message
+                $CryptographicException = New-Object -TypeName CryptographicException -ArgumentList $cryptographicExceptionMessage
+                Write-Error -Exception $CryptographicException -Category SecurityError -ErrorAction Continue
+            }
+
+            if ($handshakeSucceeded) {
+                # Get HTTP Strict Transport Security values:
+                [string]$strictTransportSecurityValue = "No value specified for strict transport security (HSTS)"
                 try {
-                    $sansList = ($sslCert.Extensions | Where-Object { $_.Oid.FriendlyName -eq "Subject Alternative Name" }).format($false).Split(",") | ForEach-Object {
-                        $_.Replace("DNS Name=", "").Trim()
+                    [Hashtable]$responseHeaders = Get-HttpResponseHeader -Uri $targetUri -AsHashtable
+
+                    $strictTransportSecurityValue = $responseHeaders['Strict-Transport-Security']
+
+                    if ($strictTransportSecurityValue.Length -lt 1) {
+                        $strictTransportSecurityValue = "Strict-Transport-Security not found in header"
                     }
                 }
                 catch {
-                    $sansList += "Subject alternative names not found on this certificate."
+                    $strictTransportSecurityValue = "Unable to acquire HSTS value"
                 }
-            }
-            else {
-                $opensslFound = $null -ne (Get-Command -CommandType Application -Name "openssl" -ErrorAction SilentlyContinue)
-                if ($opensslFound) {
-                    $sansList = (($sslCert.ExportCertificatePem() | openssl x509 -noout -text | Select-String -Pattern "DNS:") -split ",") | ForEach-Object {
-                        $_.Replace("DNS:", "").Trim()
+                $tlsInfo.StrictTransportSecurity = $strictTransportSecurityValue
+
+                # If OS is Windows, the X509Certificate2.Extensions property is populated and thus we can infer SANS from that.
+                # Else, we default to openssl to obtain the list of SANs on the retrieved certificate:
+                $sansList = @()
+                if ($IsWindows) {
+                    # Get list of Subject Alternative Names:
+                    try {
+                        $sansList = ($sslCert.Extensions | Where-Object { $_.Oid.FriendlyName -eq "Subject Alternative Name" }).format($false).Split(",") | ForEach-Object {
+                            $_.Replace("DNS Name=", "").Trim()
+                        }
+                    }
+                    catch {
+                        $sansList += "Subject alternative names not found on this certificate."
                     }
                 }
                 else {
-                    $opensslNotFoundWarning = "The openssl binary was not found. SubjectAlternativeNames will not be populated."
-                    Write-Warning -Message $opensslNotFoundWarning
-                }
-            }
-            $tlsInfo.SubjectAlternativeNames = $sansList
-
-            $negotiatedCipherSuites = @()
-            foreach ($protocol in $protocolList) {
-                $socket = [Socket]::new([SocketType]::Stream, [ProtocolType]::Tcp)
-                $socket.Connect($targetHost, $targetPort)
-
-                try {
-                    $netStream = [NetworkStream]::new($socket, $true)
-                    $callback = { param($certSender, $cert, $chain, $errors) return $true }
-                    $sslStream = [SslStream]::new($netStream, $false, $callback)
-
-                    $sslStream.AuthenticateAsClient($targetHost, $null, $protocol, $false)
-
-                    $tlsInfo.SignatureAlgorithm = $sslCert.SignatureAlgorithm.FriendlyName
-                    $tlsInfo.$protocol = $true
-
-                    if ($negotiatedCipherSuites -notcontains $sslStream.NegotiatedCipherSuite) {
-                        $negotiatedCipherSuites += $sslStream.NegotiatedCipherSuite
-                    }
-
-                    if (-not($tlsInfo.CipherAlgorithm)) {
-                        $tlsInfo.CipherAlgorithm = $sslStream.CipherAlgorithm
-                    }
-
-                    if (-not($tlsInfo.CipherStrength)) {
-                        $tlsInfo.CipherStrength = $sslStream.CipherStrength
-                    }
-                    if (-not($tlsInfo.KeyExchangeAlgorithm)) {
-                        if ($sslStream.KeyExchangeAlgorithm.ToString() -eq "44550") {
-                            $tlsInfo.KeyExchangeAlgorithm = "ECDH Ephemeral"
-                        }
-                        else {
-                            $tlsInfo.KeyExchangeAlgorithm = $sslStream.KeyExchangeAlgorithm.ToString()
+                    $opensslFound = $null -ne (Get-Command -CommandType Application -Name "openssl" -ErrorAction SilentlyContinue)
+                    if ($opensslFound) {
+                        $sansList = (($sslCert.ExportCertificatePem() | openssl x509 -noout -text | Select-String -Pattern "DNS:") -split ",") | ForEach-Object {
+                            $_.Replace("DNS:", "").Trim()
                         }
                     }
-                }
-                catch {
-                    $tlsInfo.$protocol = $false
-                }
-                finally {
-                    if ($sslStream) {
-                        $sslStream.Close()
-                        $sslStream.Dispose()
+                    else {
+                        $opensslNotFoundWarning = "The openssl binary was not found. SubjectAlternativeNames will not be populated."
+                        Write-Warning -Message $opensslNotFoundWarning
                     }
+                }
+                $tlsInfo.SubjectAlternativeNames = $sansList
 
-                    if ($socket) {
-                        $socket.Close()
-                        $socket.Dispose()
+                $negotiatedCipherSuites = @()
+                foreach ($protocol in $protocolList) {
+                    $socket = [Socket]::new([SocketType]::Stream, [ProtocolType]::Tcp)
+                    $socket.Connect($targetHost, $targetPort)
+
+                    try {
+                        $netStream = [NetworkStream]::new($socket, $true)
+                        $callback = { param($certSender, $cert, $chain, $errors) return $true }
+                        $sslStream = [SslStream]::new($netStream, $false, $callback)
+
+                        $sslStream.AuthenticateAsClient($targetHost, $null, $protocol, $false)
+
+                        $tlsInfo.SignatureAlgorithm = $sslCert.SignatureAlgorithm.FriendlyName
+                        $tlsInfo.$protocol = $true
+
+                        if ($negotiatedCipherSuites -notcontains $sslStream.NegotiatedCipherSuite) {
+                            $negotiatedCipherSuites += $sslStream.NegotiatedCipherSuite
+                        }
+
+                        if (-not($tlsInfo.CipherAlgorithm)) {
+                            $tlsInfo.CipherAlgorithm = $sslStream.CipherAlgorithm
+                        }
+
+                        if (-not($tlsInfo.CipherStrength)) {
+                            $tlsInfo.CipherStrength = $sslStream.CipherStrength
+                        }
+                        if (-not($tlsInfo.KeyExchangeAlgorithm)) {
+                            if ($sslStream.KeyExchangeAlgorithm.ToString() -eq "44550") {
+                                $tlsInfo.KeyExchangeAlgorithm = "ECDH Ephemeral"
+                            }
+                            else {
+                                $tlsInfo.KeyExchangeAlgorithm = $sslStream.KeyExchangeAlgorithm.ToString()
+                            }
+                        }
+                    }
+                    catch {
+                        $tlsInfo.$protocol = $false
+                    }
+                    finally {
+                        if ($sslStream) {
+                            $sslStream.Close()
+                            $sslStream.Dispose()
+                        }
+
+                        if ($socket) {
+                            $socket.Close()
+                            $socket.Dispose()
+                        }
                     }
                 }
+                $tlsInfo.NegotiatedCipherSuites = $negotiatedCipherSuites
+
+                return $tlsInfo
             }
-            $tlsInfo.NegotiatedCipherSuites = $negotiatedCipherSuites
-
-            return $tlsInfo
         }
-
+        else {
+            $webExceptionMessage = "Unable to connect to {0} over the following port: {1}" -f $targetHost, $targetPort
+            $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
+            Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Continue
+        }
     }
 }
 
