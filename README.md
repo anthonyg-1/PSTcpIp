@@ -73,6 +73,7 @@ $targetHostNames | ForEach-Object {
             HostName   = $targetHost
             Subject    = $sslCert.Subject
             Expiration = $sslCert.NotAfter
+            CertificateIsExpired = $sslCert.CertificateIsExpired
         }
     }
     catch {
