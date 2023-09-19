@@ -70,9 +70,9 @@ $targetHostNames | ForEach-Object {
         $sslCert = Get-TlsCertificate -HostName $targetHost
 
         [PSCustomObject]@{
-            HostName   = $targetHost
-            Subject    = $sslCert.Subject
-            Expiration = $sslCert.NotAfter
+            HostName             = $targetHost
+            Subject              = $sslCert.Subject
+            Expiration           = $sslCert.NotAfter
             CertificateIsExpired = $sslCert.CertificateIsExpired
         }
     }
