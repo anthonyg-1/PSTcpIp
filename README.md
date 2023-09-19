@@ -67,7 +67,7 @@ $targetHostNames = "microsoft.com", "linkedin.com", "powershellgallery.com", "gi
 $targetHostNames | ForEach-Object {
     $targetHost = $_
     try {
-        $sslCert = Get-TlsCertificate -HostName $targetHost -ErrorAction Stop
+        $sslCert = Get-TlsCertificate -HostName $targetHost
 
         [PSCustomObject]@{
             HostName   = $targetHost
