@@ -216,7 +216,7 @@ function Test-TcpConnection {
     .EXAMPLE
         Test-TcpConnection -DNSHostName 'myserver'
 
-        Tests TCP connectivity on the server 'myserver' against the following ports: 20, 21, 22, 23, 25, 53, 80, 88, 139, 389, 443, 445, 636, 3389, 5985
+        Tests TCP connectivity on the server 'myserver' against the following ports: 20, 21, 22, 23, 25, 53, 80, 88, 137, 139, 389, 443, 445, 636, 1433, 1434, 1521, 3306, 3389, 5432, 5985, 5986, 8080, 8443
     .EXAMPLE
         Test-TcpConnection -HostName mywebsite.org | Where Connected
 
@@ -268,7 +268,7 @@ function Test-TcpConnection {
         New-Variable -Name ipv4Address -Value $null -Force
         New-Variable -Name tcpClient -Value $null -Force
 
-        $commonPorts = @(20, 21, 22, 23, 25, 53, 80, 88, 139, 389, 443, 445, 636, 3389, 5985, 5986)
+        $commonPorts = @(20, 21, 22, 23, 25, 53, 80, 88, 137, 139, 389, 443, 445, 636, 1433, 1434, 1521, 3306, 3389, 5432, 5985, 5986, 8080, 8443)
     }
     PROCESS {
         $__ComputerNames = $DNSHostName
