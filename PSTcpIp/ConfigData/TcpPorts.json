@@ -293,7 +293,7 @@
     },
     {
         "port": "1025",
-        "description": "Microsoft"
+        "description": "Microsoft or Teradata"
     },
     {
         "port": "1026",
@@ -346,6 +346,14 @@
     {
         "port": "1512",
         "description": "WINS"
+    },
+    {
+        "port": "1521",
+        "description": "Oracle"
+    },
+    {
+        "port": "1526",
+        "description": "Informix"
     },
     {
         "port": "1589",
@@ -634,6 +642,10 @@
     {
         "port": "8200",
         "description": "VMware"
+    },
+    {
+        "port": "8443",
+        "description": "HTTPS"
     },
     {
         "port": "8500",
