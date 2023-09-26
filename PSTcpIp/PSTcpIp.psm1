@@ -480,6 +480,8 @@ function Get-TlsCertificate {
             if ($handshakeSucceeded) {
                 if ($PSBoundParameters.ContainsKey("IncludeChain")) {
                     $chain = [X509Chain]::new()
+                    $chain.ChainPolicy.RevocationMode = [X509RevocationMode]::NoCheck
+                    $chain.ChainPolicy.VerificationFlags = [X509VerificationFlags]::AllowUnknownCertificateAuthority
                     $chain.Build($sslCert) | Out-Null
                     $allCertsInChain = $chain.ChainElements | Select-Object -ExpandProperty Certificate
 
