@@ -268,7 +268,7 @@ function Test-TcpConnection {
         New-Variable -Name ipv4Address -Value $null -Force
         New-Variable -Name tcpClient -Value $null -Force
 
-        $commonPorts = @(20, 21, 22, 23, 25, 53, 80, 88, 137, 139, 389, 443, 445, 636, 1433, 1434, 1521, 3306, 3389, 5432, 5985, 5986, 8080, 8443)
+        $commonPorts = @(20, 21, 22, 23, 25, 53, 80, 88, 137, 139, 389, 443, 445, 636, 1433, 1434, 1521, 2375, 3306, 3389, 5432, 5985, 5986, 8080, 8443)
     }
     PROCESS {
         $__ComputerNames = $DNSHostName
