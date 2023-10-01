@@ -428,6 +428,10 @@
         "description": "Halo"
     },
     {
+        "port": "2375",
+        "description": "Docker"
+    },
+    {
         "port": "2379",
         "description": "Kubernetes etcd"
     },
