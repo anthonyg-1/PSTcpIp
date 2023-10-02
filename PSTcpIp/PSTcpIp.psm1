@@ -264,7 +264,7 @@ function Test-TcpConnection {
         [Parameter(Mandatory = $false, ParameterSetName = 'Default', Position = 2)][ValidateRange(1, 100000)][Alias('c')][Int]$Count = 1,
         [Parameter(Mandatory = $true, ParameterSetName = 'Quiet', Position = 2)][Alias('q')][Switch]$Quiet,
         [Parameter(Mandatory = $false, Position = 3)][ValidateRange(1, 2500)][Alias('to')][Int]$Timeout = 1200,
-        [Parameter(Mandatory = $false, Position = 4)][Alias('sco', 'sco', 'Connected', 'ShowConnected')][Switch]$ShowConnectedOnly
+        [Parameter(Mandatory = $false, Position = 4)][Alias('sco', 'sc', 'Connected', 'ShowConnected')][Switch]$ShowConnectedOnly
     )
     BEGIN {
         New-Variable -Name ipv4Addresses -Value $null -Force
