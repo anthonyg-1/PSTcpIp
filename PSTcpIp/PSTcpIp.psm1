@@ -193,7 +193,7 @@ function Test-TcpConnection {
     .PARAMETER Quiet
         Returns a boolean result only.
     .PARAMETER ShowConnectedOnly
-        Returns only succesful connections as opposed to all ports tested.
+        Returns only succesful connections as opposed to all ports tested. This parameter is only applicable for the default list of ports being scanned when the DNSHostName is not being used.
     .EXAMPLE
         Test-TcpConnection -DNSHostName 'myserver' -Port 80
 
@@ -218,7 +218,7 @@ function Test-TcpConnection {
     .EXAMPLE
         Test-TcpConnection -DNSHostName 'myserver'
 
-        Tests TCP connectivity on the server 'myserver' against the following ports: 20, 21, 22, 23, 25, 53, 80, 88, 137, 139, 389, 443, 445, 636, 1433, 1434, 1521, 3306, 3389, 5432, 5985, 5986, 8080, 8443
+        Tests TCP connectivity on the server 'myserver' against the following ports: 20, 21, 22, 23, 25, 53, 80, 88, 137, 139, 389, 443, 445, 636, 1433, 1434, 1521, 2375, 3306, 3389, 5432, 5985, 5986, 8080, 8443
     .EXAMPLE
         Test-TcpConnection -HostName mywebsite.org -ShowConnectedOnly
 
