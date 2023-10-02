@@ -38,7 +38,7 @@ Test-TcpConnection -IPAddress 134.170.184.133 -Port 80
 Test-TcpConnection -ComputerName 'mywebserver' -Port $ports -Count 1 -Timeout 100
 
 # Determine the listening TCP ports on mywebsite.org
-Test-TcpConnection -HostName mywebsite.org | Where Connected
+Test-TcpConnection -HostName mywebsite.org -ShowConnectedOnly
 
 # Test connectivity to www.mysite1.com, www.mysite2.com over ports 80 and 443 using the aliased version of Test-TcpConnection
 ttc -h www.mysite1.com, www.mysite2.com -p 80, 443
@@ -83,7 +83,7 @@ $targetHostNames | ForEach-Object {
 
 # Attempts to connect to an array of hostnames on TCP port 443 and if the target host is listening obtain the TLS certificate, select the subject and expiration, and output the results as a list.
 $targets = "www.mywebsite1.com", "www.mywebsite2.com", "www.mywebsite3.com", "www.mywebsite4.com"
-$targets | Test-TcpConnection -Port 443 | Where Connected | Get-TlsCertificate | Select Subject, NotAfter | Format-List
+$targets | Test-TcpConnection -Port 443 -ShowConnectedOnly | Get-TlsCertificate | Select Subject, NotAfter | Format-List
 
 # Gets an SSL certificate from www.mysite.com over port 443 using the aliased version of Get-TlsCertificate
 gtls -h www.mysite.com
@@ -100,7 +100,7 @@ Get-TlsInformation -Uri "https://www.mysite.com"
 
 # Attempts to connect to an array of hostnames on TCP port 443 and if the target host is listening and obtain TLS information for the target
 $targets = "www.mywebsite1.com", "www.mywebsite2.com", "www.mywebsite3.com", "www.mywebsite4.com"
-$targets | Test-TcpConnection -Port 443 | Where Connected | Get-TlsInformation
+$targets | Test-TcpConnection -Port 443 -ShowConnectedOnly | Get-TlsInformation
 
 # Obtain a list of SANs (Subject Alternative Names) from ww.mysite.com.
 Get-TlsInformation -HostName www.mysite.com | Select -Expand SubjectAlternativeNames
@@ -113,10 +113,10 @@ gtls -u "https://mysite.com/"
 
 ```powershell
 # Get all Server 2019 instances from Active Directory and determine which ones are listening on port 443:
-Get-ADComputer -Filter {OperatingSystem -like "*2019*"} | Test-TcpConnection -Port 443 -Timeout 100 | Where Connected
+Get-ADComputer -Filter {OperatingSystem -like "*2019*"} | Test-TcpConnection -Port 443 -Timeout 100 -ShowConnectedOnly
 
 # Get an expiration report of LDAPS certificates from Active Directory domain controllers:
-Get-ADDomainController -Filter * | Test-TcpConnection -Port 636 | Where Connected | Get-TlsCertificate | Select Subject, NotAfter
+Get-ADDomainController -Filter * | Test-TcpConnection -Port 636 -ShowConnectedOnly | Get-TlsCertificate | Select Subject, NotAfter
 ```
 
 ### HTTP response header retrieval
