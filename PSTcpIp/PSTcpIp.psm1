@@ -192,6 +192,8 @@ function Test-TcpConnection {
         The timeout value expressed in milliseconds. The default value is 1200.
     .PARAMETER Quiet
         Returns a boolean result only.
+    .PARAMETER ShowConnectedOnly
+        Returns only succesful connections as opposed to all ports tested.
     .EXAMPLE
         Test-TcpConnection -DNSHostName 'myserver' -Port 80
 
@@ -218,17 +220,17 @@ function Test-TcpConnection {
 
         Tests TCP connectivity on the server 'myserver' against the following ports: 20, 21, 22, 23, 25, 53, 80, 88, 137, 139, 389, 443, 445, 636, 1433, 1434, 1521, 3306, 3389, 5432, 5985, 5986, 8080, 8443
     .EXAMPLE
-        Test-TcpConnection -HostName mywebsite.org | Where Connected
+        Test-TcpConnection -HostName mywebsite.org -ShowConnectedOnly
 
         Determine the listening TCP ports on mywebsite.org.
     .EXAMPLE
         #requires -Module ActiveDirectory
-        Get-ADComputer -Filter {OperatingSystem -like "*2019*"} | Test-TcpConnection -Port 443 -Timeout 100 | Where Connected
+        Get-ADComputer -Filter {OperatingSystem -like "*2019*"} | Test-TcpConnection -Port 443 -Timeout 100 -ShowConnectedOnly
 
         GetS all Windows Server 2019 instances from Active Directory and determine which ones are listening on port 443.
     .EXAMPLE
         #requires -Module ActiveDirectory
-        Get-ADDomainController -Filter * | Test-TcpConnection -Port 636 | Where Connected | Get-TlsCertificate | Select Subject, NotAfter
+        Get-ADDomainController -Filter * | Test-TcpConnection -Port 636 -ShowConnectedOnly | Get-TlsCertificate | Select Subject, NotAfter
 
         Get an expiration report of LDAPS certificates from Active Directory domain controllers.
     .INPUTS
@@ -261,7 +263,8 @@ function Test-TcpConnection {
         [Parameter(Mandatory = $false, ValueFromPipeline = $false, Position = 1)][ValidateRange(1, 65535)][Alias('PortNumber', 'p')][Int[]]$Port,
         [Parameter(Mandatory = $false, ParameterSetName = 'Default', Position = 2)][ValidateRange(1, 100000)][Alias('c')][Int]$Count = 1,
         [Parameter(Mandatory = $true, ParameterSetName = 'Quiet', Position = 2)][Alias('q')][Switch]$Quiet,
-        [Parameter(Mandatory = $false, Position = 3)][ValidateRange(1, 2500)][Alias('to')][Int]$Timeout = 1200
+        [Parameter(Mandatory = $false, Position = 3)][ValidateRange(1, 2500)][Alias('to')][Int]$Timeout = 1200,
+        [Parameter(Mandatory = $false, Position = 4)][Alias('sco', 'sco', 'Connected', 'ShowConnected')][Switch]$ShowConnectedOnly
     )
     BEGIN {
         New-Variable -Name ipv4Addresses -Value $null -Force
@@ -348,7 +351,12 @@ function Test-TcpConnection {
                         return $connectionSucceeded
                     }
                     else {
-                        return $connectionStatusObject
+                        if (($PSBoundParameters.ContainsKey("ShowConnectedOnly")) -and (-not($PSBoundParameters.ContainsKey("Port")))) {
+                            return ($connectionStatusObject | Where-Object -Property Connected)
+                        }
+                        else {
+                            return $connectionStatusObject
+                        }
                     }
                 }
             }
