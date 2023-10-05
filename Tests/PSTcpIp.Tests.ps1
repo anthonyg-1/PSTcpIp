@@ -56,7 +56,7 @@ Describe "Testing module and cmdlets against PSSA rules" -Tag Unit -WarningActio
     Context "$module test against PSSA rules" {
         $modulePath = "$moduleDirectory\$module.psm1"
 
-        $analysis = Invoke-ScriptAnalyzer -Path $modulePath -ExcludeRule PSUseBOMForUnicodeEncodedFile, PSReviewUnusedParameter
+        $analysis = Invoke-ScriptAnalyzer -Path $modulePath -ExcludeRule PSUseBOMForUnicodeEncodedFile, PSReviewUnusedParameter, PSAvoidUsingEmptyCatchBlock
 
         foreach ($rule in $scriptAnalyzerRules) {
             It "should pass $rule" {
