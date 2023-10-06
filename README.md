@@ -133,6 +133,8 @@ Invoke-DnsEnumeration -Domain mydomain.com | Test-TcpConnection -Port 443 |
 ### Active Directory server security testing
 
 ```powershell
+#requires -Module ActiveDirectory
+
 # Get all Server 2019 instances from Active Directory and determine which ones are listening on port 443:
 Get-ADComputer -Filter {OperatingSystem -like "*2019*"} | Test-TcpConnection -Port 443 -Timeout 100 -ShowConnectedOnly
 
