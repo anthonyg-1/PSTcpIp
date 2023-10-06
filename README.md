@@ -114,14 +114,20 @@ gtls -u "https://mysite.com/"
 # Enumerates DNS record data from the mydomain.org DNS domain
 Invoke-DnsEnumeration -Domain mydomain.org
 
-# Enumerates DNS record data from the mydomain.org DNS domain using the subdomains.txt file as input
+# Enumerates DNS record data from the mydomain.org DNS domain using the subdomains.txt text file as input
 Invoke-DnsEnumeration -Domain mydomain.org -WordListPath subdomains.txt
 
-# Enumerates DNS record data from the mydomain.org DNS domain and tests TCP connectivity to them, and returns only the hosts that are listening on ports 80 and 443
+# Enumerates DNS record data from the mydomain.org DNS domain, tests TCP connectivity, and returns only the hosts that are listening on ports 80 and 443
 Invoke-DnsEnumeration -Domain mydomain.org | Test-TcpConnection -Port 80,443 | Where Connected
 
-# Enumerates DNS record data from the mydomain.org DNS domain and tests connectivity to TCP port 443 and obtains to obtain TLS information about the endpoint
+# Enumerates DNS record data from the mydomain.org DNS domain, tests connectivity to TCP port 443, and obtains to obtain TLS information about the endpoint
 Invoke-DnsEnumeration -Domain mydomain.org | Test-TcpConnection -Port 443 | Where Connected | Get-TlsInformation
+
+# Enumerates DNS record data from the mydomain.org DNS domain, tests connectivity to TCP port 443, obtains to obtain TLS information about the endpoint, and generates an export report as a CSV file
+Invoke-DnsEnumeration -Domain mydomain.com | Test-TcpConnection -Port 443 | 
+    Where Connected | Get-TlsInformation | 
+        Select HostName, IPAddress, Subject, Issuer, CertificateIsExpired, ValidFrom, ValidTo | 
+            Export-Csv TlsCertificateExpirationReport.csv
 ```
 
 ### Active Directory server security testing
