@@ -348,7 +348,7 @@ function Test-TcpConnection {
                         return $connectionSucceeded
                     }
                     else {
-                        if (($PSBoundParameters.ContainsKey("ShowConnectedOnly")) -and (-not($PSBoundParameters.ContainsKey("Port")))) {
+                        if (($PSBoundParameters.ContainsKey("ShowConnectedOnly"))) {
                             return ($connectionStatusObject | Where-Object -Property Connected)
                         }
                         else {
