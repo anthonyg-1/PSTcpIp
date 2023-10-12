@@ -191,7 +191,7 @@ function Test-TcpConnection {
     .PARAMETER Quiet
         Returns a boolean result only.
     .PARAMETER ShowConnectedOnly
-        Returns only succesful connections as opposed to all ports tested. This parameter is only applicable for the default list of ports being scanned when the DNSHostName is not being used.
+        Returns only succesful connection results.
     .EXAMPLE
         Test-TcpConnection -DNSHostName 'myserver' -Port 80
 
