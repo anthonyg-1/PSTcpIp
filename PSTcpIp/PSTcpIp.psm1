@@ -261,7 +261,7 @@ function Test-TcpConnection {
         [Parameter(Mandatory = $false, ParameterSetName = 'Default', Position = 2)][ValidateRange(1, 100000)][Alias('c')][Int]$Count = 1,
         [Parameter(Mandatory = $true, ParameterSetName = 'Quiet', Position = 2)][Alias('q')][Switch]$Quiet,
         [Parameter(Mandatory = $false, Position = 3)][ValidateRange(1, 2500)][Alias('to')][Int]$Timeout = 1200,
-        [Parameter(Mandatory = $false, Position = 4)][Alias('sco', 'sc', 'Connected', 'ShowConnected')][Switch]$ShowConnectedOnly
+        [Parameter(Mandatory = $false, Position = 4)][Alias('sco', 'sc', 'Connected', 'ShowConnected', 'WhereConnected')][Switch]$ShowConnectedOnly
     )
     BEGIN {
         New-Variable -Name ipv4Addresses -Value $null -Force
@@ -402,7 +402,7 @@ function Get-TlsCertificate {
             Gets a TLS certificate from https://www.mysite.com including the full certificate chain and writes the full chain's thumbprint, and expiration as a list to the console.
         .EXAMPLE
             $targets = "www.mywebsite1.com", "www.mywebsite2.com", "www.mywebsite3.com", "www.mywebsite4.com"
-            $targets | Test-TcpConnection -Port 443 | Where Connected | Get-TlsCertificate | Select Subject, NotAfter | Format-List
+            $targets | Test-TcpConnection -Port 443 -ShowConnectedOnly | Get-TlsCertificate | Select Subject, NotAfter | Format-List
 
             Attempts to connect to an array of hostnames on TCP port 443 and if the target host is listening obtain the TLS certificate, select the subject and expiration, and output the results as a list.
         .INPUTS
@@ -614,7 +614,7 @@ function Get-TlsInformation {
             Tests TLS settings on "https://www.mysite.com".
         .EXAMPLE
             $targets = "www.mywebsite1.com", "www.mywebsite2.com", "www.mywebsite3.com", "www.mywebsite4.com"
-            $targets | Test-TcpConnection -Port 443 | Where Connected | Get-TlsInformation
+            $targets | Test-TcpConnection -Port 443 -ShowConnectedOnly | Get-TlsInformation
 
             Attempts to connect to an array of hostnames on TCP port 443 and if the target host is listening obtain TLS information for the target.
         .EXAMPLE
@@ -880,23 +880,21 @@ function Invoke-DnsEnumeration {
 
         Enumerates DNS record data from the mydomain.org DNS domain using the subdomains.txt text file as input.
     .EXAMPLE
-        Invoke-DnsEnumeration -Domain mydomain.org | Test-TcpConnection -Port 80,443 | Where Connected
+        Invoke-DnsEnumeration -Domain mydomain.org | Test-TcpConnection -Port 80,443 -ShowConnectedOnly
 
         Enumerates DNS record data from the mydomain.org DNS domain, tests connectivity to TCP port 443, and returns only the hosts that are listening on ports 80 and 443.
     .EXAMPLE
-        Invoke-DnsEnumeration -Domain mydomain.org | Test-TcpConnection -Port 443 | Where Connected | Get-TlsInformation
+        Invoke-DnsEnumeration -Domain mydomain.org | Test-TcpConnection -Port 443 -ShowConnectedOnly | Get-TlsInformation
 
         Enumerates DNS record data from the mydomain.org DNS domain, tests connectivity to TCP port 443, and obtains to obtain TLS information about the endpoint.
     .EXAMPLE
-        Invoke-DnsEnumeration -Domain mydomain.com | Test-TcpConnection -Port 443 |
-            Where Connected | Get-TlsInformation |
-                Select HostName, IPAddress, Subject, Issuer, CertificateIsExpired, ValidFrom, ValidTo |
-                    Export-Csv TlsCertificateExpirationReport.csv
+        Invoke-DnsEnumeration -Domain mydomain.com | Test-TcpConnection -Port 443 -ShowConnectedOnly | Get-TlsInformation |
+            Select HostName, IPAddress, Subject, Issuer, CertificateIsExpired, ValidFrom, ValidTo |
+                Export-Csv TlsCertificateExpirationReport.csv
 
         Enumerates DNS record data from the mydomain.org DNS domain, tests connectivity to TCP port 443, obtains to obtain TLS information about the endpoint, and generates an export report as a CSV file.
     .LINK
         Test-TcpConnection
-        Where-Object
         Get-TlsInformation
         https://github.com/anthonyg-1/PSTcpIp
 #>
