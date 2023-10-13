@@ -83,7 +83,7 @@ $targetHostNames | ForEach-Object {
 
 # Attempts to connect to an array of hostnames on TCP port 443 and if the target host is listening obtain the TLS certificate, select the subject and expiration, and output the results as a list.
 $targets = "www.mywebsite1.com", "www.mywebsite2.com", "www.mywebsite3.com", "www.mywebsite4.com"
-$targets | Test-TcpConnection -Port 443 -ShowConnectedOnly | Get-TlsCertificate | Select Subject, NotAfter | Format-List
+$targets | Test-TcpConnection -Port 443 -WhereConnected | Get-TlsCertificate | Select Subject, NotAfter | Format-List
 
 # Gets an SSL certificate from www.mysite.com over port 443 using the aliased version of Get-TlsCertificate
 gtls -h www.mysite.com
@@ -100,7 +100,7 @@ Get-TlsInformation -Uri "https://www.mysite.com"
 
 # Attempts to connect to an array of hostnames on TCP port 443 and if the target host is listening and obtain TLS information for the target
 $targets = "www.mywebsite1.com", "www.mywebsite2.com", "www.mywebsite3.com", "www.mywebsite4.com"
-$targets | Test-TcpConnection -Port 443 -ShowConnectedOnly | Get-TlsInformation
+$targets | Test-TcpConnection -Port 443 -WhereConnected | Get-TlsInformation
 
 # Obtain a list of SANs (Subject Alternative Names) from ww.mysite.com.
 Get-TlsInformation -HostName www.mysite.com | Select -Expand SubjectAlternativeNames
@@ -121,10 +121,10 @@ Invoke-DnsEnumeration -Domain mydomain.org -WordListPath subdomains.txt
 Invoke-DnsEnumeration -Domain mydomain.org | Test-TcpConnection -Port 80,443 -ShowConnectedOnly
 
 # Enumerates DNS record data from the mydomain.org DNS domain, tests connectivity to TCP port 443, and obtains to obtain TLS information about the endpoint
-Invoke-DnsEnumeration -Domain mydomain.org | Test-TcpConnection -Port 443 -ShowConnectedOnly | Get-TlsInformation
+Invoke-DnsEnumeration -Domain mydomain.org | Test-TcpConnection -Port 443 -WhereConnected | Get-TlsInformation
 
 # Enumerates DNS record data from the mydomain.org DNS domain, tests connectivity to TCP port 443, obtains to obtain TLS information about the endpoint, and generates an export report as a CSV file
-Invoke-DnsEnumeration -Domain mydomain.com | Test-TcpConnection -Port 443 -ShowConnectedOnly | Get-TlsInformation | 
+Invoke-DnsEnumeration -Domain mydomain.com | Test-TcpConnection -Port 443 -WhereConnected | Get-TlsInformation | 
     Select HostName, IPAddress, Subject, Issuer, CertificateIsExpired, ValidFrom, ValidTo | 
         Export-Csv TlsCertificateExpirationReport.csv
 ```
@@ -138,7 +138,7 @@ Invoke-DnsEnumeration -Domain mydomain.com | Test-TcpConnection -Port 443 -ShowC
 Get-ADComputer -Filter {OperatingSystem -like "*2019*"} | Test-TcpConnection -Port 443 -Timeout 100 -ShowConnectedOnly
 
 # Get an expiration report of LDAPS certificates from Active Directory domain controllers:
-Get-ADDomainController -Filter * | Test-TcpConnection -Port 636 -ShowConnectedOnly | Get-TlsCertificate | Select Subject, NotAfter
+Get-ADDomainController -Filter * | Test-TcpConnection -Port 636 -WhereConnected | Get-TlsCertificate | Select Subject, NotAfter
 ```
 
 ### HTTP response header retrieval
