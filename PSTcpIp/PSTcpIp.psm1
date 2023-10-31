@@ -42,7 +42,7 @@ if (-not(Test-Path -Path $commonPortsFilePath )) {
 
 $tcpPortData = Get-Content -Path $tcpPortsJsonFilePath  -Raw | ConvertFrom-Json
 $protocolData = Get-Content -Path $protocolsJsonFilePath  -Raw | ConvertFrom-Json
-$tcpCommonPorts = Get-Content -Path $commonPortsFilePath | ForEach-Object { $_.Trim() }
+[int[]]$tcpCommonPorts = Get-Content -Path $commonPortsFilePath | ForEach-Object { if ([Int]::TryParse($_.Trim(), [ref]$null)) { [int]$_.Trim() } }
 
 $portTable = @{ }
 foreach ($entry in $tcpPortData) {
@@ -320,7 +320,8 @@ function Test-TcpConnection {
                 }
 
                 $__PortNumbers | ForEach-Object {
-                    [int]$__PortNumber = $_
+                    $__PortNumber = $_
+
                     if ($nameResolved) {
                         $tcpClient = New-Object -TypeName System.Net.Sockets.TcpClient
                         try {
