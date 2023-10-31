@@ -23,6 +23,7 @@ if (Test-Path -Path $PSScriptRoot) { Update-FormatData -PrependPath $formatFileP
 
 $tcpPortsJsonFilePath = Join-Path -Path $PSScriptRoot -ChildPath 'ConfigData\TcpPorts.json'
 $protocolsJsonFilePath = Join-Path -Path $PSScriptRoot -ChildPath 'ConfigData\Protocols.json'
+$commonPortsFilePath = Join-Path -Path $PSScriptRoot -ChildPath 'ConfigData\CommonPorts.txt'
 
 if (-not(Test-Path -Path $tcpPortsJsonFilePath )) {
     $FileNotFoundException = New-Object -TypeName System.IO.FileNotFoundException -ArgumentList ("JSON configuration file not found in the following path: {0}" -f $tcpPortsJsonFilePath )
@@ -34,8 +35,14 @@ if (-not(Test-Path -Path $protocolsJsonFilePath )) {
     throw $FileNotFoundException
 }
 
+if (-not(Test-Path -Path $commonPortsFilePath )) {
+    $FileNotFoundException = New-Object -TypeName System.IO.FileNotFoundException -ArgumentList ("Common TCP port file not found in the following path: {0}" -f $commonPortsFilePath)
+    throw $FileNotFoundException
+}
+
 $tcpPortData = Get-Content -Path $tcpPortsJsonFilePath  -Raw | ConvertFrom-Json
 $protocolData = Get-Content -Path $protocolsJsonFilePath  -Raw | ConvertFrom-Json
+$tcpCommonPorts = Get-Content -Path $commonPortsFilePath | ForEach-Object { $_.Trim() }
 
 $portTable = @{ }
 foreach ($entry in $tcpPortData) {
@@ -216,7 +223,7 @@ function Test-TcpConnection {
     .EXAMPLE
         Test-TcpConnection -DNSHostName 'myserver'
 
-        Tests TCP connectivity on the server 'myserver' against the following ports: 20, 21, 22, 23, 25, 53, 80, 88, 137, 139, 389, 443, 445, 636, 1433, 1434, 1521, 2375, 3306, 3389, 5432, 5985, 5986, 8080, 8443
+        Tests TCP connectivity on the server 'myserver' against a set of common ports.
     .EXAMPLE
         Test-TcpConnection -HostName mywebsite.org -ShowConnectedOnly
 
@@ -267,8 +274,6 @@ function Test-TcpConnection {
         New-Variable -Name ipv4Addresses -Value $null -Force
         New-Variable -Name ipv4Address -Value $null -Force
         New-Variable -Name tcpClient -Value $null -Force
-
-        $commonPorts = @(20, 21, 22, 23, 25, 53, 80, 88, 137, 139, 389, 443, 445, 636, 1433, 1434, 1521, 2375, 3306, 3389, 5432, 5985, 5986, 8080, 8443)
     }
     PROCESS {
         $__ComputerNames = $DNSHostName
@@ -308,14 +313,14 @@ function Test-TcpConnection {
                 [boolean]$connectionSucceeded = $false
 
                 if (-not($PSBoundParameters.ContainsKey("Port"))) {
-                    $__PortNumbers = $commonPorts
+                    $__PortNumbers = $tcpCommonPorts
                 }
                 else {
                     $__PortNumbers = $Port
                 }
 
                 $__PortNumbers | ForEach-Object {
-                    $__PortNumber = $PSItem
+                    [int]$__PortNumber = $_
                     if ($nameResolved) {
                         $tcpClient = New-Object -TypeName System.Net.Sockets.TcpClient
                         try {
