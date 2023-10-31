@@ -80,6 +80,10 @@
         "description": "POP3"
     },
     {
+        "port": "111",
+        "description": "Sun RPC"
+    },
+    {
         "port": "113",
         "description": "Ident"
     },
@@ -93,7 +97,7 @@
     },
     {
         "port": "135",
-        "description": "Microsoft"
+        "description": "NetBIOS"
     },
     {
         "port": "137",
@@ -218,6 +222,10 @@
     {
         "port": "547",
         "description": "DHCPv6"
+    },
+    {
+        "port": "548",
+        "description": "Apple Share"
     },
     {
         "port": "560",
@@ -392,6 +400,10 @@
         "description": "MSN"
     },
     {
+        "port": "1917",
+        "description": "nOAgent"
+    },
+    {
         "port": "1985",
         "description": "Cisco"
     },
@@ -450,6 +462,10 @@
     {
         "port": "2745",
         "description": "Bagle.H"
+    },
+    {
+        "port": "2869",
+        "description": "ICSLAP"
     },
     {
         "port": "2967",
@@ -588,6 +604,10 @@
         "description": "VNC"
     },
     {
+        "port": "6000",
+        "description": "X Window Server"
+    },
+    {
         "port": "6112",
         "description": "Battle.net"
     },
@@ -662,6 +682,10 @@
     {
         "port": "8866",
         "description": "Bagle.B"
+    },
+    {
+        "port": "9001",
+        "description": "ETL Service Manager"
     },
     {
         "port": "9100",
@@ -754,5 +778,9 @@
     {
         "port": "31337",
         "description": "Back"
+    },
+    {
+        "port": "49000",
+        "description": "Fraggle Rock"
     }
 ]
