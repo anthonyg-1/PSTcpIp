@@ -259,9 +259,9 @@ function Test-TcpConnection {
         https://github.com/anthonyg-1/PSTcpIp
 	#>
     [CmdletBinding(DefaultParameterSetName = 'Default')]
-    [Alias('ttc')]
     [OutputType([PSTcpIp.TcpConnectionStatus], ParameterSetName = 'Default')]
     [OutputType([System.Boolean], ParameterSetName = 'Quiet')]
+    [Alias('ttc')]
     param(
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, Position = 0)][ValidateLength(1, 250)][Alias('ComputerName', 'HostName', 'IPAddress', 'Name', 'h', 'i')][String[]]$DNSHostName,
         [Parameter(Mandatory = $false, ValueFromPipeline = $false, Position = 1)][ValidateRange(1, 65535)][Alias('PortNumber', 'p')][Int[]]$Port,
@@ -424,6 +424,7 @@ function Get-TlsCertificate {
             https://github.com/anthonyg-1/PSTcpIp
     #>
     [CmdletBinding(DefaultParameterSetName = 'HostName')]
+    [Alias('gtls', 'gtlsc', 'gssl', 'Get-SslCertificate')]
     [OutputType([System.Security.Cryptography.X509Certificates.X509Certificate2])]
     param(
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "HostName")][ValidateLength(1, 250)][Alias('ComputerName', 'IPAddress', 'Name', 'h', 'i')][String]$HostName,
@@ -671,6 +672,7 @@ function Get-TlsInformation {
             https://github.com/anthonyg-1/PSTcpIp
     #>
     [CmdletBinding(DefaultParameterSetName = 'Uri')]
+    [Alias('Get-TlsStatus', 'Get-TlsInfo', 'gtlsi', 'gtlss')]
     [OutputType([PSTcpIp.TlsInfo])]
     param
     (
@@ -905,6 +907,7 @@ function Invoke-DnsEnumeration {
         https://github.com/anthonyg-1/PSTcpIp
 #>
     [CmdletBinding()]
+    [Alias('idnse', 'dnse')]
     [OutputType([PSCustomObject])]
     param (
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][ValidateLength(1, 255)][Alias('d')][System.String]$Domain,
@@ -993,27 +996,17 @@ function Invoke-DnsEnumeration {
 #endregion
 
 
+#region Export Statements
+
 Export-ModuleMember -Function Test-TcpConnection
 Export-ModuleMember -Function Get-TlsCertificate
 Export-ModuleMember -Function Get-HttpResponseHeader
 Export-ModuleMember -Function Get-TlsInformation
 Export-ModuleMember -Function Invoke-DnsEnumeration
 
-
-New-Alias -Name ttc -Value Test-TcpConnection -Force
-New-Alias -Name gtls -Value Get-TlsCertificate -Force
-New-Alias -Name gssl -Value Get-TlsCertificate -Force
-New-Alias -Name Get-SslCertificate -Value Get-TlsCertificate -Force
-New-Alias -Name Get-TlsStatus -Value Get-TlsInformation -Force
-New-Alias -Name Get-TlsInfo -Value Get-TlsInformation -Force
-New-Alias -Name gtlsi -Value Get-TlsInformation -Force
-New-Alias -Name gwrh -Value Get-HttpResponseHeader -Force
-New-Alias -Name gtlss -Value Get-TlsInformation -Force
-New-Alias -Name idnse -Value Invoke-DnsEnumeration
-
-
 Export-ModuleMember -Alias ttc
 Export-ModuleMember -Alias gtls
+Export-ModuleMember -Alias gtlsc
 Export-ModuleMember -Alias gssl
 Export-ModuleMember -Alias Get-SslCertificate
 Export-ModuleMember -Alias Get-TlsStatus
@@ -1021,3 +1014,6 @@ Export-ModuleMember -Alias gwrh
 Export-ModuleMember -Alias gtlsi
 Export-ModuleMember -Alias gtlss
 Export-ModuleMember -Alias idnse
+Export-ModuleMember -Alias dnse
+
+#endregion
