@@ -500,6 +500,14 @@
         "description": "iSCSI"
     },
     {
+        "port": "3268",
+        "description": "Global Catalog"
+    },
+    {
+        "port": "3269",
+        "description": "Global Catalog over SSL"
+    },
+    {
         "port": "3306",
         "description": "MySQL"
     },
