@@ -346,7 +346,14 @@ function Test-TcpConnection {
                     $connectionStatusObject.HostName = $destination
                     $connectionStatusObject.IPAddress = $ipv4Address
                     $connectionStatusObject.Port = $__PortNumber
-                    $connectionStatusObject.Service = $tcpPortAndDescriptionData.Item($__PortNumber)
+
+                    if ($null -ne ($tcpPortAndDescriptionData.Item($__PortNumber))) {
+                        $connectionStatusObject.Service = $tcpPortAndDescriptionData.Item($__PortNumber)
+                    }
+                    else {
+                        $connectionStatusObject.Service = "Unknown"
+                    }
+
                     $connectionStatusObject.Connected = $connectionSucceeded
                     $connectionStatusObject.HostNameResolved = $nameResolved
 
