@@ -372,6 +372,10 @@
         "description": "L2TP"
     },
     {
+        "port": "1720",
+        "description": "h323q931"
+    },
+    {
         "port": "1723",
         "description": "MS"
     },
@@ -489,7 +493,7 @@
     },
     {
         "port": "3128",
-        "description": "HTTP"
+        "description": "Squid HTTP"
     },
     {
         "port": "3222",
