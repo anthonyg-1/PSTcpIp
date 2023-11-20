@@ -24,6 +24,7 @@ if (Test-Path -Path $PSScriptRoot) { Update-FormatData -PrependPath $formatFileP
 $tcpPortsJsonFilePath = Join-Path -Path $PSScriptRoot -ChildPath 'ConfigData\TcpPorts.json'
 $protocolsJsonFilePath = Join-Path -Path $PSScriptRoot -ChildPath 'ConfigData\Protocols.json'
 $commonPortsFilePath = Join-Path -Path $PSScriptRoot -ChildPath 'ConfigData\CommonPorts.txt'
+$dnsDefaultPrefixesFilePath = Join-Path $PSScriptRoot -ChildPath '.\ConfigData\DnsDefaultPrefixes.txt'
 
 if (-not(Test-Path -Path $tcpPortsJsonFilePath )) {
     $FileNotFoundException = New-Object -TypeName System.IO.FileNotFoundException -ArgumentList ("JSON configuration file not found in the following path: {0}" -f $tcpPortsJsonFilePath )
@@ -40,21 +41,25 @@ if (-not(Test-Path -Path $commonPortsFilePath )) {
     throw $FileNotFoundException
 }
 
-$tcpPortData = Get-Content -Path $tcpPortsJsonFilePath  -Raw | ConvertFrom-Json
-$protocolData = Get-Content -Path $protocolsJsonFilePath  -Raw | ConvertFrom-Json
-[int[]]$tcpCommonPorts = Get-Content -Path $commonPortsFilePath | ForEach-Object { if ([Int]::TryParse($_.Trim(), [ref]$null)) { [int]$_.Trim() } }
+if (-not(Test-Path -Path $dnsDefaultPrefixesFilePath )) {
+    $FileNotFoundException = New-Object -TypeName System.IO.FileNotFoundException -ArgumentList ("Default DNS prefix list not found in the following path: {0}" -f $dnsDefaultPrefixesFilePath)
+    throw $FileNotFoundException
+}
 
-$portTable = @{ }
+
+$tcpPortData = Get-Content -Path $tcpPortsJsonFilePath -Raw | ConvertFrom-Json
+$protocolData = Get-Content -Path $protocolsJsonFilePath -Raw | ConvertFrom-Json
+[int[]]$tcpCommonPorts = Get-Content -Path $commonPortsFilePath | ForEach-Object { if ([Int]::TryParse($_.Trim(), [ref]$null)) { [int]$_.Trim() } }
+$defaultDnsPrefixes = Get-Content -Path $dnsDefaultPrefixesFilePath
+
+$tcpPortAndDescriptionData = @{ }
 foreach ($entry in $tcpPortData) {
-    if (-not($portTable.ContainsKey([int]$entry.Port))) {
-        $portTable.Add([int]$entry.port, $entry.description)
+    if (-not($tcpPortAndDescriptionData.ContainsKey([int]$entry.Port))) {
+        $tcpPortAndDescriptionData.Add([int]$entry.port, $entry.description)
     }
 }
 
-$protocolArray = $protocolData | Select-Object -ExpandProperty protocols
-
-New-Variable -Name tcpPortAndDescriptionData -Value $portTable -Option ReadOnly -Scope Global -Force
-New-Variable -Name protocolList -Value $protocolArray -Option ReadOnly -Scope Global -Force
+$protocolList = $protocolData | Select-Object -ExpandProperty protocols
 
 #endregion
 
@@ -271,9 +276,9 @@ function Test-TcpConnection {
         [Parameter(Mandatory = $false, Position = 4)][Alias('sco', 'sc', 'Connected', 'ShowConnected', 'WhereConnected', 'wc')][Switch]$ShowConnectedOnly
     )
     BEGIN {
-        New-Variable -Name ipv4Addresses -Value $null -Force
-        New-Variable -Name ipv4Address -Value $null -Force
-        New-Variable -Name tcpClient -Value $null -Force
+        $ipv4Addresses = $null
+        $ipv4Address = $null
+        $tcpClient = $null
     }
     PROCESS {
         $__ComputerNames = $DNSHostName
@@ -519,6 +524,7 @@ function Get-TlsCertificate {
     }
 }
 
+
 function Get-HttpResponseHeader {
     <#
     .SYNOPSIS
@@ -557,24 +563,26 @@ function Get-HttpResponseHeader {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true,
-            Position = 0)][Alias('u')][ValidateNotNullOrEmpty()][System.Uri]$Uri,
+            Position = 0, ParameterSetName = "Uri")][Alias('u')][ValidateNotNullOrEmpty()][System.Uri]$Uri,
 
         [Parameter(Mandatory = $false,
             Position = 1)][Alias('ht')][Switch]$AsHashtable
     )
     PROCESS {
-        [bool]$isValidUri = [System.Uri]::IsWellFormedUriString($Uri, 1)
+        [Uri]$targetUri = $Uri
+
+        [bool]$isValidUri = [System.Uri]::IsWellFormedUriString($targetUri, 1)
 
         if (-not($isValidUri)) {
             $ArgumentException = [ArgumentException]::new("Invalid data passed to Uri parameter.")
             Write-Error -Exception $ArgumentException -Category InvalidArgument -ErrorAction Stop
         }
 
-        [bool]$canConnect = Test-TcpConnection -DNSHostName $Uri.DnsSafeHost -Port $Uri.Port -Quiet
+        [bool]$canConnect = Test-TcpConnection -DNSHostName $targetUri.DnsSafeHost -Port $targetUri.Port -Quiet
         if ($canConnect) {
             try {
                 # Get response headers:
-                $responseHeaders = Invoke-WebRequest -Uri $Uri.AbsoluteUri -MaximumRedirection 0 -SkipCertificateCheck -ErrorAction Stop | Select-Object -ExpandProperty Headers -ErrorAction Stop
+                $responseHeaders = Invoke-WebRequest -Uri $targetUri.AbsoluteUri -MaximumRedirection 0 -SkipCertificateCheck -ErrorAction Stop | Select-Object -ExpandProperty Headers -ErrorAction Stop
 
                 # Create sorted table:
                 $sortedHeaders = $responseHeaders.GetEnumerator() | Sort-Object -Property Key
@@ -599,7 +607,7 @@ function Get-HttpResponseHeader {
             }
         }
         else {
-            $webExceptionMessage = "Unable to connect to the following endpoint: $Uri"
+            $webExceptionMessage = "Unable to connect to the following endpoint: $targetUri"
             $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
             Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Continue
         }
@@ -922,48 +930,6 @@ function Invoke-DnsEnumeration {
         [Parameter(Mandatory = $false)][ValidateNotNullOrEmpty()][Alias('wl', 'Path')][System.IO.FileInfo]$WordListPath
     )
     BEGIN {
-        $defaultDnsPrefixes = @("a", "access", "accounting", "accounts", "ad", "adm", "admin", "administrator", "ads", "adserver", "affiliate", "affiliates",
-            "agenda", "alpha", "alumni", "analytics", "ann", "api", "apollo", "app", "apps", "ar", "archive", "art", "assets", "atlas", "auth",
-            "auto", "autoconfig", "autodiscover", "av", "ayuda", "b", "b2b", "b2c", "backup", "backups", "banner", "barracuda", "bb", "bbs", "beta", "biblioteca",
-            "billing", "blackboard", "blog", "blogs", "board", "book", "booking", "bookings", "broadcast-ip", "bsd", "bt", "bug", "bugs", "business",
-            "c", "ca", "cache", "cacti", "cal", "calendar", "cam", "careers", "cart", "cas", "catalog", "catalogo", "catalogue", "cc", "cctv", "cdn", "cdn1", "cdn2",
-            "chat", "chimera", "chronos", "ci", "cisco", "citrix", "classroom", "client", "clientes", "clients", "cloud", "cloudflare-resolve-to", "club", "cms", "cn",
-            "co", "community", "conference", "config", "connect", "contact", "contacts", "content", "control", "controller", "controlp", "controlpanel", "corp", "corporate",
-            "correo", "correoweb", "cp", "cpanel", "crm", "cs", "css", "customers", "cvs", "d", "da", "dashboard", "data", "database", "db", "db1", "db2", "dbadmin", "dbs",
-            "dc", "de", "default", "demo", "demo2", "daemon", "demostration", "descargas", "design", "desktop", "dev", "dev01", "dev1", "dev2", "devel", "developers", "development",
-            "dialin", "diana", "direct", "directory", "dl", "dmz", "dns", "dns1", "dns2", "dns3", "dns4", "doc", "docs", "domain", "domainadmin", "domaincontrol", "domaincontroller",
-            "domain-controller", "domaincontrolpanel", "domainmanagement", "domains", "download", "downloads", "drupal", "e", "eaccess", "ebook", "echo", "ecommerce", "edu", "ektron",
-            "elearning", "email", "en", "eng", "english", "enterpriseenrollment", "enterpriseregistration", "erp", "es", "eu", "event", "events", "ex", "example", "examples", "exchange",
-            "external", "extranet", "f", "facebook", "faq", "fax", "fb", "feedback", "feeds", "file", "files", "fileserver", "finance", "firewall", "folders", "forms", "foro", "foros", "forum",
-            "forums", "foto", "fr", "free", "freebsd", "fs", "ftp", "ftp1", "ftp2", "ftpadmin", "ftpd", "fw", "g", "galeria", "gallery", "game", "games", "gate", "gateway", "gilford", "gis", "git",
-            "gmail", "go", "google", "graphql", "groups", "groupwise", "gu", "guest", "guia", "guide", "gw", "health", "help", "helpdesk", "hera", "heracles", "hercules",
-            "home", "host", "host2", "hosting", "hotspot", "hr", "hypernova", "i", "id", "idp", "im", "image", "images", "images1", "images2", "images3", "images4", "images5", "images6",
-            "images7", "images8", "imail", "imap", "imap3", "imap3d", "imapd", "imaps", "img", "img1", "img2", "img3", "imgs", "imogen", "in", "incoming", "info", "inmuebles", "internal", "interno",
-            "intra", "intranet", "io", "ip", "ip6", "ipfixe", "iphone", "ipmi", "ipsec", "ipv4", "ipv6", "irc", "ircd", "is", "isa", "it", "j", "ja", "jabber", "jboss", "jboss2", "jira",
-            "job", "jobs", "jp", "js", "jupiter", "k", "kb", "kerberos", "kubernetes", "l", "la", "lab", "laboratories", "laboratorio", "laboratory", "labs", "ldap", "legacy", "lib", "library", "link", "links",
-            "linux", "lisa", "list", "lists", "live", "lms", "local", "localhost", "log", "loghost", "login", "logon", "logs", "london", "loopback", "love", "lp", "lync", "lyncdiscover", "m", "m1",
-            "m2", "magento", "mail", "mail01", "mail1", "mail2", "mail3", "mail4", "mail5", "mailadmin", "mailbackup", "mailbox", "mailer", "mailgate", "mailhost", "mailing", "mailman", "mailserver",
-            "main", "manage", "manager", "mantis", "map", "maps", "market", "marketing", "mars", "master", "math", "mb", "mc", "mdm", "media", "meet", "member", "members", "mercury", "meta", "meta01",
-            "meta02", "meta03", "meta1", "meta2", "meta3", "miembros", "mijn", "minerva", "mirror", "ml", "mm", "mob", "mobil", "mobile", "monitor", "monitoring", "moodle", "movil", "mrtg",
-            "ms", "msoid", "mssql", "munin", "music", "mx", "mx0", "mx01", "mx02", "mx03", "mx1", "mx2", "mx3", "mx-a", "mx-b", "my", "mysql", "mysql2", "n", "nagios", "nas", "nat", "nelson", "neon",
-            "net", "netmail", "netscaler", "network", "network-ip", "networks", "new", "newmail", "news", "newsgroups", "newsite", "newsletter", "nl", "noc", "novell",
-            "ns", "ns0", "ns01", "ns02", "ns03", "ns1", "ns10", "ns11", "ns12", "ns2", "ns3", "ns4", "ns5", "ns6", "ns7", "ns8", "nt", "ntp", "ntp1", "o", "oa", "office", "office2",
-            "old", "oldmail", "oldsite", "oldwww", "on", "online", "op", "openbsd", "operation", "operations", "ops", "ora", "oracle", "origin", "orion", "os", "osx", "ou", "outgoing",
-            "outlook", "owa", "ox", "p", "painel", "panel", "partner", "partners", "pay", "payment", "payments", "pbx", "pcanywhere", "pda", "pegasus", "pendrell", "personal", "pgsql", "phoenix",
-            "photo", "photos", "php", "phpmyadmin", "pm", "pma", "poczta", "pop", "pop3", "portal", "portfolio", "post", "postgres", "postgresql", "postman", "postmaster", "pp", "ppp", "pr", "preprod",
-            "pre-prod", "pre-production", "press", "preview", "private", "pro", "prod", "production", "project", "projects", "promo", "proxy", "prueba", "pruebas", "pt", "pub", "public", "q", "qa", "r", "ra",
-            "radio", "radius", "ras", "rdp", "redirect", "redmine", "register", "relay", "remote", "remote2", "repo", "report", "reports", "repos", "research", "resources", "restricted", "reviews", "robinhood",
-            "root", "router", "rss", "rt", "rtmp", "ru", "s", "s1", "s2", "s3", "s4", "sa", "sales", "sample", "samples", "sandbox", "sc", "search", "secure", "security", "seo", "server", "server1", "server2",
-            "service", "services", "sftp", "share", "sharepoint", "shell", "shop", "shopping", "signup", "sip", "site", "siteadmin", "sitebuilder", "sites", "skype", "sms", "smtp", "smtp1", "smtp2", "smtp3", "snmp",
-            "social", "software", "solaris", "soporte", "sp", "spam", "speedtest", "sport", "sports", "sql", "sqlserver", "squirrel", "squirrelmail", "ssh", "ssl", "sslvpn", "sso", "st", "staff", "stage", "staging",
-            "start", "stat", "static", "static1", "static2", "stats", "status", "storage", "store", "stream", "streaming", "student", "sun", "support", "survey", "sv", "svn", "t", "team", "tech", "telewerk",
-            "telework", "temp", "test", "test1", "test2", "test3", "testing", "testsite", "testweb", "tfs", "tftp", "thumbs", "ticket", "tickets", "time", "tools", "trac", "track", "tracker", "tracking",
-            "train", "training", "travel", "ts", "tunnel", "tutorials", "tv", "tw", "u", "uat", "uk", "unix", "up", "update", "upload", "uploads", "us", "user", "users", "v", "v2", "vc", "ventas", "video",
-            "videos", "vip", "virtual", "vista", "vle", "vm", "vms", "vmware", "vnc", "vod", "voip", "vpn", "vpn1", "vpn2", "vpn3", "vps", "vps1", "vps2", "w", "w3", "wap", "wc", "web", "web0", "web01", "web02",
-            "web03", "web1", "web2", "web3", "web4", "web5", "webadmin", "webcam", "webconf", "webct", "webdb", "webdisk", "weblog", "weblogs", "webmail", "webmail2", "webmaster", "webmin", "webservices", "webstats",
-            "webstore", "whm", "wifi", "wiki", "win", "win32", "windows", "wordpress", "work", "wp", "ws", "wsus", "ww", "ww0", "ww01", "ww02", "ww03", "ww1", "ww2", "ww3", "www", "www0", "www01", "www02", "www03",
-            "www1", "www2", "www3", "www4", "www5", "www6", "www7", "wwwm", "wwwold", "www-test", "wwww", "x", "xml")
-
         function _queryDnsDomain([string]$dnsDomain) {
             # Query record data:
             try {
