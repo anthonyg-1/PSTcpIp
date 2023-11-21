@@ -148,4 +148,7 @@ Get-HttpResponseHeader -Uri "https://mysite.com/"
 
 # Retrieves the HTTP response headers with the results as a Hashtable from the specified web endpoint:
 Get-HttpResponseHeader -Uri "https://mysite.com/" -AsHashtable
+
+# Retrieves the HTTP response headers from the specified web endpoint with a hostname of example.com
+Get-HttpResponseHeader -HostName "example.com"
 ```
