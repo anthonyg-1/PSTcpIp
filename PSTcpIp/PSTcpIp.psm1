@@ -531,6 +531,12 @@ function Get-HttpResponseHeader {
         Retrieves the response headers from a web endpoint.
     .DESCRIPTION
         Retrieves HTTP response headers from a web endpoint. An HTTP response header is a type of HTTP header that is used in the response that typically contains metadata about the target web endpoint.
+    .PARAMETER HostName
+        The target host for the web endpoint to get HTTP response headers from.
+    .PARAMETER Port
+        The port for the target host. This parameter is only applicable when using the HostName parameter. Default value is 443.
+    .PARAMETER ProtocolScheme
+        Determines whether the request is HTTP or HTTPS. Default value is HTTPS.
     .PARAMETER Uri
         Specifies the Uniform Resource Identifier (URI) of the web endpoint. This parameter is mandatory and can be provided through the pipeline or by property name.
     .PARAMETER AsHashtable
@@ -540,6 +546,10 @@ function Get-HttpResponseHeader {
 
         Retrieves the HTTP response headers from the specified web endpoint.
     .EXAMPLE
+        Get-HttpResponseHeader -HostName "example.com"
+
+        Retrieves the HTTP response headers from the specified web endpoint with a hostname of example.com.
+    .EXAMPLE
         "https://example.com" | Get-HttpResponseHeader
 
         Retrieves the HTTP response headers from the web endpoint provided through the pipeline.
@@ -547,6 +557,10 @@ function Get-HttpResponseHeader {
         gwrh -u "https://example.com"
 
         Retrieves the HTTP response headers from the specified web endpoint.
+    .EXAMPLE
+        gwrh -h "example.com"
+
+        Retrieves the HTTP response headers from the specified web endpoint hostname of example.com.
     .INPUTS
         System.Uri
     .OUTPUTS
@@ -555,11 +569,24 @@ function Get-HttpResponseHeader {
         https://developer.mozilla.org/en-US/docs/Glossary/Response_header
         https://github.com/anthonyg-1/PSTcpIp
     #>
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = 'Uri')]
     [Alias('gwrh')]
     [OutputType([System.Management.Automation.PSCustomObject], [System.Collections.Specialized.OrderedDictionary])]
     Param
     (
+        [Parameter(Mandatory = $true,
+            ValueFromPipeline = $false,
+            ValueFromPipelineByPropertyName = $true,
+            Position = 0, ParameterSetName = "HostName")][ValidateLength(1, 250)][Alias('ComputerName', 'IPAddress', 'Name', 'h', 'i')][String]$HostName,
+
+        [Parameter(Mandatory = $false,
+            ValueFromPipelineByPropertyName = $true,
+            Position = 1, ParameterSetName = "HostName")][ValidateRange(1, 65535)][Alias('PortNumber', 'p')][Int]$Port = 443,
+
+        [Parameter(Mandatory = $false,
+            ValueFromPipelineByPropertyName = $true,
+            Position = 1, ParameterSetName = "HostName")][ValidateSet("HTTP", "HTTPS")][Alias('Scheme', 'ps', 's')][String]$ProtocolScheme = "https",
+
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true,
@@ -570,6 +597,18 @@ function Get-HttpResponseHeader {
     )
     PROCESS {
         [Uri]$targetUri = $Uri
+        if ($PSBoundParameters.ContainsKey("HostName")) {
+
+            [bool]$hostNameIsUri = [System.Uri]::IsWellFormedUriString($HostName, 1)
+            if ($hostNameIsUri) {
+                $argumentExceptionMessage = "Value passed to HostName is a URI. Use the Uri parameter instead."
+                $ArgumentException = [ArgumentException]::new($argumentExceptionMessage)
+                Write-Error -Exception $ArgumentException -Category InvalidArgument -ErrorAction Stop
+            }
+
+            $uriString = "{0}://{1}:{2}" -f $ProtocolScheme.ToLower(), $HostName, $Port
+            $targetUri = [System.Uri]::new($uriString)
+        }
 
         [bool]$isValidUri = [System.Uri]::IsWellFormedUriString($targetUri, 1)
 
