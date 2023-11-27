@@ -849,7 +849,7 @@ function Get-TlsInformation {
                 else {
                     $opensslFound = $null -ne (Get-Command -CommandType Application -Name "openssl" -ErrorAction SilentlyContinue)
                     if ($opensslFound) {
-                        $sansList = (($sslCert.ExportCertificatePem() | openssl x509 -noout -text | Select-String -Pattern "DNS:") -split ",") | ForEach-Object {
+                        $sansList = (($sslCert.ExportCertificatePem() | openssl x509 -noout -text 2>$null | Select-String -Pattern "DNS:") -split ",") | ForEach-Object {
                             $_.Replace("DNS:", "").Trim()
                         }
                     }
