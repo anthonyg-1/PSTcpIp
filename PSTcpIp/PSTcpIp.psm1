@@ -577,7 +577,7 @@ function Get-HttpResponseHeader {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $false,
             ValueFromPipelineByPropertyName = $true,
-            Position = 0, ParameterSetName = "HostName")][ValidateLength(1, 250)][Alias('ComputerName', 'Name', 'h')][String]$HostName,
+            Position = 0, ParameterSetName = "HostName")][ValidateLength(1, 250)][Alias('ComputerName', 'Name', 'h', 'IPAddress', 'i')][String]$HostName,
 
         [Parameter(Mandatory = $false,
             ValueFromPipelineByPropertyName = $true,
