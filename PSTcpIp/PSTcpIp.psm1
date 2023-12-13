@@ -1135,6 +1135,7 @@ Export-ModuleMember -Function Get-TlsCertificate
 Export-ModuleMember -Function Get-HttpResponseHeader
 Export-ModuleMember -Function Get-TlsInformation
 Export-ModuleMember -Function Invoke-DnsEnumeration
+Export-ModuleMember -Function Get-IPInformation
 
 Export-ModuleMember -Alias ttc
 Export-ModuleMember -Alias gtls
@@ -1147,5 +1148,6 @@ Export-ModuleMember -Alias gtlsi
 Export-ModuleMember -Alias gtlss
 Export-ModuleMember -Alias idnse
 Export-ModuleMember -Alias dnse
+Export-ModuleMember -Alias gipi
 
 #endregion
