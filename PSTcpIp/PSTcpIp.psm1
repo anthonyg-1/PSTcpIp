@@ -1041,10 +1041,8 @@ function Get-IPInformation {
         $PSDefaultParameterValues = @{
             "Get-IPInformation:ApiKey"=(Get-Secret -Name 'whatismyip_api_key'-AsPlainText)
         }
-
         $targetIPAddress = "13.107.213.36"
-
-        Get-IPInformation -IPAddress $targetIPAddress -ApiKey $key
+        Get-IPInformation -IPAddress $targetIPAddress
 
         Define default value for ApiKey param to be stored in the users profile defined in $PROFILE and obtains IP address geolocation data for 13.107.213.36.
     .PARAMETER IPAddress
