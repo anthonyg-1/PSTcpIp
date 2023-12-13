@@ -166,5 +166,5 @@ $PSDefaultParameterValues = @{
     "Get-IPInformation:ApiKey"=(Get-Secret -Name 'whatismyip_api_key'-AsPlainText)
 }
 $targetIPAddress = "13.107.213.36"
-Get-IPInformation -IPAddress $targetIPAddress -ApiKey $key
+Get-IPInformation -IPAddress $targetIPAddress
 ```
