@@ -1031,6 +1031,7 @@ function Get-IPInformation {
     .DESCRIPTION
         Returns geolocation and hosting information for a specified IP address by calling the whatismyip.com REST API. This function requires an API key from whatismyip.com. For more on this, see the .NOTES section.
     .EXAMPLE
+        #requires -Module Microsoft.PowerShell.SecretManagement
         $secretName = 'whatismyip_api_key'
         $key = Get-Secret -Name $secretName -AsPlainText
         $targetIPAddress = "13.107.213.36"
@@ -1038,6 +1039,7 @@ function Get-IPInformation {
 
         Obtains IP address geolocation data for 13.107.213.36
     .EXAMPLE
+        #requires -Module Microsoft.PowerShell.SecretManagement
         $PSDefaultParameterValues = @{
             "Get-IPInformation:ApiKey"=(Get-Secret -Name 'whatismyip_api_key'-AsPlainText)
         }
