@@ -92,7 +92,7 @@ gtls -h www.mysite.com
 ### TLS/SSL information retrieval examples
 
 ```powershell
-# Obtains TLS status on mysite.com against TCP port 443.
+# Obtains TLS status on mysite.com against TCP port 443
 Get-TlsInformation -HostName mysite.com -Port 443
 
 # Gets TLS status on "https://www.mysite.com" 
@@ -134,16 +134,16 @@ Invoke-DnsEnumeration -Domain mydomain.com | Test-TcpConnection -Port 443 -Where
 ```powershell
 #requires -Module ActiveDirectory
 
-# Get all Server 2019 instances from Active Directory and determine which ones are listening on port 443:
+# Get all Server 2019 instances from Active Directory and determine which ones are listening on port 443
 Get-ADComputer -Filter {OperatingSystem -like "*2019*"} | Test-TcpConnection -Port 443 -Timeout 100 -ShowConnectedOnly
 
-# Get an expiration report of LDAPS certificates from Active Directory domain controllers:
+# Get an expiration report of LDAPS certificates from Active Directory domain controllers
 Get-ADDomainController -Filter * | Test-TcpConnection -Port 636 -WhereConnected | Get-TlsCertificate | Select Subject, NotAfter
 ```
 
 ### HTTP response header retrieval
 ```powershell
-# Retrieves the HTTP response headers from the specified web endpoint:
+# Retrieves the HTTP response headers from the specified web endpoint
 Get-HttpResponseHeader -Uri "https://mysite.com/"
 
 # Retrieves the HTTP response headers with the results as a Hashtable from the specified web endpoint:
@@ -158,6 +158,13 @@ Get-HttpResponseHeader -HostName "example.com"
 # Obtains IP address geolocation data for 13.107.213.36
 $secretName = 'whatismyip_api_key'
 $key = Get-Secret -Name $secretName -AsPlainText
+$targetIPAddress = "13.107.213.36"
+Get-IPInformation -IPAddress $targetIPAddress -ApiKey $key
+
+# Define default value for ApiKey param to be stored in the users profile defined in $PROFILE and obtains IP address geolocation data for 13.107.213.36
+$PSDefaultParameterValues = @{
+    "Get-IPInformation:ApiKey"=(Get-Secret -Name 'whatismyip_api_key'-AsPlainText)
+}
 $targetIPAddress = "13.107.213.36"
 Get-IPInformation -IPAddress $targetIPAddress -ApiKey $key
 ```
