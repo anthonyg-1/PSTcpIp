@@ -181,6 +181,25 @@ function Get-WebServerCertificate([string]$TargetHost, [int]$Port = 443, [int]$T
     }
 }
 
+function Invoke-TimedWait {
+    [CmdletBinding()]
+    [OutputType([void])]
+    Param
+    (
+        [Parameter(Mandatory = $true, Position = 0)][Int]$Seconds,
+        [Parameter(Mandatory = $true, Position = 1)][String]$Activity
+    )
+    PROCESS {
+        for ($i = $Seconds; $i -ge 0; $i--) {
+            $percentComplete = (($Seconds - $i) / $Seconds) * 100
+            Write-Progress -Activity "Waiting $Seconds seconds prior to $Activity.." -Status "$i seconds remaining" -PercentComplete $percentComplete
+            Start-Sleep -Seconds 1
+        }
+
+        Write-Host "Sleep cycle complete. Initiating $Activity now..."
+    }
+}
+
 #endregion
 
 
@@ -1001,6 +1020,107 @@ function Invoke-DnsEnumeration {
         # Subdomains/hosts query:
         foreach ($prefix in $subdomains) {
             _queryDnsDomain "$prefix.$Domain"
+        }
+    }
+}
+
+function Get-IPInformation {
+    <#
+    .SYNOPSIS
+        Returns information for a specified IP address.
+    .DESCRIPTION
+        Returns geolocation and hosting information for a specified IP address by calling the whatismyip.com REST API. This function requires an API key from whatismyip.com. For more on this, see the .NOTES section.
+    .EXAMPLE
+        $secretName = 'whatismyip_api_key'
+        $key = Get-Secret -Name $secretName -AsPlainText
+        $targetIPAddress = "13.107.213.36"
+        Get-IPInformation -IPAddress $targetIPAddress -ApiKey $key
+
+        Obtains IP address geolocation data for 13.107.213.36
+    .EXAMPLE
+        $PSDefaultParameterValues = @{
+            "Get-IPInformation:ApiKey"=(Get-Secret -Name 'whatismyip_api_key'-AsPlainText)
+        }
+
+        $targetIPAddress = "13.107.213.36"
+
+        Get-IPInformation -IPAddress $targetIPAddress -ApiKey $key
+
+        Define default value for ApiKey param to be stored in the users profile defined in $PROFILE and obtains IP address geolocation data for 13.107.213.36.
+    .PARAMETER IPAddress
+        The IP address to obtain for.
+    .PARAMETER ApiKey
+        The whatismyip.com REST API key.
+    .NOTES
+        In order to obtain an API key for this function, please see the following: https://members.whatismyip.com/api/
+    .LINK
+        Get-Secret
+        https://members.whatismyip.com/api
+        https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.secretmanagement
+        https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_parameters_default_values
+    #>
+    [CmdletBinding()]
+    [Alias('gipi')]
+    [OutputType([PSCustomObject])]
+    Param
+    (
+        [Parameter(Mandatory = $true,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true,
+            Position = 0)][Alias('ip', 'i')][String]$IPAddress,
+
+        [Parameter(Mandatory = $true,
+            ValueFromPipeline = $false,
+            ValueFromPipelineByPropertyName = $false,
+            Position = 0)][Alias('Secret', 'k', 'ak', 's')][String]$ApiKey
+
+    )
+
+    BEGIN {
+        $activity = "whatismyip.com REST API call"
+        $timeToWaitInSeconds = 60
+
+        [Uri]$baseUri = "https://api.whatismyip.com/ip-address-lookup.php"
+
+    }
+    PROCESS {
+        [string]$stringIPAddress = ""
+        try {
+            $stringIPAddress = [System.Net.IPAddress]::Parse($IPAddress).IPAddressToString
+        }
+        catch {
+            $argExcepMessage = "An invalid IP address was passed to the IPAddress parameter."
+            $ArgumentException = New-Object -TypeName ArgumentException -ArgumentList $argExcepMessage
+            Write-Error -Exception $ArgumentException -ErrorAction Stop
+        }
+
+        $url = "{0}?key={1}&input={2}" -f $baseUri.AbsoluteUri, $ApiKey, $stringIPAddress
+
+        try {
+            Invoke-TimedWait -Activity $activity -Seconds $timeToWaitInSeconds
+
+            $responses = Invoke-RestMethod -Method Get -Uri $url -ErrorAction Stop
+
+            $responses | ForEach-Object {
+                $ht = @{}
+                $rows = $_.Split("`r`n")
+
+                $rows | ForEach-Object {
+                    $columns = $_.Split(":")
+
+                    $prop = $columns[0]
+                    $value = $columns[1]
+
+                    if ($prop.Length -ge 1) {
+                        $ht.Add($prop, $value)
+                    }
+                }
+                $individualRecord = [PSCustomObject]$ht
+                return $individualRecord
+            }
+        }
+        catch {
+            Write-Error -Exception $_.Exception -ErrorAction Continue
         }
     }
 }
