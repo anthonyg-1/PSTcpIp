@@ -152,3 +152,12 @@ Get-HttpResponseHeader -Uri "https://mysite.com/" -AsHashtable
 # Retrieves the HTTP response headers from the specified web endpoint with a hostname of example.com
 Get-HttpResponseHeader -HostName "example.com"
 ```
+
+### Get IP address information
+```powershell
+# Obtains IP address geolocation data for 13.107.213.36
+$secretName = 'whatismyip_api_key'
+$key = Get-Secret -Name $secretName -AsPlainText
+$targetIPAddress = "13.107.213.36"
+Get-IPInformation -IPAddress $targetIPAddress -ApiKey $key
+```
