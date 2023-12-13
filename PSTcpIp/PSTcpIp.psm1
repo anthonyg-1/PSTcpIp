@@ -1060,7 +1060,7 @@ function Get-IPInformation {
         https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_parameters_default_values
     #>
     [CmdletBinding()]
-    [Alias('gipi')]
+    [Alias('gipi', 'Get-IPAddressInformation')]
     [OutputType([PSCustomObject])]
     Param
     (
@@ -1149,5 +1149,6 @@ Export-ModuleMember -Alias gtlss
 Export-ModuleMember -Alias idnse
 Export-ModuleMember -Alias dnse
 Export-ModuleMember -Alias gipi
+Export-ModuleMember -Alias Get-IPAddressInformation
 
 #endregion
