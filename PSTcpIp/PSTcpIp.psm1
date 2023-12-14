@@ -667,7 +667,7 @@ function Get-HttpResponseHeader {
         else {
             $webExceptionMessage = "Unable to connect to the following endpoint: $targetUri"
             $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
-            Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Continue
+            Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Stop
         }
     }
 }
