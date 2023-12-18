@@ -780,6 +780,22 @@
         "description": "Xfire"
     },
     {
+        "port": "27017",
+        "description": "MongoDB"
+    },
+    {
+        "port": "27018",
+        "description": "MongoDB"
+    },
+    {
+        "port": "27019",
+        "description": "MongoDB"
+    },
+    {
+        "port": "27020",
+        "description": "MongoDB"
+    },
+    {
         "port": "27374",
         "description": "Sub7"
     },
