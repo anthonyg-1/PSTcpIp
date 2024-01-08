@@ -1072,7 +1072,7 @@ function Get-IPInformation {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $false,
             ValueFromPipelineByPropertyName = $false,
-            Position = 0)][Alias('Secret', 'k', 'ak', 's')][String]$ApiKey
+            Position = 1)][Alias('Secret', 'k', 'ak', 's')][String]$ApiKey
 
     )
 
@@ -1099,7 +1099,7 @@ function Get-IPInformation {
         try {
             Invoke-TimedWait -Activity $activity -Seconds $timeToWaitInSeconds
 
-            $responses = Invoke-RestMethod -Method Get -Uri $url -ErrorAction Stop
+            $responses = Invoke-RestMethod -Method Get -Uri $url -SkipCertificateCheck -ErrorAction Stop
 
             $responses | ForEach-Object {
                 $ht = @{}
@@ -1120,7 +1120,12 @@ function Get-IPInformation {
             }
         }
         catch {
-            Write-Error -Exception $_.Exception -ErrorAction Continue
+            if ($null -ne $_.Exception.InnerException) {
+                Write-Error -Exception $_.Exception.InnerException -Category InvalidOperation -ErrorAction Continue
+            }
+            else {
+                Write-Error -Exception $_.Exception -Category InvalidOperation -ErrorAction Continue
+            }
         }
     }
 }
