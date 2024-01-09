@@ -196,7 +196,7 @@ function Invoke-TimedWait {
             Start-Sleep -Seconds 1
         }
 
-        Write-Host "Sleep cycle complete. Initiating $Activity now..."
+        Write-Host -Object "Sleep cycle complete. Initiating $Activity now..." -ForegroundColor Cyan
     }
 }
 
