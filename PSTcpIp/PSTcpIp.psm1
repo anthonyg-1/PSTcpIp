@@ -67,7 +67,6 @@ $protocolList = $protocolData | Select-Object -ExpandProperty protocols
 
 $tcpConnectionStatusClassDef = @"
 using System;
-using System.Net;
 namespace PSTcpIp
 {
     public class TcpConnectionStatus
@@ -85,14 +84,13 @@ namespace PSTcpIp
 
 $tlsStatusDefinition = @"
 using System;
-using System.Net;
 using System.Security.Cryptography.X509Certificates;
 namespace PSTcpIp
 {
     public class TlsInfo
     {
         public string HostName { get; set; }
-        public IPAddress IPAddress { get; set; }
+        public string IPAddress { get; set; }
         public int Port { get; set; }
         public string SerialNumber { get; set; }
         public string Thumbprint { get; set; }
