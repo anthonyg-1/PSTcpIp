@@ -46,7 +46,6 @@ if (-not(Test-Path -Path $dnsDefaultPrefixesFilePath )) {
     throw $FileNotFoundException
 }
 
-
 $tcpPortData = Get-Content -Path $tcpPortsJsonFilePath -Raw | ConvertFrom-Json
 $protocolData = Get-Content -Path $protocolsJsonFilePath -Raw | ConvertFrom-Json
 [int[]]$tcpCommonPorts = Get-Content -Path $commonPortsFilePath | ForEach-Object { if ([Int]::TryParse($_.Trim(), [ref]$null)) { [int]$_.Trim() } }
@@ -180,6 +179,7 @@ function Get-WebServerCertificate([string]$TargetHost, [int]$Port = 443, [int]$T
         throw $CryptographicException
     }
 }
+
 
 function Invoke-TimedWait {
     [CmdletBinding()]
@@ -402,6 +402,7 @@ function Test-TcpConnection {
         Remove-Variable -Name ipv4Addresses
     }
 }
+
 
 function Get-TlsCertificate {
     <#
@@ -671,6 +672,7 @@ function Get-HttpResponseHeader {
         }
     }
 }
+
 
 function Get-TlsInformation {
     <#
@@ -942,6 +944,7 @@ function Get-TlsInformation {
     }
 }
 
+
 function Invoke-DnsEnumeration {
     <#
     .SYNOPSIS
@@ -1024,6 +1027,7 @@ function Invoke-DnsEnumeration {
     }
 }
 
+
 function Get-IPInformation {
     <#
     .SYNOPSIS
@@ -1089,7 +1093,7 @@ function Get-IPInformation {
             $stringIPAddress = [System.Net.IPAddress]::Parse($IPAddress).IPAddressToString
         }
         catch {
-            $argExcepMessage = "An invalid IP address was passed to the IPAddress parameter."
+            $argExcepMessage = "Invalid data was passed to the IPAddress parameter."
             $ArgumentException = New-Object -TypeName ArgumentException -ArgumentList $argExcepMessage
             Write-Error -Exception $ArgumentException -ErrorAction Stop
         }
