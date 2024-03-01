@@ -100,8 +100,8 @@ namespace PSTcpIp
         public DateTime ValidTo { get; set; }
         public int CertificateValidityPeriodInYears { get; set; }
         public int CertificateValidityPeriodInDays { get; set; }
-        public bool CertificateIsExpired { get; set; }
-        public bool CertificateVerifies { get; set; }
+        public bool? CertificateIsExpired { get; set; }
+        public bool? CertificateVerifies { get; set; }
         public string SignatureAlgorithm { get; set; }
         public string[] NegotiatedCipherSuites { get; set; }
         public string CipherAlgorithm { get; set; }
@@ -109,12 +109,12 @@ namespace PSTcpIp
         public string KeyExchangeAlgorithm { get; set; }
         public string StrictTransportSecurity { get; set; }
         public string[] SubjectAlternativeNames { get; set; }
-        public bool Ssl2 { get; set; }
-        public bool Ssl3 { get; set; }
-        public bool Tls { get; set; }
-        public bool Tls11 { get; set; }
-        public bool Tls12 { get; set; }
-        public bool Tls13 { get; set; }
+        public bool? Ssl2 { get; set; }
+        public bool? Ssl3 { get; set; }
+        public bool? Tls { get; set; }
+        public bool? Tls11 { get; set; }
+        public bool? Tls12 { get; set; }
+        public bool? Tls13 { get; set; }
     }
 }
 "@
@@ -180,27 +180,27 @@ function Get-WebServerCertificate([string]$TargetHost, [int]$Port = 443, [int]$T
             # Build target host and part for connect argument for openssl:
             $targetHostAndPort = "{0}:{1}" -f $TargetHost, $Port
 
-            try {
-                # Get the cert:
-                $openSslResult = "Q" | openssl s_client -connect $targetHostAndPort 2>$null
+            #try {
+            # Get the cert:
+            $openSslResult = "Q" | openssl s_client -connect $targetHostAndPort 2>$null
 
-                # Parse the relevant base64 cert resulting from openssl:
-                $beginString = "BEGIN CERTIFICATE"
-                $endString = "END CERTIFICATE"
-                $base64CertString = (($openSslResult -join "").Split($beginString)[1].Split($endString)[0]).Replace("-", "")
+            # Parse the relevant base64 cert resulting from openssl:
+            $beginString = "BEGIN CERTIFICATE"
+            $endString = "END CERTIFICATE"
+            $base64CertString = (($openSslResult -join "").Split($beginString)[1].Split($endString)[0]).Replace("-", "")
 
-                # Convert the base64 string to a byte array to be fed to the X509Certificate2 constructor:
-                $certBytes = [System.Convert]::FromBase64String($base64CertString)
+            # Convert the base64 string to a byte array to be fed to the X509Certificate2 constructor:
+            [byte[]]$certBytes = [System.Convert]::FromBase64String($base64CertString)
 
-                # Instantiate the certificate from the deserialized byte array:
-                $tlsCert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($certBytes)
+            # Instantiate the certificate from the deserialized byte array:
+            $tlsCert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($certBytes)
 
-                # return the TLS cert:
-                return $tlsCert
-            }
-            catch {
-                throw $CryptographicException
-            }
+            # return the TLS cert:
+            return $tlsCert
+            #}
+            #catch {
+            #   throw $CryptographicException
+            #}
         }
         else {
             throw $CryptographicException
@@ -944,7 +944,12 @@ function Get-TlsInformation {
                         }
                     }
                     catch {
-                        $tlsInfo.$protocol = $false
+                        if ($null -eq $sslCert.SignatureAlgorithm) {
+                            $tlsInfo.$protocol = $null
+                        }
+                        else {
+                            $tlsInfo.$protocol = $false
+                        }
                     }
                     finally {
                         if ($sslStream) {
