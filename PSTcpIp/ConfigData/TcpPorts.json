@@ -576,6 +576,10 @@
         "description": "SIP"
     },
     {
+        "port": "5061",
+        "description": "SIP"
+    },
+    {
         "port": "5190",
         "description": "AIM/ICQ"
     },
