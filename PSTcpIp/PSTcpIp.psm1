@@ -73,6 +73,7 @@ namespace PSTcpIp
     {
         public string HostName { get; set; }
         public string IPAddress { get; set; }
+        public string SourceAddress { get; set; }
         public Int32 Port { get; set; }
         public string Service { get; set; }
         public bool Connected { get; set; }
@@ -126,6 +127,39 @@ Add-Type -TypeDefinition $tlsStatusDefinition -ErrorAction Stop
 
 
 #region Private Functions
+
+function Get-SourceAddress([string]$Destination = "8.8.8.8") {
+    [string]$sourceAddress = ""
+
+    if ($Destination) {
+        [string]$targetIP = ""
+        try {
+            $targetAddresses = [System.Net.Dns]::GetHostAddresses($Destination)
+            $targetIP = $targetAddresses | Select-Object -ExpandProperty IPAddressToString -First 1
+        }
+        catch {
+            return $sourceAddress
+        }
+
+        if ($targetIP) {
+            if ($IsWindows) {
+                $sourceAddress = Find-NetRoute -RemoteIPAddress $targetIP | Select-Object -ExpandProperty IPAddress -First 1
+            }
+            else {
+                try {
+                    Get-Command -Name ip -ErrorAction Stop | Out-Null
+                    $output = $(ip route get $targetIP)
+                    $sourceAddress = $output.Split("src")[1].Split(" ")[1]
+                }
+                catch {
+                    return $sourceAddress
+                }
+            }
+        }
+    }
+
+    return $sourceAddress
+}
 
 function Get-WebServerCertificate([string]$TargetHost, [int]$Port = 443, [int]$Timeout = 30) {
 
@@ -373,7 +407,10 @@ function Test-TcpConnection {
                 $__PortNumbers | ForEach-Object {
                     $__PortNumber = $_
 
+                    $connectionStatusObject = [PSTcpIp.TcpConnectionStatus]::new()
+
                     if ($nameResolved) {
+                        $connectionStatusObject.SourceAddress = Get-SourceAddress -Destination $ipv4Address
                         $tcpClient = New-Object -TypeName System.Net.Sockets.TcpClient
                         try {
                             ($tcpClient.BeginConnect($ipv4Address, $__PortNumber, $null, $null).AsyncWaitHandle.WaitOne($Timeout)) | Out-Null
@@ -392,10 +429,13 @@ function Test-TcpConnection {
                             $tcpClient.Dispose()
                         }
                     }
+                    else {
+                        $connectionStatusObject.SourceAddress = Get-SourceAddress
+                    }
 
-                    $connectionStatusObject = New-Object -TypeName PSTcpIp.TcpConnectionStatus
                     $connectionStatusObject.HostName = $destination
                     $connectionStatusObject.IPAddress = $ipv4Address
+
                     $connectionStatusObject.Port = $__PortNumber
 
                     if ($null -ne ($tcpPortAndDescriptionData.Item($__PortNumber))) {
