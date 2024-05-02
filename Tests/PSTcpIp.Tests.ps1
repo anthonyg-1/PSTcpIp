@@ -57,7 +57,7 @@ Describe "Testing module and cmdlets" -Tag Unit -WarningAction SilentlyContinue 
     $modulePath = "$moduleDirectory\$module.psm1"
 
     Context "$module test against PSSA rules" {
-        $analysis = Invoke-ScriptAnalyzer -Path $modulePath -ExcludeRule PSUseBOMForUnicodeEncodedFile, PSReviewUnusedParameter, PSAvoidUsingEmptyCatchBlock, PSAvoidUsingWriteHost
+        $analysis = Invoke-ScriptAnalyzer -Path $modulePath -ExcludeRule PSReviewUnusedParameter, PSAvoidUsingEmptyCatchBlock, PSAvoidUsingWriteHost
 
         foreach ($rule in $scriptAnalyzerRules) {
             It "should pass $rule" {
