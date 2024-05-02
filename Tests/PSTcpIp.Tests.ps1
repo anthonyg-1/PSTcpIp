@@ -54,9 +54,9 @@ Describe "$module Module Structure and Validation Tests" -Tag Unit -WarningActio
 Describe "Testing module and cmdlets" -Tag Unit -WarningAction SilentlyContinue {
     $scriptAnalyzerRules = Get-ScriptAnalyzerRule
 
-    Context "$module test against PSSA rules" {
-        $modulePath = "$moduleDirectory\$module.psm1"
+    $modulePath = "$moduleDirectory\$module.psm1"
 
+    Context "$module test against PSSA rules" {
         $analysis = Invoke-ScriptAnalyzer -Path $modulePath -ExcludeRule PSUseBOMForUnicodeEncodedFile, PSReviewUnusedParameter, PSAvoidUsingEmptyCatchBlock, PSAvoidUsingWriteHost
 
         foreach ($rule in $scriptAnalyzerRules) {
@@ -70,8 +70,6 @@ Describe "Testing module and cmdlets" -Tag Unit -WarningAction SilentlyContinue 
     }
 
     Context "$module test against InjectionHunter rules" {
-        $modulePath = "$moduleDirectory\$module.psm1"
-
         $injectionHunterModulePath = Get-Module -Name InjectionHunter -ListAvailable | Select-Object -ExpandProperty Path
 
         $analysis = Invoke-ScriptAnalyzer -Path $modulePath -CustomRulePath $injectionHunterModulePath
