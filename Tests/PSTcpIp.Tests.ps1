@@ -1,5 +1,6 @@
 #requires -Module Pester
 #requires -Module PSScriptAnalyzer
+#requires -Module InjectionHunter
 
 $myDefaultDirectory = Get-Location
 
@@ -50,7 +51,7 @@ Describe "$module Module Structure and Validation Tests" -Tag Unit -WarningActio
 
 }
 
-Describe "Testing module and cmdlets against PSSA rules" -Tag Unit -WarningAction SilentlyContinue {
+Describe "Testing module and cmdlets" -Tag Unit -WarningAction SilentlyContinue {
     $scriptAnalyzerRules = Get-ScriptAnalyzerRule
 
     Context "$module test against PSSA rules" {
@@ -61,7 +62,24 @@ Describe "Testing module and cmdlets against PSSA rules" -Tag Unit -WarningActio
         foreach ($rule in $scriptAnalyzerRules) {
             It "should pass $rule" {
                 If ($analysis.RuleName -contains $rule) {
-                    $analysis | Where RuleName -eq $rule -OutVariable failures
+                    $analysis | Where-Object RuleName -eq $rule -OutVariable failures
+                    $failures.Count | Should -Be 0
+                }
+            }
+        }
+    }
+
+    Context "$module test against InjectionHunter rules" {
+        $modulePath = "$moduleDirectory\$module.psm1"
+
+        $injectionHunterModulePath = Get-Module -Name InjectionHunter -ListAvailable | Select-Object -ExpandProperty Path
+
+        $analysis = Invoke-ScriptAnalyzer -Path $modulePath -CustomRulePath $injectionHunterModulePath
+
+        foreach ($rule in $scriptAnalyzerRules) {
+            It "should pass $rule" {
+                If ($analysis.RuleName -contains $rule) {
+                    $analysis | Where-Object RuleName -eq $rule -OutVariable failures
                     $failures.Count | Should -Be 0
                 }
             }
