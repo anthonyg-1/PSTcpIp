@@ -56,6 +56,12 @@ Describe "Testing module and cmdlets" -Tag Unit -WarningAction SilentlyContinue 
 
     $modulePath = "$moduleDirectory\$module.psm1"
 
+    <#
+        1. PSReviewUnusedParameter is excluded due to false positives for private method Get-WebServerCertificate and Get-TlsInformation for the $callback variable (which is used literally the next line).
+        2. PSAvoidUsingEmptyCatchBlock is excluded due to the necessary use of an empty catch block for Invoke-DnsEnumeration to not stop when an exception occurs when calling [System.Net.Dns]::GetHostAddresses()
+        3. PSAvoidUsingWriteHost is very intentionally excluded in for the private function Invoke-TimedWait as I do not want the status messages to ever reach the pipeline.
+    #>
+
     Context "$module test against PSSA rules" {
         $analysis = Invoke-ScriptAnalyzer -Path $modulePath -ExcludeRule PSReviewUnusedParameter, PSAvoidUsingEmptyCatchBlock, PSAvoidUsingWriteHost
 
