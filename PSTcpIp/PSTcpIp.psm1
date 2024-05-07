@@ -1,4 +1,4 @@
-﻿using namespace System
+using namespace System
 using namespace System.Collections
 using namespace System.Net
 using namespace System.Net.Sockets
@@ -672,7 +672,7 @@ function Get-HttpResponseHeader {
 
         [Parameter(Mandatory = $false,
             ValueFromPipelineByPropertyName = $true,
-            Position = 1, ParameterSetName = "HostName")][ValidateSet("HTTP", "HTTPS")][Alias('Scheme', 'ps', 's')][String]$ProtocolScheme = "https",
+            Position = 2, ParameterSetName = "HostName")][ValidateSet("HTTP", "HTTPS")][Alias('Scheme', 'ps', 's')][String]$ProtocolScheme = "https",
 
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
@@ -680,7 +680,7 @@ function Get-HttpResponseHeader {
             Position = 0, ParameterSetName = "Uri")][Alias('u')][ValidateNotNullOrEmpty()][System.Uri]$Uri,
 
         [Parameter(Mandatory = $false,
-            Position = 1)][Alias('ht')][Switch]$AsHashtable
+            Position = 3)][Alias('ht')][Switch]$AsHashtable
     )
     PROCESS {
         [Uri]$targetUri = $Uri
