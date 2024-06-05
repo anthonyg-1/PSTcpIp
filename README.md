@@ -87,6 +87,14 @@ $targets | Test-TcpConnection -Port 443 -WhereConnected | Get-TlsCertificate | S
 
 # Gets an SSL certificate from www.mysite.com over port 443 using the aliased version of Get-TlsCertificate
 gtls -h www.mysite.com
+
+# Get full certificate chain, convert certificate objects into PEM strings, and output to a file
+#requires -Module PSJsonWebToken
+
+$targetServerName = "powershell.org"
+$outputFilePath = "chain.crt"
+
+Get-TlsCertificate -HostName $targetServerName -IncludeChain | Convert-X509CertificateToBase64 | Out-File $outputFilePath -Encoding ascii
 ```
 
 ### TLS/SSL information retrieval examples
