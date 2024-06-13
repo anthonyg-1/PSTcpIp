@@ -146,7 +146,7 @@ Invoke-DnsEnumeration -Domain mydomain.com | Test-TcpConnection -Port 443 -Where
 Get-ADComputer -Filter {OperatingSystem -like "*2019*"} | Test-TcpConnection -Port 443 -Timeout 100 -ShowConnectedOnly
 
 # Get an expiration report of LDAPS certificates from Active Directory domain controllers
-Get-ADDomainController -Filter * | Test-TcpConnection -Port 636 -WhereConnected | Get-TlsCertificate | Select Subject, NotAfter
+Get-ADDomainController -Filter * | % { Test-TcpConnection -HostName $_.HostName -Port 636 -WhereConnected | Get-TlsCertificate | Select Subject, NotAfter }
 ```
 
 ### HTTP response header retrieval
