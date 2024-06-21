@@ -7,7 +7,7 @@
     RootModule        = 'PSTcpIp.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '4.30.4'
+    ModuleVersion     = '5.0.0'
 
     # ID used to uniquely identify this module
     GUID              = '99675863-c68e-46fd-b669-0d4942004b28'
@@ -16,7 +16,7 @@
     Author            = 'Anthony Guimelli'
 
     # Minimum version of the PowerShell engine required by this module.
-    PowerShellVersion = "7.2"
+    PowerShellVersion = "7.4.2"
 
     # Description of the functionality provided by this module
     Description       = 'Provides cmdlets to perform various TCPIP and TLS/SSL related tasks.'
