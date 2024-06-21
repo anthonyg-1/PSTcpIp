@@ -1206,6 +1206,183 @@ function Get-IPInformation {
     }
 }
 
+
+function Invoke-WebCrawl {
+    <#
+    .SYNOPSIS
+        Invokes a web crawl starting from a specified base URI, traversing links up to a specified depth, and optionally including or excluding specific hosts.
+    .DESCRIPTION
+        The Invoke-WebCrawl function performs a web crawl starting from the provided base URI. It traverses links up to the specified depth and can include or exclude specific hosts based on the provided parameters. The function outputs a custom object for each visited link, containing the URI, hostname, status code, and status description.
+    .PARAMETER BaseUri
+        The base URI from which the web crawl starts. This parameter is mandatory.
+    .PARAMETER Depth
+        The depth to which the web crawl should traverse links. The default value is 2. This parameter is optional.
+    .PARAMETER Headers
+        A hashtable of headers to include in the web requests as a hash table. This parameter is optional.
+    .PARAMETER IncludeHosts
+        An array of hostnames to include in the web crawl. If specified, only links to these hosts will be followed. This parameter is mandatory if the "Include" parameter set is used.
+    .PARAMETER ExcludeHosts
+        An array of hostnames to exclude from the web crawl. If specified, links to these hosts will not be followed. This parameter is mandatory if the "Exclude" parameter set is used.
+    .EXAMPLE
+        Invoke-WebCrawl -BaseUri "https://example.com" -Depth 3
+
+        Starts a web crawl from "https://example.com" and traverses links up to a depth of 3.
+    .EXAMPLE
+        Invoke-WebCrawl -BaseUri "https://example.com" -Depth 2 -IncludeHosts "example.com", "sub.example.com"
+
+        Starts a web crawl from "https://example.com", traverses links up to a depth of 2, and includes only links to "example.com" and "sub.example.com".
+    .EXAMPLE
+        Invoke-WebCrawl -BaseUri "https://example.com" -Depth 2 -ExcludeHosts "unwanted.com"
+
+        Starts a web crawl from "https://example.com", traverses links up to a depth of 2, and excludes links to "unwanted.com".
+    .INPUTS
+        System.Uri
+
+            A System.Uri value is received by the BaseUri parameter.
+    .OUTPUTS
+        PSCustomObject
+
+            Outputs a custom object containing the following properties:
+            - BaseUri: The base URI from which the web crawl started.
+            - Uri: The URI of the visited link.
+            - HostName: The hostname of the visited link.
+            - StatusCode: The HTTP status code returned for the visited link.
+            - StatusDescription: The status description returned for the visited link.
+#>
+    [CmdletBinding(DefaultParameterSetName = "Default")]
+    [Alias('iwc')]
+    [OutputType([PSCustomObject])]
+    param (
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, Position = 0)][Alias('Uri', 'u', 'bu')][Uri]$BaseUri,
+        [Parameter(Mandatory = $false, Position = 1)][Alias('d')][int]$Depth = 2,
+        [Parameter(Mandatory = $false, Position = 2)][Alias('h')][System.Collections.Hashtable]$Headers,
+        [Parameter(Mandatory = $true, Position = 3, ParameterSetName = "Include")][Alias('i', 'il')][String[]]$IncludeHosts,
+        [Parameter(Mandatory = $true, Position = 3, ParameterSetName = "Exclude")][Alias('e', 'el')][String[]]$ExcludeHosts
+    )
+    BEGIN {
+        function Get-WebLinkStatus {
+            param (
+                [Parameter(Mandatory = $true)][Uri]$Uri,
+                [Parameter(Mandatory = $false)][int]$Depth = 2,
+                [Parameter(Mandatory = $false)][System.Collections.Hashtable]$Headers,
+                [Parameter(Mandatory = $false)][String[]]$IncludeHosts,
+                [Parameter(Mandatory = $false)][String[]]$ExcludeHosts,
+                [hashtable]$Visited = @{}
+            )
+
+            PROCESS {
+                $targetUri = $Uri.AbsoluteUri
+
+                # Avoid visiting the same URL more than once:
+                if ($Visited.ContainsKey($targetUri)) {
+                    return
+                }
+
+                $Visited[$targetUri] = $true
+
+                $iwrParams = @{
+                    Uri                            = $Uri
+                    Method                         = "Get"
+                    UseBasicParsing                = $true
+                    SkipCertificateCheck           = $true
+                    SkipHttpErrorCheck             = $true
+                    ErrorAction                    = "Stop"
+                    AllowInsecureRedirect          = $true
+                    AllowUnencryptedAuthentication = $true
+                    UseDefaultCredentials          = $true
+                }
+
+                if ($PSBoundParameters.ContainsKey("Headers")) {
+                    $iwrParams.Add("Headers", $Headers)
+                }
+
+                $parsedUri = [Uri]::new($targetUri)
+                $targetHost = $parsedUri.Host
+
+                [PSObject]$response = $null
+                [int]$statusCode = 0
+                [string]$statusDescription = ""
+                try {
+                    $response = Invoke-WebRequest @iwrParams
+                    $statusCode = $response.StatusCode
+                    $statusDescription = $response.StatusDescription
+                }
+                catch {
+                    $statusCode = 520
+                    $statusDescription = $_.Exception.Message
+                }
+
+                $webCrawlResult = ([PSCustomObject]@{
+                        BaseUri           = $BaseUri.AbsoluteUri
+                        Uri               = $targetUri
+                        HostName          = $targetHost
+                        StatusCode        = $statusCode
+                        StatusDescription = $statusDescription
+                    })
+
+                Write-Output -InputObject $webCrawlResult
+
+                # If the depth is 0, we stop here:
+                if ($Depth -le 0) {
+                    return;
+                }
+
+                # Extract links from the HTML content
+                $links = $response.Links | Where-Object { $_.href -match "^http" } | Select-Object -ExpandProperty href
+                foreach ($link in $links) {
+                    # Recursively visit each link:
+                    $parsedUri = [Uri]::new($link)
+                    $targetHost = $parsedUri.Host
+
+                    $gwlsParamsInner = @{
+                        Uri     = $link
+                        Depth   = ($Depth - 1)
+                        Visited = $Visited
+                    }
+
+                    if ($PSBoundParameters.ContainsKey("Headers")) {
+                        $gwlsParamsInner.Add("Headers", $Headers)
+                    }
+
+                    if ($PSBoundParameters.ContainsKey("IncludeHosts")) {
+                        if ($targetHost -in $IncludeHosts) {
+                            Get-WebLinkStatus @gwlsParamsInner -IncludeHosts $IncludeHosts
+                        }
+                    }
+                    elseif ($PSBoundParameters.ContainsKey("ExcludeHosts")) {
+                        if ($targetHost -notin $ExcludeHosts) {
+                            Get-WebLinkStatus @gwlsParamsInner -ExcludeHosts $ExcludeHosts
+                        }
+                    }
+                    else {
+                        Get-WebLinkStatus @gwlsParamsInner
+                    }
+                }
+            }
+        }
+    }
+    PROCESS {
+        $gwlsParamsOuter = @{
+            Uri   = $BaseUri
+            Depth = ($Depth - 1)
+        }
+
+        if ($PSBoundParameters.ContainsKey("Headers")) {
+            $gwlsParamsOuter.Add("Headers", $Headers)
+        }
+
+        if ($PSBoundParameters.ContainsKey("IncludeHosts")) {
+            Get-WebLinkStatus @gwlsParamsOuter -IncludeHosts $IncludeHosts
+        }
+        elseif ($PSBoundParameters.ContainsKey("ExcludeHosts")) {
+            Get-WebLinkStatus @gwlsParamsOuter -ExcludeHosts $ExcludeHosts
+        }
+        else {
+            Get-WebLinkStatus @gwlsParamsOuter
+        }
+    }
+}
+
 #endregion
 
 
@@ -1217,6 +1394,7 @@ Export-ModuleMember -Function Get-HttpResponseHeader
 Export-ModuleMember -Function Get-TlsInformation
 Export-ModuleMember -Function Invoke-DnsEnumeration
 Export-ModuleMember -Function Get-IPInformation
+Export-ModuleMember -Function Invoke-WebCrawl
 
 Export-ModuleMember -Alias ttc
 Export-ModuleMember -Alias gtls
@@ -1231,5 +1409,6 @@ Export-ModuleMember -Alias idnse
 Export-ModuleMember -Alias dnse
 Export-ModuleMember -Alias gipi
 Export-ModuleMember -Alias Get-IPAddressInformation
+Export-ModuleMember -Alias iwc
 
 #endregion
