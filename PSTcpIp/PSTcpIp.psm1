@@ -1,4 +1,4 @@
-using namespace System
+﻿using namespace System
 using namespace System.Collections
 using namespace System.Net
 using namespace System.Net.Sockets
@@ -1228,13 +1228,13 @@ function Invoke-WebCrawl {
 
         Starts a web crawl from "https://example.com" and traverses links up to a depth of 3.
     .EXAMPLE
-        Invoke-WebCrawl -BaseUri "https://example.com" -Depth 2 -IncludeHosts "example.com", "sub.example.com"
+        Invoke-WebCrawl -BaseUri "https://example.com" -IncludeHosts "example.com", "sub.example.com"
 
-        Starts a web crawl from "https://example.com", traverses links up to a depth of 2, and includes only links to "example.com" and "sub.example.com".
+        Starts a web crawl from "https://example.com", traverses links up to a default depth of 2, and includes only links to "example.com" and "sub.example.com".
     .EXAMPLE
-        Invoke-WebCrawl -BaseUri "https://example.com" -Depth 2 -ExcludeHosts "unwanted.com"
+        Invoke-WebCrawl -BaseUri "https://example.com" -ExcludeHosts "unwanted.com"
 
-        Starts a web crawl from "https://example.com", traverses links up to a depth of 2, and excludes links to "unwanted.com".
+        Starts a web crawl from "https://example.com", traverses links up to a default depth of 2, and excludes links to "unwanted.com".
     .INPUTS
         System.Uri
 
@@ -1362,6 +1362,16 @@ function Invoke-WebCrawl {
         }
     }
     PROCESS {
+        $targetHost = $BaseUri.DnsSafeHost
+        $targetPort = $BaseUri.Port
+
+        [bool]$canConnect = Test-TcpConnection -DNSHostName $targetHost -Port $targetPort -Quiet
+        if (-not($canConnect)) {
+            $webExceptionMessage = "Unable to reach base URI. Failed to connect to host {0} over port {1}." -f $targetHost, $targetPort
+            $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
+            Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Continue
+        }
+
         $gwlsParamsOuter = @{
             Uri   = $BaseUri
             Depth = ($Depth - 1)
