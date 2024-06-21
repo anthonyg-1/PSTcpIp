@@ -1362,33 +1362,40 @@ function Invoke-WebCrawl {
         }
     }
     PROCESS {
-        $targetHost = $BaseUri.DnsSafeHost
-        $targetPort = $BaseUri.Port
+        if ([Uri]::IsWellFormedUriString($BaseUri, 1)) {
+            $targetHost = $BaseUri.DnsSafeHost
+            $targetPort = $BaseUri.Port
 
-        [bool]$canConnect = Test-TcpConnection -DNSHostName $targetHost -Port $targetPort -Quiet
-        if (-not($canConnect)) {
-            $webExceptionMessage = "Unable to reach base URI. Failed to connect to host {0} over port {1}." -f $targetHost, $targetPort
-            $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
-            Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Continue
-        }
+            [bool]$canConnect = Test-TcpConnection -DNSHostName $targetHost -Port $targetPort -Quiet
+            if (-not($canConnect)) {
+                $webExceptionMessage = "Unable to reach base URI. Failed to connect to host {0} over port {1}." -f $targetHost, $targetPort
+                $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
+                Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Continue
+            }
 
-        $gwlsParamsOuter = @{
-            Uri   = $BaseUri
-            Depth = ($Depth - 1)
-        }
+            $gwlsParamsOuter = @{
+                Uri   = $BaseUri
+                Depth = ($Depth - 1)
+            }
 
-        if ($PSBoundParameters.ContainsKey("Headers")) {
-            $gwlsParamsOuter.Add("Headers", $Headers)
-        }
+            if ($PSBoundParameters.ContainsKey("Headers")) {
+                $gwlsParamsOuter.Add("Headers", $Headers)
+            }
 
-        if ($PSBoundParameters.ContainsKey("IncludeHosts")) {
-            Get-WebLinkStatus @gwlsParamsOuter -IncludeHosts $IncludeHosts
-        }
-        elseif ($PSBoundParameters.ContainsKey("ExcludeHosts")) {
-            Get-WebLinkStatus @gwlsParamsOuter -ExcludeHosts $ExcludeHosts
+            if ($PSBoundParameters.ContainsKey("IncludeHosts")) {
+                Get-WebLinkStatus @gwlsParamsOuter -IncludeHosts $IncludeHosts
+            }
+            elseif ($PSBoundParameters.ContainsKey("ExcludeHosts")) {
+                Get-WebLinkStatus @gwlsParamsOuter -ExcludeHosts $ExcludeHosts
+            }
+            else {
+                Get-WebLinkStatus @gwlsParamsOuter
+            }
         }
         else {
-            Get-WebLinkStatus @gwlsParamsOuter
+            $argExcepMessage = "{0} is not a valid URI" -f $BaseUri
+            $ArgumentException = [ArgumentException]::new($argExcepMessage)
+            Write-Error -Exception $ArgumentException -Category InvalidArgument -ErrorAction Continue
         }
     }
 }
