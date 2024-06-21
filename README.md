@@ -178,3 +178,9 @@ $PSDefaultParameterValues = @{
 $targetIPAddress = "13.107.213.36"
 Get-IPInformation -IPAddress $targetIPAddress
 ```
+
+### Web Crawling
+```powershell
+# Starts a web crawl from "https://example.com", traverses links up to a depth of 3, and excludes links to "unwanted.com"
+Invoke-WebCrawl -BaseUri "https://example.com" -Depth 3 -ExcludeHosts "unwanted.com"
+```
