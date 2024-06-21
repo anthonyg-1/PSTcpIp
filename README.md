@@ -181,6 +181,12 @@ Get-IPInformation -IPAddress $targetIPAddress
 
 ### Web Crawling
 ```powershell
+# Starts a web crawl from "https://example.com" and traverses links up to a depth of 3
+Invoke-WebCrawl -BaseUri "https://example.com" -Depth 3
+
 # Starts a web crawl from "https://example.com", traverses links up to a depth of 3, and excludes links to "unwanted.com"
 Invoke-WebCrawl -BaseUri "https://example.com" -Depth 3 -ExcludeHosts "unwanted.com"
+
+# Starts a web crawl from "https://example.com", traverses links up to a depth of 2, and includes only links to "example.com" and "sub.example.com"
+Invoke-WebCrawl -BaseUri "https://example.com" -IncludeHosts "example.com", "sub.example.com"
 ```
