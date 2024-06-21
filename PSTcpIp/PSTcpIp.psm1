@@ -1256,8 +1256,8 @@ function Invoke-WebCrawl {
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, Position = 0)][Alias('Uri', 'u', 'bu')][Uri]$BaseUri,
         [Parameter(Mandatory = $false, Position = 1)][Alias('d')][int]$Depth = 2,
         [Parameter(Mandatory = $false, Position = 2)][Alias('h')][System.Collections.Hashtable]$Headers,
-        [Parameter(Mandatory = $true, Position = 3, ParameterSetName = "Include")][Alias('i', 'il')][String[]]$IncludeHosts,
-        [Parameter(Mandatory = $true, Position = 3, ParameterSetName = "Exclude")][Alias('e', 'el')][String[]]$ExcludeHosts
+        [Parameter(Mandatory = $true, Position = 3, ParameterSetName = "Include")][Alias('i', 'il', 'ih')][String[]]$IncludeHosts,
+        [Parameter(Mandatory = $true, Position = 3, ParameterSetName = "Exclude")][Alias('e', 'el', 'eh')][String[]]$ExcludeHosts
     )
     BEGIN {
         function Get-WebLinkStatus {
