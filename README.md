@@ -189,4 +189,10 @@ Invoke-WebCrawl -BaseUri "https://example.com" -Depth 3 -ExcludeHosts "unwanted.
 
 # Starts a web crawl from "https://example.com", traverses links up to a depth of 2, and includes only links to "example.com" and "sub.example.com"
 Invoke-WebCrawl -BaseUri "https://example.com" -IncludeHosts "example.com", "sub.example.com"
+
+# Starts a web crawl from "https://example.com" and traverses links up to a depth of 3 using the webcrawl alias for Invoke-WebCrawl
+webcrawl -u "https://example.com" -d 3
+
+# Starts a web crawl from "https://example.com" and traverses links up to a depth of 3 using the iwc alias for Invoke-WebCrawl
+iwc -u "https://example.com" -d 3
 ```
