@@ -1,4 +1,4 @@
-﻿using namespace System
+using namespace System
 using namespace System.Collections
 using namespace System.Net
 using namespace System.Net.Sockets
@@ -1250,7 +1250,7 @@ function Invoke-WebCrawl {
             - StatusDescription: The status description returned for the visited link.
 #>
     [CmdletBinding(DefaultParameterSetName = "Default")]
-    [Alias('iwc')]
+    [Alias('iwc', 'webcrawl')]
     [OutputType([PSCustomObject])]
     param (
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, Position = 0)][Alias('Uri', 'u', 'bu')][Uri]$BaseUri,
@@ -1433,5 +1433,6 @@ Export-ModuleMember -Alias dnse
 Export-ModuleMember -Alias gipi
 Export-ModuleMember -Alias Get-IPAddressInformation
 Export-ModuleMember -Alias iwc
+Export-ModuleMember -Alias webcrawl
 
 #endregion
