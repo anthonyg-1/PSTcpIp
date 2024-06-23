@@ -708,7 +708,7 @@ function Get-HttpResponseHeader {
         if ($canConnect) {
             try {
                 # Get response headers:
-                $responseHeaders = Invoke-WebRequest -Uri $targetUri.AbsoluteUri -SkipCertificateCheck -SkipHttpErrorCheck -ErrorAction Stop | Select-Object -ExpandProperty Headers -ErrorAction Stop
+                $responseHeaders = Invoke-WebRequest -Uri $targetUri.AbsoluteUri -AllowInsecureRedirect -SkipCertificateCheck -SkipHttpErrorCheck -ErrorAction Stop | Select-Object -ExpandProperty Headers -ErrorAction Stop
 
                 # Create sorted table:
                 $sortedHeaders = $responseHeaders.GetEnumerator() | Sort-Object -Property Key
