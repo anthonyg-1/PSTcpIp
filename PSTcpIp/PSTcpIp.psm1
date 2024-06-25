@@ -1,5 +1,5 @@
-using namespace System
-using namespace System.Collections
+﻿using namespace System
+using namespace System.Collections.Generic
 using namespace System.Net
 using namespace System.Net.Sockets
 using namespace System.Net.Security
@@ -103,6 +103,7 @@ namespace PSTcpIp
         public int CertificateValidityPeriodInDays { get; set; }
         public bool? CertificateIsExpired { get; set; }
         public bool? CertificateVerifies { get; set; }
+        public bool? CertificateSubjectMatchesHostName { get; set; }
         public string SignatureAlgorithm { get; set; }
         public string[] NegotiatedCipherSuites { get; set; }
         public string CipherAlgorithm { get; set; }
@@ -779,32 +780,33 @@ function Get-TlsInformation {
 
                 This function returns a TlsInfo object. Example output against "https://www.microsoft.com/en-us" using the Uri parameter:
 
-                HostName                         : www.microsoft.com
-                IPAddress                        : 23.47.169.232
-                Port                             : 443
-                SerialNumber                     : 330003E2CD1066AD8DB81C060800000003E2CD
-                Thumbprint                       : E1579BA55125CEC3A78E39F55CF81DA8BFA94F88
-                Subject                          : CN=www.microsoft.com, O=Microsoft Corporation, L=Redmond, S=WA, C=US
-                Issuer                           : CN=Microsoft Azure RSA TLS Issuing CA 07, O=Microsoft Corporation, C=US
-                ValidFrom                        : 9/14/2023 1:24:20 PM
-                ValidTo                          : 9/8/2024 1:24:20 PM
-                CertificateValidityPeriodInYears : 1
-                CertificateValidityPeriodInDays  : 360
-                CertificateIsExpired             : False
-                CertificateVerifies              : True
-                SignatureAlgorithm               : sha384RSA
-                NegotiatedCipherSuites           : {TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384}
-                CipherAlgorithm                  : Aes256
-                CipherStrength                   : 256
-                KeyExchangeAlgorithm             : ECDH Ephemeral
-                StrictTransportSecurity          : Strict-Transport-Security not found in header
-                SubjectAlternativeNames          : {wwwqa.microsoft.com, www.microsoft.com, staticview.microsoft.com, i.s-microsoft.comΓÇª}
-                Ssl2                             : False
-                Ssl3                             : False
-                Tls                              : False
-                Tls11                            : False
-                Tls12                            : True
-                Tls13                            : False
+                HostName                          : www.microsoft.com
+                IPAddress                         : 23.47.169.232
+                Port                              : 443
+                SerialNumber                      : 330003E2CD1066AD8DB81C060800000003E2CD
+                Thumbprint                        : E1579BA55125CEC3A78E39F55CF81DA8BFA94F88
+                Subject                           : CN=www.microsoft.com, O=Microsoft Corporation, L=Redmond, S=WA, C=US
+                Issuer                            : CN=Microsoft Azure RSA TLS Issuing CA 07, O=Microsoft Corporation, C=US
+                ValidFrom                         : 9/14/2023 1:24:20 PM
+                ValidTo                           : 9/8/2024 1:24:20 PM
+                CertificateValidityPeriodInYears  : 1
+                CertificateValidityPeriodInDays   : 360
+                CertificateIsExpired              : False
+                CertificateVerifies               : True
+                CertificateSubjectMatchesHostName : True
+                SignatureAlgorithm                : sha384RSA
+                NegotiatedCipherSuites            : {TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384}
+                CipherAlgorithm                   : Aes256
+                CipherStrength                    : 256
+                KeyExchangeAlgorithm              : ECDH Ephemeral
+                StrictTransportSecurity           : Strict-Transport-Security not found in header
+                SubjectAlternativeNames           : {wwwqa.microsoft.com, www.microsoft.com, staticview.microsoft.com, i.s-microsoft.comΓÇª}
+                Ssl2                              : False
+                Ssl3                              : False
+                Tls                               : False
+                Tls11                             : False
+                Tls12                             : True
+                Tls13                             : False
         .NOTES
             If StrictTransportSecurity returns "Unable to acquire HSTS value" or "No value specified for strict transport security (HSTS)" with the HostName parameter set, try the fully qualified web address with the Uri parameter.
         .LINK
@@ -920,7 +922,7 @@ function Get-TlsInformation {
                 }
                 $tlsInfo.StrictTransportSecurity = $strictTransportSecurityValue
 
-                # If OS is Windows, the X509Certificate2.Extensions property is populated and thus we can infer SANS from that.
+                # SECTION  If OS is Windows, the X509Certificate2.Extensions property is populated and thus we can infer SANS from that.
                 # Else, we default to openssl to obtain the list of SANs on the retrieved certificate:
                 $sansList = @()
                 if ($IsWindows) {
@@ -947,6 +949,36 @@ function Get-TlsInformation {
                     }
                 }
                 $tlsInfo.SubjectAlternativeNames = $sansList
+                #!SECTION
+
+                # SECTION Obtain a list of SANs and cert subject to determine if the certificate subject matches the target host name:
+                [Nullable[Boolean]]$certSubjectMatchesHostName = $null
+
+                $validHostNames = [List[String]]::new()
+
+                $parsedCertSubject = (($sslCert.Subject).Split(",")[0].Replace("CN=", "")).Trim()
+
+                $validHostNames = [List[String]]::new()
+                foreach ($san in $sansList) {
+                    if (-not($validHostNames.Contains($san))) {
+                        $validHostNames.Add($san)
+                    }
+                }
+                if (-not($validHostNames.Contains($parsedCertSubject))) {
+                    $validHostNames.Add($parsedCertSubject)
+                }
+
+                if (-not($isIp)) {
+                    if ($targetHost -in $validHostNames) {
+                        $certSubjectMatchesHostName = $true
+                    }
+                    else {
+                        $certSubjectMatchesHostName = $false
+                    }
+                }
+
+                $tlsInfo.CertificateSubjectMatchesHostName = $certSubjectMatchesHostName
+                #!SECTION
 
                 $negotiatedCipherSuites = @()
                 foreach ($protocol in $protocolList) {
