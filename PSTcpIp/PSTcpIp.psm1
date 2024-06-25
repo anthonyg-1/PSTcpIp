@@ -104,6 +104,7 @@ namespace PSTcpIp
         public bool? CertificateIsExpired { get; set; }
         public bool? CertificateVerifies { get; set; }
         public bool? CertificateSubjectMatchesHostName { get; set; }
+        public bool? IsWildcardCertificate { get; set; }
         public string SignatureAlgorithm { get; set; }
         public string[] NegotiatedCipherSuites { get; set; }
         public string CipherAlgorithm { get; set; }
@@ -978,6 +979,17 @@ function Get-TlsInformation {
                 }
 
                 $tlsInfo.CertificateSubjectMatchesHostName = $certSubjectMatchesHostName
+
+                [bool]$isWildcard = $false
+                foreach ($name in $validHostNames) {
+                    if ($name.StartsWith("*")) {
+                        $isWildcard = $true
+                        break
+                    }
+                }
+
+                $tlsInfo.IsWildcardCertificate = $isWildcard
+
                 #!SECTION
 
                 $negotiatedCipherSuites = @()
