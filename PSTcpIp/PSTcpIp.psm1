@@ -1,4 +1,4 @@
-﻿using namespace System
+using namespace System
 using namespace System.Collections.Generic
 using namespace System.Net
 using namespace System.Net.Sockets
@@ -795,6 +795,7 @@ function Get-TlsInformation {
                 CertificateIsExpired              : False
                 CertificateVerifies               : True
                 CertificateSubjectMatchesHostName : True
+                IsWildcardCertificate             : False
                 SignatureAlgorithm                : sha384RSA
                 NegotiatedCipherSuites            : {TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384}
                 CipherAlgorithm                   : Aes256
@@ -980,6 +981,7 @@ function Get-TlsInformation {
 
                 $tlsInfo.CertificateSubjectMatchesHostName = $certSubjectMatchesHostName
 
+                # Determine if certificate is a wildcard certifcate from cert subject and SANs:
                 [bool]$isWildcard = $false
                 foreach ($name in $validHostNames) {
                     if ($name.StartsWith("*")) {
