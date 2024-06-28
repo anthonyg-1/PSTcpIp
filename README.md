@@ -194,7 +194,7 @@ Invoke-WebCrawl -BaseUri "https://example.com" -IncludeHosts "example.com", "sub
 Invoke-WebCrawl -BaseUri "https://example.com" -Depth 3 | Where ResponseHeaders -NotMatch "Server=AkamaiNetStorage"
 
 # Starts a web crawl from "https://example.com", traverses links up to a default depth of 2, and returns results that have a server response header indicating a server of nginx
-Invoke-WebCrawl -BaseUri "https://example.com" | Where-Object ResponseHeaders -Match "Server=nginx"
+Invoke-WebCrawl -BaseUri "https://example.com" | Where ResponseHeaders -Match "Server=nginx"
 
 # Starts a web crawl from "https://example.com" and traverses links up to a depth of 3 using the webcrawl alias for Invoke-WebCrawl
 webcrawl -u "https://example.com" -d 3
