@@ -1,4 +1,4 @@
-using namespace System
+﻿using namespace System
 using namespace System.Collections.Generic
 using namespace System.Net
 using namespace System.Net.Sockets
@@ -630,6 +630,8 @@ function Get-HttpResponseHeader {
         Specifies the Uniform Resource Identifier (URI) of the web endpoint. This parameter is mandatory and can be provided through the pipeline or by property name.
     .PARAMETER AsHashtable
         Instructs the function to return the results as an ordered Hashtable as opposed to the default of PSCustomObject.
+    .PARAMETER IncludeTargetInformation
+         Instructs the function to also return the target computer's host name, IPv4 address, and target URI.
     .EXAMPLE
         Get-HttpResponseHeader -Uri "https://example.com"
 
@@ -642,6 +644,10 @@ function Get-HttpResponseHeader {
         "https://example.com" | Get-HttpResponseHeader
 
         Retrieves the HTTP response headers from the web endpoint provided through the pipeline.
+    .EXAMPLE
+        Get-HttpResponseHeader -HostName "example.com" -IncludeTargetInformation
+
+        Retrieves the HTTP response headers from the specified web endpoint with a hostname of example.com including the host name (as HostName), the resolved IPv4 address (as IPAddress), and the target Uri (as Uri).
     .EXAMPLE
         gwrh -u "https://example.com"
 
@@ -682,7 +688,10 @@ function Get-HttpResponseHeader {
             Position = 0, ParameterSetName = "Uri")][Alias('u')][ValidateNotNullOrEmpty()][System.Uri]$Uri,
 
         [Parameter(Mandatory = $false,
-            Position = 3)][Alias('ht')][Switch]$AsHashtable
+            Position = 3)][Alias('ht')][Switch]$AsHashtable,
+
+        [Parameter(Mandatory = $false,
+            Position = 4)][Alias('IncludeTargetInfo', 'iti')][Switch]$IncludeTargetInformation
     )
     PROCESS {
         [Uri]$targetUri = $Uri
@@ -712,8 +721,30 @@ function Get-HttpResponseHeader {
                 # Get response headers:
                 $responseHeaders = Invoke-WebRequest -Uri $targetUri.AbsoluteUri -AllowInsecureRedirect -SkipCertificateCheck -SkipHttpErrorCheck -ErrorAction Stop | Select-Object -ExpandProperty Headers -ErrorAction Stop
 
+                [System.Collections.Hashtable]$responseHeaderTable = $responseHeaders
+
+                [string]$ipAddress = ""
+                if ($PSBoundParameters.ContainsKey("IncludeTargetInformation")) {
+                    $ipAddress = Test-TcpConnection -DNSHostName $targetUri.DnsSafeHost -Port $targetUri.Port | Select-Object -ExpandProperty IPAddress
+
+                    $hostName = $targetUri.DnsSafeHost
+                    $absoluteUri = $targetUri.AbsoluteUri
+
+                    if (-not($responseHeaderTable.ContainsKey("HostName"))) {
+                        $responseHeaderTable.Add("HostName", $hostName)
+                    }
+
+                    if (-not($responseHeaderTable.ContainsKey("IPAddress"))) {
+                        $responseHeaderTable.Add("IPAddress", $ipAddress)
+                    }
+
+                    if (-not($responseHeaderTable.ContainsKey("Uri"))) {
+                        $responseHeaderTable.Add("Uri", $absoluteUri)
+                    }
+                }
+
                 # Create sorted table:
-                $sortedHeaders = $responseHeaders.GetEnumerator() | Sort-Object -Property Key
+                $sortedHeaders = $responseHeaderTable.GetEnumerator() | Sort-Object -Property Key
 
                 # Create empty sorted hash table and populate (can't send PSCustomObject a table that's has GetEnumerator() called on it:
                 $headersToReturn = [ordered]@{}
