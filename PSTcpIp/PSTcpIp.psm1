@@ -720,15 +720,14 @@ function Get-HttpResponseHeader {
                 $sortedHeaders | ForEach-Object { $headersToReturn.Add($_.Key, $_.Value) }
 
                 # Return collection of headers with header name as key:
-                $headerCollection = $null
                 if ($PSBoundParameters.ContainsKey("AsHashtable")) {
-                    $headerCollection = $headersToReturn
+                    [System.Collections.Hashtable]$headerCollection = $headersToReturn
+                    return $headerCollection
                 }
                 else {
-                    $headerCollection = New-Object -TypeName PSCustomObject -Property $headersToReturn
+                    [PSCustomObject]$headerCollection = New-Object -TypeName PSCustomObject -Property $headersToReturn
+                    return $headerCollection
                 }
-
-                return $headerCollection
             }
             catch {
                 Write-Error -Exception $_.Exception -ErrorAction Stop
