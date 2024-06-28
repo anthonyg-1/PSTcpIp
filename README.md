@@ -190,6 +190,12 @@ Invoke-WebCrawl -BaseUri "https://example.com" -Depth 3 -ExcludeHosts "unwanted.
 # Starts a web crawl from "https://example.com", traverses links up to a depth of 2, and includes only links to "example.com" and "sub.example.com"
 Invoke-WebCrawl -BaseUri "https://example.com" -IncludeHosts "example.com", "sub.example.com"
 
+# Starts a web crawl from "https://example.com", traverses links up to a depth of 3, and returns results that do not have a server response header of AkamaiNetStorage
+Invoke-WebCrawl -BaseUri "https://example.com" -Depth 3 | Where ResponseHeaders -NotMatch "Server=AkamaiNetStorage"
+
+# Starts a web crawl from "https://example.com", traverses links up to a default depth of 2, and returns results that have a server response header indicating a server of nginx
+Invoke-WebCrawl -BaseUri "https://example.com" | Where-Object ResponseHeaders -Match "Server=nginx"
+
 # Starts a web crawl from "https://example.com" and traverses links up to a depth of 3 using the webcrawl alias for Invoke-WebCrawl
 webcrawl -u "https://example.com" -d 3
 
