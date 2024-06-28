@@ -1280,6 +1280,14 @@ function Invoke-WebCrawl {
         Invoke-WebCrawl -BaseUri "https://example.com" -ExcludeHosts "unwanted.com"
 
         Starts a web crawl from "https://example.com", traverses links up to a default depth of 2, and excludes links to "unwanted.com".
+    .EXAMPLE
+        Invoke-WebCrawl -BaseUri "https://example.com" | Where-Object ResponseHeaders -Match "Server=nginx"
+
+        Starts a web crawl from "https://example.com", traverses links up to a default depth of 2, and returns results that have a server response header indicating a server of nginx.
+    .EXAMPLE
+        Invoke-WebCrawl -BaseUri "https://example.com" -Depth 3 | Where ResponseHeaders -NotMatch "Server=AkamaiNetStorage"
+
+        Starts a web crawl from "https://example.com", traverses links up to a depth of 3, and returns results that do not have a server response header of AkamaiNetStorage.
     .INPUTS
         System.Uri
 
@@ -1293,6 +1301,9 @@ function Invoke-WebCrawl {
             - HostName: The hostname of the visited link.
             - StatusCode: The HTTP status code returned for the visited link.
             - StatusDescription: The status description returned for the visited link.
+    .LINK
+        Where-Object
+        Get-HttpResponseHeader
 #>
     [CmdletBinding(DefaultParameterSetName = "Default")]
     [Alias('iwc', 'webcrawl')]
@@ -1300,7 +1311,7 @@ function Invoke-WebCrawl {
     param (
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, Position = 0)][Alias('Uri', 'u', 'bu')][Uri]$BaseUri,
         [Parameter(Mandatory = $false, Position = 1)][Alias('d')][int]$Depth = 2,
-        [Parameter(Mandatory = $false, Position = 2)][Alias('h')][System.Collections.Hashtable]$Headers,
+        [Parameter(Mandatory = $false, Position = 2)][Alias('h', 'RequestHeaders')][System.Collections.Hashtable]$Headers,
         [Parameter(Mandatory = $true, Position = 3, ParameterSetName = "Include")][Alias('i', 'il', 'ih')][String[]]$IncludeHosts,
         [Parameter(Mandatory = $true, Position = 3, ParameterSetName = "Exclude")][Alias('e', 'el', 'eh')][String[]]$ExcludeHosts
     )
@@ -1335,6 +1346,7 @@ function Invoke-WebCrawl {
                     AllowInsecureRedirect          = $true
                     AllowUnencryptedAuthentication = $true
                     UseDefaultCredentials          = $true
+                    SessionVariable                = "websession"
                 }
 
                 if ($PSBoundParameters.ContainsKey("Headers")) {
@@ -1347,10 +1359,27 @@ function Invoke-WebCrawl {
                 [PSObject]$response = $null
                 [int]$statusCode = 0
                 [string]$statusDescription = ""
+                [System.Net.CookieCollection]$cookies = $null
+                [PSCustomObject]$responseHeaders = $null
                 try {
                     $response = Invoke-WebRequest @iwrParams
                     $statusCode = $response.StatusCode
                     $statusDescription = $response.StatusDescription
+                    $cookies = $websession.Cookies.GetCookies($Uri)
+
+                    # In order to produce a PSCustomObject that contains only the string values of the key/value pairs contained within the headers property
+                    # from Invoke-WebRquest, we have to build a new hash table that will contain the string values only of the header names and header values:
+                    $stringResponseHeaderHashtable = @{}
+                    foreach ($kvp in $response.Headers.GetEnumerator()) {
+                        $stringKey = $($kvp.Key)
+                        $stringValue = $($kvp.Value) -join ", "
+
+                        if (-not($stringResponseHeaderHashtable.ContainsKey($stringKey))) {
+                            $stringResponseHeaderHashtable.Add($stringKey, $stringValue)
+                        }
+                    }
+                    $responseHeaders = New-Object -TypeName PSObject -Property $stringResponseHeaderHashtable
+
                 }
                 catch {
                     $statusCode = 520
@@ -1363,6 +1392,8 @@ function Invoke-WebCrawl {
                         HostName          = $targetHost
                         StatusCode        = $statusCode
                         StatusDescription = $statusDescription
+                        ResponseHeaders   = $responseHeaders
+                        Cookies           = $cookies
                     })
 
                 Write-Output -InputObject $webCrawlResult
@@ -1450,7 +1481,6 @@ function Invoke-WebCrawl {
         }
     }
 }
-
 #endregion
 
 
