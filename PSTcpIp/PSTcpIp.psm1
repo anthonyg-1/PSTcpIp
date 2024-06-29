@@ -1300,7 +1300,7 @@ function Invoke-WebCrawl {
     .PARAMETER ExcludeHosts
         An array of hostnames to exclude from the web crawl. If specified, links to these hosts will not be followed. This parameter is mandatory if the "Exclude" parameter set is used.
     .PARAMETER IncludeContent
-        If specified, the website content is returned as a System.String.
+        If specified, the website content is returned as a System.String. This parameter is optional.
     .EXAMPLE
         Invoke-WebCrawl -BaseUri "https://example.com" -Depth 3
 
