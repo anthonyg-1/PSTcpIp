@@ -1294,7 +1294,7 @@ function Invoke-WebCrawl {
     .PARAMETER Depth
         The depth to which the web crawl should traverse links. The default value is 2. This parameter is optional.
     .PARAMETER Headers
-        A hashtable of headers to include in the web requests as a hash table. This parameter is optional.
+        A hashtable of headers to include to as a hash table. Note that this header collection is for the base URI only, not crawled sites from discovered links. This parameter is optional.
     .PARAMETER IncludeHosts
         An array of hostnames to include in the web crawl. If specified, only links to these hosts will be followed. This parameter is mandatory if the "Include" parameter set is used.
     .PARAMETER ExcludeHosts
@@ -1350,6 +1350,12 @@ function Invoke-WebCrawl {
         [Parameter(Mandatory = $false, Position = 4)][Alias('ic')][Switch]$IncludeContent
     )
     BEGIN {
+        # Determines if the website content will be returned in the output for all crawled sites:
+        [bool]$addContentToOutput = $false
+        if ($PSBoundParameters.ContainsKey("IncludeContent")) {
+            $addContentToOutput = $true
+        }
+
         function Get-WebLinkStatus {
             param (
                 [Parameter(Mandatory = $true)][Uri]$Uri,
@@ -1357,7 +1363,7 @@ function Invoke-WebCrawl {
                 [Parameter(Mandatory = $false)][System.Collections.Hashtable]$Headers,
                 [Parameter(Mandatory = $false)][String[]]$IncludeHosts,
                 [Parameter(Mandatory = $false)][String[]]$ExcludeHosts,
-                [Parameter(Mandatory = $false)][Alias('ic')][Switch]$IncludeContent,
+                [Parameter(Mandatory = $false)][Switch]$IncludeContent,
                 [hashtable]$Visited = @{}
             )
 
@@ -1431,7 +1437,7 @@ function Invoke-WebCrawl {
                     Cookies           = $cookies
                 }
 
-                if ($PSBoundParameters.ContainsKey("IncludeContent")) {
+                if ($addContentToOutput) {
                     [string]$websiteContent = $response.Content
                     $webCrawlResultHashtable.Add("Content", $websiteContent)
                 }
