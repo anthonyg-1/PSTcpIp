@@ -1299,6 +1299,8 @@ function Invoke-WebCrawl {
         An array of hostnames to include in the web crawl. If specified, only links to these hosts will be followed. This parameter is mandatory if the "Include" parameter set is used.
     .PARAMETER ExcludeHosts
         An array of hostnames to exclude from the web crawl. If specified, links to these hosts will not be followed. This parameter is mandatory if the "Exclude" parameter set is used.
+    .PARAMETER IncludeContent
+        If specified, the website content is returned as a System.String.
     .EXAMPLE
         Invoke-WebCrawl -BaseUri "https://example.com" -Depth 3
 
@@ -1344,7 +1346,8 @@ function Invoke-WebCrawl {
         [Parameter(Mandatory = $false, Position = 1)][Alias('d')][int]$Depth = 2,
         [Parameter(Mandatory = $false, Position = 2)][Alias('h', 'RequestHeaders')][System.Collections.Hashtable]$Headers,
         [Parameter(Mandatory = $true, Position = 3, ParameterSetName = "Include")][Alias('i', 'il', 'ih')][String[]]$IncludeHosts,
-        [Parameter(Mandatory = $true, Position = 3, ParameterSetName = "Exclude")][Alias('e', 'el', 'eh')][String[]]$ExcludeHosts
+        [Parameter(Mandatory = $true, Position = 3, ParameterSetName = "Exclude")][Alias('e', 'el', 'eh')][String[]]$ExcludeHosts,
+        [Parameter(Mandatory = $false, Position = 4)][Alias('ic')][Switch]$IncludeContent
     )
     BEGIN {
         function Get-WebLinkStatus {
@@ -1354,6 +1357,7 @@ function Invoke-WebCrawl {
                 [Parameter(Mandatory = $false)][System.Collections.Hashtable]$Headers,
                 [Parameter(Mandatory = $false)][String[]]$IncludeHosts,
                 [Parameter(Mandatory = $false)][String[]]$ExcludeHosts,
+                [Parameter(Mandatory = $false)][Alias('ic')][Switch]$IncludeContent,
                 [hashtable]$Visited = @{}
             )
 
@@ -1396,6 +1400,7 @@ function Invoke-WebCrawl {
                     $response = Invoke-WebRequest @iwrParams
                     $statusCode = $response.StatusCode
                     $statusDescription = $response.StatusDescription
+
                     $cookies = $websession.Cookies.GetCookies($Uri)
 
                     # In order to produce a PSCustomObject that contains only the string values of the key/value pairs contained within the headers property
@@ -1410,22 +1415,28 @@ function Invoke-WebCrawl {
                         }
                     }
                     $responseHeaders = New-Object -TypeName PSObject -Property $stringResponseHeaderHashtable
-
                 }
                 catch {
                     $statusCode = 520
                     $statusDescription = $_.Exception.Message
                 }
 
-                $webCrawlResult = ([PSCustomObject]@{
-                        BaseUri           = $BaseUri.AbsoluteUri
-                        Uri               = $targetUri
-                        HostName          = $targetHost
-                        StatusCode        = $statusCode
-                        StatusDescription = $statusDescription
-                        ResponseHeaders   = $responseHeaders
-                        Cookies           = $cookies
-                    })
+                $webCrawlResultHashtable = [ordered]@{
+                    BaseUri           = $BaseUri.AbsoluteUri
+                    Uri               = $targetUri
+                    HostName          = $targetHost
+                    StatusCode        = $statusCode
+                    StatusDescription = $statusDescription
+                    ResponseHeaders   = $responseHeaders
+                    Cookies           = $cookies
+                }
+
+                if ($PSBoundParameters.ContainsKey("IncludeContent")) {
+                    [string]$websiteContent = $response.Content
+                    $webCrawlResultHashtable.Add("Content", $websiteContent)
+                }
+
+                $webCrawlResult = New-Object -TypeName PSObject -Property $webCrawlResultHashtable
 
                 Write-Output -InputObject $webCrawlResult
 
@@ -1495,6 +1506,10 @@ function Invoke-WebCrawl {
                 $gwlsParamsOuter.Add("Headers", $Headers)
             }
 
+            if ($PSBoundParameters.ContainsKey("IncludeContent")) {
+                $gwlsParamsOuter.Add("IncludeContent", $true)
+            }
+
             if ($PSBoundParameters.ContainsKey("IncludeHosts")) {
                 Get-WebLinkStatus @gwlsParamsOuter -IncludeHosts $IncludeHosts
             }
@@ -1512,6 +1527,7 @@ function Invoke-WebCrawl {
         }
     }
 }
+
 #endregion
 
 
