@@ -201,4 +201,35 @@ webcrawl -u "https://example.com" -d 3
 
 # Starts a web crawl from "https://example.com" and traverses links up to a depth of 3 using the iwc alias for Invoke-WebCrawl
 iwc -u "https://example.com" -d 3
+
+# Define a list of common authentication and credential keywords, crawl the target site, determine if any of the keywords exist in the content for each crawled page, and return the URI and keyword
+$keywords = @(
+    "access_token",
+    "api_key",
+    "apikey",
+    "auth",
+    "auth_code",
+    "bearer",
+    "cert",
+    "certificate",
+    "credential",
+    "id_token",
+    "jwt",
+    "key",
+    "login",
+    "oauth",
+    "password",
+    "secret",
+    "session",
+    "sso",
+    "token",
+    "username"
+)
+
+$crawlResults = Invoke-WebCrawl -BaseUri "https://example.com" -IncludeContent
+foreach ($word in $keywords) {
+    $Keyword = @{n = "Keyword"; e = { $word } }
+    $regExMatch = '\b{0}\b'
+    $crawlResults | Where Content -match $regExMatch | Select Uri, $Keyword
+}
 ```
