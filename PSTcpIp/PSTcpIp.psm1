@@ -1349,7 +1349,7 @@ function Invoke-WebCrawl {
 
         foreach ($word in $keywords) {
             $Keyword = @{n = "Keyword"; e = { $word } }
-            $regExMatch = '\b{0}\b'
+            $regExMatch = '\b{0}\b' -f $word
             $crawlResults | Where Content -match $regExMatch | Select Uri, $Keyword
         }
 
