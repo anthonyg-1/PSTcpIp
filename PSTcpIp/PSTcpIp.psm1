@@ -1,4 +1,4 @@
-﻿using namespace System
+using namespace System
 using namespace System.Collections.Generic
 using namespace System.Net
 using namespace System.Net.Sockets
@@ -987,7 +987,6 @@ function Get-TlsInformation {
                 [Nullable[Boolean]]$certSubjectMatchesHostName = $null
 
                 $validHostNames = [List[String]]::new()
-
                 $parsedCertSubject = (($sslCert.Subject).Split(",")[0].Replace("CN=", "")).Trim()
 
                 $validHostNames = [List[String]]::new()
@@ -996,31 +995,59 @@ function Get-TlsInformation {
                         $validHostNames.Add($san)
                     }
                 }
+
                 if (-not($validHostNames.Contains($parsedCertSubject))) {
                     $validHostNames.Add($parsedCertSubject)
                 }
 
-                if (-not($isIp)) {
-                    if ($targetHost -in $validHostNames) {
-                        $certSubjectMatchesHostName = $true
-                    }
-                    else {
-                        $certSubjectMatchesHostName = $false
-                    }
-                }
-
-                $tlsInfo.CertificateSubjectMatchesHostName = $certSubjectMatchesHostName
-
                 # Determine if certificate is a wildcard certifcate from cert subject and SANs:
-                [bool]$isWildcard = $false
+                [bool]$wildcardFound = $false
                 foreach ($name in $validHostNames) {
                     if ($name.StartsWith("*")) {
-                        $isWildcard = $true
+                        $wildcardFound = $true
                         break
                     }
                 }
 
-                $tlsInfo.IsWildcardCertificate = $isWildcard
+                # Construct a list of wildcard entries:
+                $wildcardEntries = [List[String]]::new()
+                if ($wildcardFound) {
+                    foreach ($name in $validHostNames) {
+                        if ($name.Contains("*")) {
+                            $wcEntry = $name.Replace("*.", "")
+                            if (-not($wildcardEntries.Contains($wcEntry))) {
+                                $wildcardEntries.Add($wcEntry)
+                            }
+                        }
+                    }
+                }
+
+                <#
+                If the passed target is not an IP address, determine if the certificate contains a wildcard entry in
+                either the SAN list or subject itself. If so, determine if there's a match on host name based on the wildcard entry.
+                If not wildcard is found determine if there's an exact match on hostname:
+                #>
+                if (-not($isIp)) {
+                    if ($wildcardFound) {
+                        foreach ($domainName in $wildcardEntries) {
+                            if ($targetHost -match $domainName) {
+                                $certSubjectMatchesHostName = $true
+                                break
+                            }
+                        }
+                    }
+                    else {
+                        if ($targetHost -in $validHostNames) {
+                            $certSubjectMatchesHostName = $true
+                        }
+                        else {
+                            $certSubjectMatchesHostName = $false
+                        }
+                    }
+                }
+
+                $tlsInfo.CertificateSubjectMatchesHostName = $certSubjectMatchesHostName
+                $tlsInfo.IsWildcardCertificate = $wildcardFound
 
                 #!SECTION
 
@@ -1091,6 +1118,7 @@ function Get-TlsInformation {
         }
     }
 }
+
 
 
 function Invoke-DnsEnumeration {
@@ -1285,92 +1313,92 @@ function Get-IPInformation {
 
 function Invoke-WebCrawl {
     <#
-    .SYNOPSIS
-        Invokes a web crawl starting from a specified base URI, traversing links up to a specified depth, and optionally including or excluding specific hosts.
-    .DESCRIPTION
-        The Invoke-WebCrawl function performs a web crawl starting from the provided base URI. It traverses links up to the specified depth and can include or exclude specific hosts based on the provided parameters. The function outputs a custom object for each visited link, containing the URI, hostname, status code, and status description.
-    .PARAMETER BaseUri
-        The base URI from which the web crawl starts. This parameter is mandatory.
-    .PARAMETER Depth
-        The depth to which the web crawl should traverse links. The default value is 2. This parameter is optional.
-    .PARAMETER Headers
-        A hashtable of headers to include to as a hash table. Note that this header collection is for the base URI only, not crawled sites from discovered links. This parameter is optional.
-    .PARAMETER IncludeHosts
-        An array of hostnames to include in the web crawl. If specified, only links to these hosts will be followed. This parameter is mandatory if the "Include" parameter set is used.
-    .PARAMETER ExcludeHosts
-        An array of hostnames to exclude from the web crawl. If specified, links to these hosts will not be followed. This parameter is mandatory if the "Exclude" parameter set is used.
-    .PARAMETER IncludeContent
-        If specified, the website content is returned as a System.String. This parameter is optional.
-    .EXAMPLE
-        Invoke-WebCrawl -BaseUri "https://example.com" -Depth 3
+        .SYNOPSIS
+            Invokes a web crawl starting from a specified base URI, traversing links up to a specified depth, and optionally including or excluding specific hosts.
+        .DESCRIPTION
+            The Invoke-WebCrawl function performs a web crawl starting from the provided base URI. It traverses links up to the specified depth and can include or exclude specific hosts based on the provided parameters. The function outputs a custom object for each visited link, containing the URI, hostname, status code, and status description.
+        .PARAMETER BaseUri
+            The base URI from which the web crawl starts. This parameter is mandatory.
+        .PARAMETER Depth
+            The depth to which the web crawl should traverse links. The default value is 2. This parameter is optional.
+       .PARAMETER Headers
+            Specifies the headers of the web request as a hash table. Note that this header collection is for the base URI as well as all crawled sites from discovered links. This parameter is optional.
+        .PARAMETER IncludeHosts
+            An array of hostnames to include in the web crawl. If specified, only links to these hosts will be followed. This parameter is mandatory if the "Include" parameter set is used.
+        .PARAMETER ExcludeHosts
+            An array of hostnames to exclude from the web crawl. If specified, links to these hosts will not be followed. This parameter is mandatory if the "Exclude" parameter set is used.
+        .PARAMETER IncludeContent
+            If specified, the website content is returned as a System.String. This parameter is optional.
+        .EXAMPLE
+            Invoke-WebCrawl -BaseUri "https://example.com" -Depth 3
 
-        Starts a web crawl from "https://example.com" and traverses links up to a depth of 3.
-    .EXAMPLE
-        Invoke-WebCrawl -BaseUri "https://example.com" -IncludeHosts "example.com", "sub.example.com"
+            Starts a web crawl from "https://example.com" and traverses links up to a depth of 3.
+        .EXAMPLE
+            Invoke-WebCrawl -BaseUri "https://example.com" -IncludeHosts "example.com", "sub.example.com"
 
-        Starts a web crawl from "https://example.com", traverses links up to a default depth of 2, and includes only links to "example.com" and "sub.example.com".
-    .EXAMPLE
-        Invoke-WebCrawl -BaseUri "https://example.com" -ExcludeHosts "unwanted.com"
+            Starts a web crawl from "https://example.com", traverses links up to a default depth of 2, and includes only links to "example.com" and "sub.example.com".
+        .EXAMPLE
+            Invoke-WebCrawl -BaseUri "https://example.com" -ExcludeHosts "unwanted.com"
 
-        Starts a web crawl from "https://example.com", traverses links up to a default depth of 2, and excludes links to "unwanted.com".
-    .EXAMPLE
-        Invoke-WebCrawl -BaseUri "https://example.com" | Where-Object ResponseHeaders -Match "Server=nginx"
+            Starts a web crawl from "https://example.com", traverses links up to a default depth of 2, and excludes links to "unwanted.com".
+        .EXAMPLE
+            Invoke-WebCrawl -BaseUri "https://example.com" | Where-Object ResponseHeaders -Match "Server=nginx"
 
-        Starts a web crawl from "https://example.com", traverses links up to a default depth of 2, and returns results that have a server response header indicating a server of nginx.
-    .EXAMPLE
-        Invoke-WebCrawl -BaseUri "https://example.com" -Depth 3 | Where ResponseHeaders -NotMatch "Server=AkamaiNetStorage"
+            Starts a web crawl from "https://example.com", traverses links up to a default depth of 2, and returns results that have a server response header indicating a server of nginx.
+        .EXAMPLE
+            Invoke-WebCrawl -BaseUri "https://example.com" -Depth 3 | Where ResponseHeaders -NotMatch "Server=AkamaiNetStorage"
 
-        Starts a web crawl from "https://example.com", traverses links up to a depth of 3, and returns results that do not have a server response header of AkamaiNetStorage.
-    .EXAMPLE
-        $keywords = @(
-        "access_token",
-        "api_key",
-        "apikey",
-        "auth",
-        "auth_code",
-        "bearer",
-        "cert",
-        "certificate",
-        "credential",
-        "id_token",
-        "jwt",
-        "key",
-        "login",
-        "oauth",
-        "password",
-        "secret",
-        "session",
-        "sso",
-        "token",
-        "username"
-        )
+            Starts a web crawl from "https://example.com", traverses links up to a depth of 3, and returns results that do not have a server response header of AkamaiNetStorage.
+        .EXAMPLE
+            $keywords = @(
+            "access_token",
+            "api_key",
+            "apikey",
+            "auth",
+            "auth_code",
+            "bearer",
+            "cert",
+            "certificate",
+            "credential",
+            "id_token",
+            "jwt",
+            "key",
+            "login",
+            "oauth",
+            "password",
+            "secret",
+            "session",
+            "sso",
+            "token",
+            "username"
+            )
 
-        $crawlResults = Invoke-WebCrawl -BaseUri "https://example.com" -IncludeContent
+            $crawlResults = Invoke-WebCrawl -BaseUri "https://example.com" -IncludeContent
 
-        foreach ($word in $keywords) {
-            $Keyword = @{n = "Keyword"; e = { $word } }
-            $regExMatch = '\b{0}\b' -f $word
-            $crawlResults | Where Content -match $regExMatch | Select Uri, $Keyword
-        }
+            foreach ($word in $keywords) {
+                $Keyword = @{n = "Keyword"; e = { $word } }
+                $regExMatch = '\b{0}\b' -f $word
+                $crawlResults | Where Content -match $regExMatch | Select Uri, $Keyword
+            }
 
-        Defines a list of common authentication and credential keywords, crawl the target site, determine if any of the keywords exist in the content for each crawled page, and return the URI and keyword.
-    .INPUTS
-        System.Uri
+            Defines a list of common authentication and credential keywords, crawl the target site, determine if any of the keywords exist in the content for each crawled page, and return the URI and keyword.
+        .INPUTS
+            System.Uri
 
-            A System.Uri value is received by the BaseUri parameter.
-    .OUTPUTS
-        PSCustomObject
+                A System.Uri value is received by the BaseUri parameter.
+        .OUTPUTS
+            PSCustomObject
 
-            Outputs a custom object containing the following properties:
-            - BaseUri: The base URI from which the web crawl started.
-            - Uri: The URI of the visited link.
-            - HostName: The hostname of the visited link.
-            - StatusCode: The HTTP status code returned for the visited link.
-            - StatusDescription: The status description returned for the visited link.
-    .LINK
-        Where-Object
-        Get-HttpResponseHeader
-#>
+                Outputs a custom object containing the following properties:
+                - BaseUri: The base URI from which the web crawl started.
+                - Uri: The URI of the visited link.
+                - HostName: The hostname of the visited link.
+                - StatusCode: The HTTP status code returned for the visited link.
+                - StatusDescription: The status description returned for the visited link.
+        .LINK
+            Where-Object
+            Get-HttpResponseHeader
+    #>
     [CmdletBinding(DefaultParameterSetName = "Default")]
     [Alias('iwc', 'webcrawl')]
     [OutputType([PSCustomObject])]
@@ -1383,6 +1411,14 @@ function Invoke-WebCrawl {
         [Parameter(Mandatory = $false, Position = 4)][Alias('ic')][Switch]$IncludeContent
     )
     BEGIN {
+        # Determines if headers are being passed and if so populates a global variable to pass them to the base URI and every crawled site:
+        [bool]$hasHeaders = $false
+        [System.Collections.Hashtable]$headerCollection = @{}
+        if ($PSBoundParameters.ContainsKey("Headers")) {
+            $hasHeaders = $true
+            $headerCollection = $Headers
+        }
+
         # Determines if the website content will be returned in the output for all crawled sites:
         [bool]$addContentToOutput = $false
         if ($PSBoundParameters.ContainsKey("IncludeContent")) {
@@ -1423,8 +1459,8 @@ function Invoke-WebCrawl {
                     SessionVariable                = "websession"
                 }
 
-                if ($PSBoundParameters.ContainsKey("Headers")) {
-                    $iwrParams.Add("Headers", $Headers)
+                if ($hasHeaders) {
+                    $iwrParams.Add("Headers", $headerCollection)
                 }
 
                 $parsedUri = [Uri]::new($targetUri)
