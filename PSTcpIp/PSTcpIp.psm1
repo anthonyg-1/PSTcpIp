@@ -866,7 +866,7 @@ function Get-TlsInformation {
 
         if ($PSBoundParameters.ContainsKey("Uri")) {
             if ($Uri -like "https://*") {
-                $targetHost = $Uri.Authority
+                $targetHost = $Uri.DnsSafeHost
                 $targetPort = $Uri.Port
                 $targetUri = $Uri
             }
