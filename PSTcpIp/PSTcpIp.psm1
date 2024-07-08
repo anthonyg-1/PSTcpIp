@@ -1,4 +1,4 @@
-﻿using namespace System
+using namespace System
 using namespace System.Collections.Generic
 using namespace System.Net
 using namespace System.Net.Sockets
@@ -263,6 +263,27 @@ function Invoke-TimedWait {
     }
 }
 
+function Test-IPAddress {
+    [CmdletBinding()]
+    [Alias()]
+    [OutputType([bool])]
+    Param
+    (
+        [Parameter(Mandatory = $true, Position = 0)][String]$InputString
+    )
+
+    [bool]$isIpAddress = $false
+    try {
+        [IPAddress]::Parse($InputString) | Out-Null
+        $isIpAddress = $true
+    }
+    catch {
+        $isIpAddress = $false
+    }
+
+    return $isIpAddress
+}
+
 #endregion
 
 
@@ -385,7 +406,7 @@ function Test-TcpConnection {
                 $destination = $__ComputerName
             }
 
-            [boolean]$nameResolved = $false
+            [Boolean]$nameResolved = $false
             try {
                 $ipv4Addresses = @(([System.Net.Dns]::GetHostAddresses($__ComputerName)).IPAddressToString)
                 $ipv4Address = $ipv4Addresses[0]
@@ -448,7 +469,13 @@ function Test-TcpConnection {
                     }
 
                     $connectionStatusObject.Connected = $connectionSucceeded
-                    $connectionStatusObject.HostNameResolved = $nameResolved
+
+                    if (Test-IPAddress -InputString $destination) {
+                        $connectionStatusObject.HostNameResolved = $false
+                    }
+                    else {
+                        $connectionStatusObject.HostNameResolved = $nameResolved
+                    }
 
                     if ($Quiet) {
                         return $connectionSucceeded
@@ -558,14 +585,7 @@ function Get-TlsCertificate {
 
         $connectionTestResult = Test-TcpConnection -DNSHostName $targetHost -Port $targetPort
 
-        [bool]$isIp = $false
-        try {
-            [IPAddress]::Parse($targetHost) | Out-Null
-            $isIp = $true
-        }
-        catch {
-            $isIp = $false
-        }
+        [bool]$isIp = Test-IPAddress -InputString $targetHost
 
         if ($isIp) {
             $targetHost = $connectionTestResult.HostName
