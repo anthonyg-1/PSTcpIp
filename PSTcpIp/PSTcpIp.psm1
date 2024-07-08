@@ -1,4 +1,4 @@
-using namespace System
+﻿using namespace System
 using namespace System.Collections.Generic
 using namespace System.Net
 using namespace System.Net.Sockets
@@ -632,6 +632,8 @@ function Get-HttpResponseHeader {
         Instructs the function to return the results as an ordered Hashtable as opposed to the default of PSCustomObject.
     .PARAMETER IncludeTargetInformation
          Instructs the function to also return the target computer's host name, IPv4 address, and target URI.
+    .PARAMETER Headers
+        Specifies the request headers as a hash table.
     .EXAMPLE
         Get-HttpResponseHeader -Uri "https://example.com"
 
@@ -685,13 +687,13 @@ function Get-HttpResponseHeader {
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true,
-            Position = 0, ParameterSetName = "Uri")][Alias('u')][ValidateNotNullOrEmpty()][System.Uri]$Uri,
+            Position = 0, ParameterSetName = "Uri")][Alias('u')][System.Uri]$Uri,
 
-        [Parameter(Mandatory = $false,
-            Position = 3)][Alias('ht')][Switch]$AsHashtable,
+        [Parameter(Mandatory = $false, Position = 3)][Alias('ht')][Switch]$AsHashtable,
 
-        [Parameter(Mandatory = $false,
-            Position = 4)][Alias('IncludeTargetInfo', 'iti')][Switch]$IncludeTargetInformation
+        [Parameter(Mandatory = $false, Position = 4)][Alias('IncludeTargetInfo', 'iti')][Switch]$IncludeTargetInformation,
+
+        [Parameter(Mandatory = $false, Position = 5)][Alias('RequestHeaders', 'rh')][System.Collections.Hashtable]$Headers
     )
     PROCESS {
         [Uri]$targetUri = $Uri
@@ -719,7 +721,20 @@ function Get-HttpResponseHeader {
         if ($canConnect) {
             try {
                 # Get response headers:
-                $responseHeaders = Invoke-WebRequest -Uri $targetUri.AbsoluteUri -AllowInsecureRedirect -SkipCertificateCheck -SkipHttpErrorCheck -ErrorAction Stop | Select-Object -ExpandProperty Headers -ErrorAction Stop
+
+                $iwrParams = @{
+                    Uri                   = $targetUri.AbsoluteUri
+                    AllowInsecureRedirect = $true
+                    SkipCertificateCheck  = $true
+                    SkipHttpErrorCheck    = $true
+                    ErrorAction           = "Stop"
+                }
+
+                if ($PSBoundParameters.ContainsKey("Headers")) {
+                    $iwrParams.Add("Headers", $Headers)
+                }
+
+                $responseHeaders = Invoke-WebRequest @iwrParams | Select-Object -ExpandProperty Headers -ErrorAction Stop
 
                 [System.Collections.Hashtable]$responseHeaderTable = $responseHeaders
 
@@ -1322,7 +1337,7 @@ function Invoke-WebCrawl {
         .PARAMETER Depth
             The depth to which the web crawl should traverse links. The default value is 2. This parameter is optional.
        .PARAMETER Headers
-            Specifies the headers of the web request as a hash table. Note that this header collection is for the base URI as well as all crawled sites from discovered links. This parameter is optional.
+            Specifies the request headers for all web requests in the crawl as a hash table. Note that this header collection is for the base URI as well as all crawled sites from discovered links. This parameter is optional.
         .PARAMETER IncludeHosts
             An array of hostnames to include in the web crawl. If specified, only links to these hosts will be followed. This parameter is mandatory if the "Include" parameter set is used.
         .PARAMETER ExcludeHosts
