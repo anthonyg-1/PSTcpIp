@@ -265,23 +265,47 @@ function Invoke-TimedWait {
 
 function Test-IPAddress {
     [CmdletBinding()]
-    [Alias()]
     [OutputType([bool])]
     Param
     (
         [Parameter(Mandatory = $true, Position = 0)][String]$InputString
     )
+    PROCESS {
+        [bool]$isIpAddress = $false
 
-    [bool]$isIpAddress = $false
-    try {
-        [IPAddress]::Parse($InputString) | Out-Null
-        $isIpAddress = $true
-    }
-    catch {
-        $isIpAddress = $false
-    }
+        try {
+            [IPAddress]::Parse($InputString) | Out-Null
+            $isIpAddress = $true
+        }
+        catch {
+            $isIpAddress = $false
+        }
 
-    return $isIpAddress
+        return $isIpAddress
+    }
+}
+
+function Resolve-DNSHostName {
+    [CmdletBinding()]
+    [OutputType([string])]
+    Param
+    (
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, Position = 0)][ValidateLength(1, 250)][Alias('ComputerName', 'HostName')][String]$DNSHostName
+    )
+    PROCESS {
+        [string]$ipAddress = ""
+
+        try {
+            $ipAddress = $([System.Net.Dns]::GetHostEntry($DNSHostName)[0] | Select-Object -ExpandProperty AddressList | Select-Object -ExpandProperty IPAddressToString )
+        }
+        catch {
+            $webExMessage = "Unable to resolve {0} to an IP address." -f $HostName
+            $WebException = [System.Net.WebException]::new($webExMessage)
+            throw $WebException
+        }
+
+        return $ipAddress
+    }
 }
 
 #endregion
@@ -1531,10 +1555,19 @@ function Invoke-WebCrawl {
                     $statusDescription = $_.Exception.Message
                 }
 
+                [string]$targetIP = ""
+                try {
+                    $targetIP = Resolve-DNSHostName -DNSHostName $targetHost
+                }
+                catch {
+                    $targetIP = ""
+                }
+
                 $webCrawlResultHashtable = [ordered]@{
                     BaseUri           = $BaseUri.AbsoluteUri
                     Uri               = $targetUri
                     HostName          = $targetHost
+                    IPAddress         = $targetIP
                     StatusCode        = $statusCode
                     StatusDescription = $statusDescription
                     ResponseHeaders   = $responseHeaders
