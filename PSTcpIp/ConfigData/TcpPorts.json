@@ -212,10 +212,6 @@
         "description": "UUCP"
     },
     {
-        "port": "554",
-        "description": "RTSP"
-    },
-    {
         "port": "546",
         "description": "DHCPv6"
     },
@@ -226,6 +222,10 @@
     {
         "port": "548",
         "description": "Apple Share"
+    },
+    {
+        "port": "554",
+        "description": "RTSP"
     },
     {
         "port": "560",
@@ -480,6 +480,10 @@
         "description": "Interbase"
     },
     {
+        "port": "3060",
+        "description": "Oracle Internet Directory (non-SSL)"
+    },
+    {
         "port": "3074",
         "description": "XBOX"
     },
@@ -494,6 +498,10 @@
     {
         "port": "3128",
         "description": "Squid HTTP"
+    },
+    {
+        "port": "3131",
+        "description": "Oracle Internet Directory (SSL)"
     },
     {
         "port": "3222",
@@ -544,6 +552,10 @@
         "description": "mSQL"
     },
     {
+        "port": "4443",
+        "description": "Oracle HTTP Server (SSL)"
+    },
+    {
         "port": "4444",
         "description": "Blaster"
     },
@@ -580,6 +592,10 @@
         "description": "SIP"
     },
     {
+        "port": "5162",
+        "description": "Oracle Management Agent"
+    },
+    {
         "port": "5190",
         "description": "AIM/ICQ"
     },
@@ -596,6 +612,10 @@
         "description": "Sasser"
     },
     {
+        "port": "5556",
+        "description": "Oracle WebLogic Server Node Manager Port"
+    },
+    {
         "port": "5723",
         "description": "Microsoft SCOM"
     },
@@ -608,6 +628,10 @@
         "description": "VNC"
     },
     {
+        "port": "5900",
+        "description": "VNC"
+    },
+    {
         "port": "5985",
         "description": "WinRM"
     },
@@ -616,12 +640,12 @@
         "description": "WinRM/SSL"
     },
     {
-        "port": "5900",
-        "description": "VNC"
-    },
-    {
         "port": "6000",
         "description": "X Window Server"
+    },
+    {
+        "port": "6100",
+        "description": "Oracle Notification Server Local Port"
     },
     {
         "port": "6112",
@@ -630,6 +654,10 @@
     {
         "port": "6129",
         "description": "DameWare"
+    },
+    {
+        "port": "6200",
+        "description": "Oracle Notification Server Remote Port"
     },
     {
         "port": "6257",
@@ -642,6 +670,10 @@
     {
         "port": "6500",
         "description": "GameSpy"
+    },
+    {
+        "port": "6501",
+        "description": "Oracle Virtual Directory (non-SSL)"
     },
     {
         "port": "6566",
@@ -664,12 +696,64 @@
         "description": "Quicktime"
     },
     {
+        "port": "7001",
+        "description": "Oracle WebLogic Server Listen Port for Administration Server"
+    },
+    {
+        "port": "7002",
+        "description": "Oracle WebLogic Server SSL Listen Port for Administration Server"
+    },
+    {
+        "port": "7005",
+        "description": "Oracle Directory Services Manager"
+    },
+    {
+        "port": "7005",
+        "description": "Oracle Directory Integration Platform"
+    },
+    {
         "port": "7212",
         "description": "GhostSurf"
     },
     {
+        "port": "7499",
+        "description": "Oracle Access Management Identity Federation Server Managed Server"
+    },
+    {
+        "port": "7501",
+        "description": "Oracle Virtual Directory (SSL)"
+    },
+    {
+        "port": "7777",
+        "description": "Oracle HTTP Server (non-SSL)"
+    },
+    {
+        "port": "7785",
+        "description": "Oracle Web Cache (non-SSL)"
+    },
+    {
+        "port": "7786",
+        "description": "Oracle Web Cache Administration Port"
+    },
+    {
+        "port": "7787",
+        "description": "Oracle Web Cache Statistics Port"
+    },
+    {
+        "port": "7788",
+        "description": "Oracle Web Cache Invalidation Port"
+    },
+    {
+        "port": "7789",
+        "description": "Oracle Web Cache (SSL)"
+    },
+    {
         "port": "8000",
         "description": "Internet"
+    },
+    {
+        "port": "8001",
+        "description": "Oracle WebLogic Server Listen Port for Managed Server"
     },
     {
         "port": "8080",
@@ -696,12 +780,48 @@
         "description": "TeamSpeak"
     },
     {
+        "port": "8793",
+        "description": "Oracle WebCenter Portal Custom Services Producer managed server"
+    },
+    {
         "port": "8866",
         "description": "Bagle.B"
     },
     {
+        "port": "8888",
+        "description": "Oracle HTTP Server, Oracle WebCenter Portal: Spacess"
+    },
+    {
+        "port": "8889",
+        "description": "Oracle WebCenter Portal's Portlet Producer"
+    },
+    {
+        "port": "8889",
+        "description": "Oracle WebCenter Portal's Pagelet Producer"
+    },
+    {
+        "port": "8890",
+        "description": "Oracle WebCenter Portal's Discussion Server"
+    },
+    {
+        "port": "8891",
+        "description": "Oracle WebCenter Portal Activity Graph Engines"
+    },
+    {
+        "port": "8891",
+        "description": "Oracle WebCenter Personalization"
+    },
+    {
+        "port": "8891",
+        "description": "Oracle WebCenter Analytics Collector"
+    },
+    {
+        "port": "8892",
+        "description": "Oracle WebCenter Portal Custom Portal managed server"
+    },
+    {
         "port": "9001",
-        "description": "ETL Service Manager"
+        "description": "Oracle Business Activity Monitoring Managed Server"
     },
     {
         "port": "9100",
@@ -760,8 +880,28 @@
         "description": "Battlefield"
     },
     {
+        "port": "15000",
+        "description": "Oracle Data Integrator"
+    },
+    {
         "port": "15118",
         "description": "Dipnet/Oddbob"
+    },
+    {
+        "port": "16000",
+        "description": "Oracle WebCenter Content: Imaging"
+    },
+    {
+        "port": "16100",
+        "description": "Oracle Information Rights Management"
+    },
+    {
+        "port": "16200",
+        "description": "Oracle WebCenter Content"
+    },
+    {
+        "port": "16300",
+        "description": "Oracle WebCenter Content: Records"
     },
     {
         "port": "19226",
