@@ -163,7 +163,7 @@ function Get-SourceAddress([string]$Destination = "8.8.8.8") {
     return $sourceAddress
 }
 
-function Get-WebServerCertificate([string]$TargetHost, [int]$Port = 443, [int]$Timeout = 30) {
+function Get-WebServerCertificate([string]$TargetHost, [int]$Port = 443, [int]$Timeout = 10) {
 
     $cryptographicExceptionMessage = "Unable to establish TLS session with the following host: {0}." -f $TargetHost
     $CryptographicException = [System.Security.Cryptography.CryptographicException]::new($cryptographicExceptionMessage)
@@ -199,13 +199,21 @@ function Get-WebServerCertificate([string]$TargetHost, [int]$Port = 443, [int]$T
         }
     }
 
-    $certRetrievalJob = Start-Job -ScriptBlock $getCertScriptBlock
+    $getCertJobResult = $null
+    try {
+        $certRetrievalJob = Start-Job -ScriptBlock $getCertScriptBlock
 
-    Wait-Job -Job $certRetrievalJob -Timeout $Timeout | Out-Null
+        Wait-Job -Job $certRetrievalJob -Timeout $Timeout | Out-Null
 
-    $getCertJobResult = Receive-Job -Job $certRetrievalJob
+        if ((Get-Job -Id $certRetrievalJob.Id).State -ne "Failed") {
+            $getCertJobResult = Receive-Job -Job $certRetrievalJob
+        }
 
-    Remove-Job -Job $certRetrievalJob -Force
+        Remove-Job -Job $certRetrievalJob -Force
+    }
+    finally {
+        Get-Job | Where-Object -Property State -eq "Failed" | Remove-Job -Force | Out-Null
+    }
 
     if ($null -ne $getCertJobResult) {
         return $getCertJobResult
@@ -217,6 +225,9 @@ function Get-WebServerCertificate([string]$TargetHost, [int]$Port = 443, [int]$T
             $targetHostAndPort = "{0}:{1}" -f $TargetHost, $Port
 
             try {
+                # Cert object to be returned:
+                $tlsCert = $null
+
                 # Get the cert:
                 $openSslResult = "Q" | openssl s_client -connect $targetHostAndPort 2>$null
 
@@ -767,11 +778,12 @@ function Get-HttpResponseHeader {
                 # Get response headers:
 
                 $iwrParams = @{
-                    Uri                   = $targetUri.AbsoluteUri
-                    AllowInsecureRedirect = $true
-                    SkipCertificateCheck  = $true
-                    SkipHttpErrorCheck    = $true
-                    ErrorAction           = "Stop"
+                    Uri                      = $targetUri.AbsoluteUri
+                    AllowInsecureRedirect    = $true
+                    SkipCertificateCheck     = $true
+                    SkipHttpErrorCheck       = $true
+                    ErrorAction              = "Stop"
+                    ConnectionTimeoutSeconds = 10
                 }
 
                 if ($PSBoundParameters.ContainsKey("Headers")) {
@@ -820,7 +832,9 @@ function Get-HttpResponseHeader {
                 }
             }
             catch {
-                Write-Error -Exception $_.Exception -ErrorAction Stop
+                $webExceptionMessage = "Unable to connect to the following endpoint: $targetUri. Reason: {0}" -f $_.Exception.Message
+                $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
+                Write-Error -Exception $WebException -ErrorAction Stop
             }
         }
         else {
@@ -1516,6 +1530,7 @@ function Invoke-WebCrawl {
                     AllowUnencryptedAuthentication = $true
                     UseDefaultCredentials          = $true
                     SessionVariable                = "websession"
+                    ConnectionTimeoutSeconds       = 10
                 }
 
                 if ($hasHeaders) {
