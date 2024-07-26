@@ -1038,7 +1038,7 @@ function Get-TlsInformation {
                         }
                     }
                     catch {
-                        $sansList += "Subject alternative names not found on this certificate."
+                        $sansList += "No subject alternative names found on this certificate"
                     }
                 }
                 else {
