@@ -324,6 +324,14 @@
         "description": "SOCKS"
     },
     {
+        "port": "1089",
+        "description": "ff-annunc?"
+    },
+    {
+        "port": "1096",
+        "description": "cnrprotocol"
+    },
+    {
         "port": "1194",
         "description": "OpenVPN"
     },
@@ -362,6 +370,10 @@
     {
         "port": "1526",
         "description": "Informix"
+    },
+    {
+        "port": "1556",
+        "description": "veritas_pbx"
     },
     {
         "port": "1589",
@@ -577,7 +589,7 @@
     },
     {
         "port": "5001",
-        "description": "iperf"
+        "description": "java-object"
     },
     {
         "port": "5050",
@@ -760,6 +772,10 @@
         "description": "HTTP"
     },
     {
+        "port": "8093",
+        "description": "apachemq"
+    },
+    {
         "port": "8118",
         "description": "Privoxy"
     },
@@ -874,6 +890,10 @@
     {
         "port": "12345",
         "description": "NetBus"
+    },
+    {
+        "port": "13782",
+        "description": "netbackup"
     },
     {
         "port": "14567",
