@@ -103,7 +103,7 @@ namespace PSTcpIp
         public int CertificateValidityPeriodInDays { get; set; }
         public bool? CertificateIsExpired { get; set; }
         public bool? CertificateVerifies { get; set; }
-        public bool? CertificateSubjectMatchesHostName { get; set; }
+        public bool CertificateSubjectMatchesHostName { get; set; }
         public bool? IsWildcardCertificate { get; set; }
         public string SignatureAlgorithm { get; set; }
         public string[] NegotiatedCipherSuites { get; set; }
@@ -1057,7 +1057,7 @@ function Get-TlsInformation {
                 #!SECTION
 
                 # SECTION Obtain a list of SANs and cert subject to determine if the certificate subject matches the target host name:
-                [Nullable[Boolean]]$certSubjectMatchesHostName = $null
+                [Boolean]$certSubjectMatchesHostName = $false
 
                 $validHostNames = [List[String]]::new()
                 $parsedCertSubject = (($sslCert.Subject).Split(",")[0].Replace("CN=", "")).Trim()
@@ -1100,24 +1100,8 @@ function Get-TlsInformation {
                 either the SAN list or subject itself. If so, determine if there's a match on host name based on the wildcard entry.
                 If not wildcard is found determine if there's an exact match on hostname:
                 #>
-                if (-not($isIp)) {
-                    if ($wildcardFound) {
-                        foreach ($domainName in $wildcardEntries) {
-                            if ($targetHost -match $domainName) {
-                                $certSubjectMatchesHostName = $true
-                                break
-                            }
-                        }
-                    }
-                    else {
-                        if ($targetHost -in $validHostNames) {
-                            $certSubjectMatchesHostName = $true
-                        }
-                        else {
-                            $certSubjectMatchesHostName = $false
-                        }
-                    }
-                }
+
+                $certSubjectMatchesHostName = $sslCert.MatchesHostname($targetHost, $true, $true)
 
                 $tlsInfo.CertificateSubjectMatchesHostName = $certSubjectMatchesHostName
                 $tlsInfo.IsWildcardCertificate = $wildcardFound
