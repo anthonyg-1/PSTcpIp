@@ -1095,12 +1095,6 @@ function Get-TlsInformation {
                     }
                 }
 
-                <#
-                If the passed target is not an IP address, determine if the certificate contains a wildcard entry in
-                either the SAN list or subject itself. If so, determine if there's a match on host name based on the wildcard entry.
-                If not wildcard is found determine if there's an exact match on hostname:
-                #>
-
                 $certSubjectMatchesHostName = $sslCert.MatchesHostname($targetHost, $true, $true)
 
                 $tlsInfo.CertificateSubjectMatchesHostName = $certSubjectMatchesHostName
