@@ -780,6 +780,22 @@
         "description": "HTTP"
     },
     {
+        "port": "8081",
+        "description": "HTTP"
+    },
+    {
+        "port": "8082",
+        "description": "HTTP"
+    },
+    {
+        "port": "8083",
+        "description": "HTTP"
+    },
+    {
+        "port": "8084",
+        "description": "HTTP"
+    },
+    {
         "port": "8090",
         "description": "opsmessaging"
     },
