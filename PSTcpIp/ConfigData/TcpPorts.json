@@ -728,8 +728,12 @@
         "description": "GhostSurf"
     },
     {
+        "port": "7443",
+        "description": "Oracle HTTP Server (SSL)"
+    },
+    {
         "port": "7499",
-        "description": "Oracle Access Management Identity Federation Server Managed Server"
+        "description": "Oracle Identity Federation Server"
     },
     {
         "port": "7501",
@@ -770,6 +774,10 @@
     {
         "port": "8080",
         "description": "HTTP"
+    },
+    {
+        "port": "8090",
+        "description": "opsmessaging?"
     },
     {
         "port": "8093",
