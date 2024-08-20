@@ -234,3 +234,16 @@ foreach ($word in $keywords) {
     $crawlResults | Where Content -match $regExMatch | Select Uri, $Keyword
 }
 ```
+
+### DNS WHOIS
+```powershell
+# Retrieves the WHOIS information for the domain "example.com"
+if ($IsLinux) {
+    Get-Whois -Domain "example.com"
+}
+
+# Retrieves WHOIS information for "example.com" and selects only the domain name and expiration date from the output
+if ($IsLinux) {
+    Get-Whois -Domain "example.com" | Select-Object Domain, ExpirationDate
+}
+```
