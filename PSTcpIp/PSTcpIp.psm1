@@ -1664,6 +1664,117 @@ function Invoke-WebCrawl {
     }
 }
 
+
+function Get-Whois {
+    <#
+        .SYNOPSIS
+            Retrieves WHOIS information for a specified domain.
+        .DESCRIPTION
+            The Get-Whois function fetches WHOIS information for a given domain name and returns it as a PowerShell custom object.
+        .PARAMETER Domain
+            The domain name for which to retrieve WHOIS information. This parameter is mandatory, and it accepts input from the pipeline.
+        .INPUTS
+            A String is received by the Domain parameter.
+        .OUTPUTS
+            PSCustomObject
+                The function outputs a custom object containing WHOIS information for the specified domain.
+        .NOTES
+            * This function is only compatible with Linux. If run on a non-Linux system, it will throw an error.
+            * The function relies on the `whois`, 'awk', and 'sed command-line tools being available on the system. If these tool are not found, the function will throw a terminating error.=
+        .EXAMPLE
+                Get-Whois -Domain "example.com"
+
+                Retrieves the WHOIS information for the domain "example.com".
+
+        .EXAMPLE
+                "example.com" | Get-Whois
+
+                Passes the domain "example.com" through the pipeline to retrieve WHOIS information.
+
+        .EXAMPLE
+                Get-Whois "example.com"
+
+                An alternative syntax using positional parameter.
+        .EXAMPLE
+                Get-Whois -Domain "example.com" | Select-Object Domain, ExpirationDate
+
+                Retrieves WHOIS information for "example.com" and selects only the domain name and expiration date from the output.
+        .LINK
+            https://who.is/
+    #>
+    [CmdletBinding()]
+    [Alias('pswhois')]
+    [OutputType([PSCustomObject])]
+    Param
+    (
+        [Parameter(Mandatory = $true,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true,
+            Position = 0)][ValidateLength(1, 250)][Alias('d')][String]$Domain
+    )
+    BEGIN {
+        if (-not($IsLinux)) {
+            $ApplicationException = [System.ApplicationException]::new("This function is only compatible with Linux.")
+            Write-Error -Exception $ApplicationException -Category InvalidOperation -ErrorAction Stop
+        }
+
+        $dependencyList = @('whois', 'awk', 'sed')
+        foreach ($dependency in $dependencyList) {
+            try {
+                Get-Command -Name $dependency -ErrorAction Stop | Out-Null
+            }
+            catch {
+                $ArgumentException = [System.ArgumentException]::new("Unable to find the following command dependency: {0}" -f $dependency)
+                Write-Error -Exception $ArgumentException -Category InvalidArgument -ErrorAction Stop
+            }
+        }
+    }
+    PROCESS {
+        $whoisData = $null
+
+        $whoisResults = & whois $Domain 2>$null | awk '/Domain Name:/,/DNSSEC:/' 2>$null | sed -s 's/: */,/' 2>$null
+
+        if ($whoisResults) {
+            $resultsTable = @{"Domain" = $Domain }
+
+            $whoisResults | ForEach-Object {
+                $lineArray = $_.Split(",")
+                $key = ($lineArray[0]).Replace(" ", "").Trim()
+                $value = ($lineArray[1]).Trim()
+
+                if (-not($resultsTable.ContainsKey($key))) {
+                    $resultsTable.Add($key, $value)
+                }
+                else {
+                    $priorValues = @($resultsTable.$key)
+                    $currentValue = $value
+                    $valueArray = $priorValues += $currentValue
+                    $resultsTable.$key = $valueArray
+                }
+            }
+
+            $expirationDateUTC = $null
+            $expirationDateString = $resultsTable.RegistryExpiryDate
+
+            if ($expirationDateString) {
+                $expirationDateUTC = Get-Date -Date $expirationDateString -AsUTC
+            }
+
+            $resultsTable.Add("ExpirationDate", $expirationDateUTC)
+
+            $whoisData = New-Object -TypeName PSObject -Property $resultsTable
+        }
+
+        if ($whoisData) {
+            return $whoisData
+        }
+        else {
+            $ArgumentException = [System.ArgumentException]::new("No whois server is known for the value passed to the Domain parameter.")
+            Write-Error -Exception $ArgumentException -Category InvalidArgument -ErrorAction Continue
+        }
+    }
+}
+
 #endregion
 
 
@@ -1676,6 +1787,9 @@ Export-ModuleMember -Function Get-TlsInformation
 Export-ModuleMember -Function Invoke-DnsEnumeration
 Export-ModuleMember -Function Get-IPInformation
 Export-ModuleMember -Function Invoke-WebCrawl
+if ($IsLinux) {
+    Export-ModuleMember -Function Get-Whois
+}
 
 Export-ModuleMember -Alias ttc
 Export-ModuleMember -Alias gtls
@@ -1692,5 +1806,8 @@ Export-ModuleMember -Alias gipi
 Export-ModuleMember -Alias Get-IPAddressInformation
 Export-ModuleMember -Alias iwc
 Export-ModuleMember -Alias webcrawl
+if ($IsLinux) {
+    Export-ModuleMember -Alias pswhois
+}
 
 #endregion
