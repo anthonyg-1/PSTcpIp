@@ -165,7 +165,7 @@ function Get-SourceAddress([string]$Destination = "8.8.8.8") {
 
 function Get-WebServerCertificate([string]$TargetHost, [int]$Port = 443, [int]$Timeout = 10) {
 
-    $cryptographicExceptionMessage = "Unable to establish TLS session with the following host: {0}" -f $TargetHost
+    $cryptographicExceptionMessage = "Unable to establish TLS session with {0} over port {1}." -f $TargetHost, $Port
     $CryptographicException = [System.Security.Cryptography.CryptographicException]::new($cryptographicExceptionMessage)
 
     $getCertScriptBlock = {
