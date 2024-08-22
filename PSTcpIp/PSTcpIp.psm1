@@ -1732,9 +1732,13 @@ function Get-Whois {
     PROCESS {
         $whoisData = $null
 
+        $ArgumentException = [System.ArgumentException]::new("No whois server is known for the value passed to the Domain parameter.")
+
         $whoisResults = & whois $Domain 2>$null | awk '/Domain Name:/,/DNSSEC:/' 2>$null | sed -s 's/: */,/' 2>$null
 
-        if ($whoisResults) {
+        $registrarLineCount = $whoisResults | Select-String -CaseSensitive "Registrar" | Measure-Object | Select-Object -ExpandProperty Count
+
+        if (($whoisResults) -and ($registrarLineCount -gt 0)) {
             $resultsTable = @{"Domain" = $Domain }
 
             $whoisResults | ForEach-Object {
@@ -1762,14 +1766,18 @@ function Get-Whois {
 
             $resultsTable.Add("ExpirationDate", $expirationDateUTC)
 
-            $whoisData = New-Object -TypeName PSObject -Property $resultsTable
+            try {
+                $whoisData = New-Object -TypeName PSObject -Property $resultsTable -ErrorAction Stop
+            }
+            catch {
+                Write-Error -Exception $ArgumentException -Category InvalidArgument -ErrorAction Continue
+            }
         }
 
         if ($whoisData) {
             return $whoisData
         }
         else {
-            $ArgumentException = [System.ArgumentException]::new("No whois server is known for the value passed to the Domain parameter.")
             Write-Error -Exception $ArgumentException -Category InvalidArgument -ErrorAction Continue
         }
     }
