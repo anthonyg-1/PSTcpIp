@@ -7,7 +7,7 @@
     RootModule        = 'PSTcpIp.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '5.19.0'
+    ModuleVersion     = '5.19.1'
 
     # ID used to uniquely identify this module
     GUID              = '99675863-c68e-46fd-b669-0d4942004b28'
