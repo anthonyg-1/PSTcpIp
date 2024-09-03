@@ -737,7 +737,7 @@ function Get-HttpResponseHeader {
 
         [Parameter(Mandatory = $false,
             ValueFromPipelineByPropertyName = $true,
-            Position = 2, ParameterSetName = "HostName")][ValidateSet("HTTP", "HTTPS")][Alias('Scheme', 'ps', 's')][String]$ProtocolScheme = "https",
+            Position = 2, ParameterSetName = "HostName")][ValidateSet("HTTP", "HTTPS")][Alias('Scheme', 'ps', 's')][String]$ProtocolScheme = "HTTPS",
 
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
@@ -750,13 +750,12 @@ function Get-HttpResponseHeader {
 
         [Parameter(Mandatory = $false, Position = 5)][Alias('RequestHeaders', 'rh')][System.Collections.Hashtable]$Headers
     )
-    BEGIN {
-        $webExceptionMessage = "Unable to connect to the following endpoint: $Uri. Verify Uri and try again."
-        $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
-    }
     PROCESS {
         [Uri]$targetUri = $Uri
         if ($PSBoundParameters.ContainsKey("HostName")) {
+
+            $webExceptionMessage = "Unable to connect to the following endpoint: $HostName. Verify hostname and try again."
+            $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
 
             [bool]$hostNameIsUri = [System.Uri]::IsWellFormedUriString($HostName, 1)
             if ($hostNameIsUri) {
@@ -767,6 +766,10 @@ function Get-HttpResponseHeader {
 
             $uriString = "{0}://{1}:{2}" -f $ProtocolScheme.ToLower(), $HostName, $Port
             $targetUri = [System.Uri]::new($uriString)
+        }
+        else {
+            $webExceptionMessage = "Unable to connect to the following endpoint: $Uri. Verify URI and try again."
+            $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
         }
 
         [bool]$isValidUri = [System.Uri]::IsWellFormedUriString($targetUri, 1)
