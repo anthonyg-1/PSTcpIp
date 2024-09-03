@@ -750,6 +750,10 @@ function Get-HttpResponseHeader {
 
         [Parameter(Mandatory = $false, Position = 5)][Alias('RequestHeaders', 'rh')][System.Collections.Hashtable]$Headers
     )
+    BEGIN {
+        $webExceptionMessage = "Unable to connect to the following endpoint: $Uri. Verify Uri and try again."
+        $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
+    }
     PROCESS {
         [Uri]$targetUri = $Uri
         if ($PSBoundParameters.ContainsKey("HostName")) {
@@ -772,7 +776,9 @@ function Get-HttpResponseHeader {
             Write-Error -Exception $ArgumentException -Category InvalidArgument -ErrorAction Stop
         }
 
-        [bool]$canConnect = Test-TcpConnection -DNSHostName $targetUri.DnsSafeHost -Port $targetUri.Port -Quiet
+        $tcpConnectionTestResults = Test-TcpConnection -DNSHostName $targetUri.DnsSafeHost -Port $targetUri.Port
+
+        [bool]$canConnect = $tcpConnectionTestResults.Connected
         if ($canConnect) {
             try {
                 # Get response headers:
@@ -780,23 +786,32 @@ function Get-HttpResponseHeader {
                 $iwrParams = @{
                     Uri                      = $targetUri.AbsoluteUri
                     AllowInsecureRedirect    = $true
+                    ConnectionTimeoutSeconds = 10
+                    ErrorAction              = "SilentlyContinue"
+                    MaximumRedirection       = 0
                     SkipCertificateCheck     = $true
                     SkipHttpErrorCheck       = $true
-                    ErrorAction              = "Stop"
-                    ConnectionTimeoutSeconds = 10
                 }
 
                 if ($PSBoundParameters.ContainsKey("Headers")) {
                     $iwrParams.Add("Headers", $Headers)
                 }
 
-                $responseHeaders = Invoke-WebRequest @iwrParams | Select-Object -ExpandProperty Headers -ErrorAction Stop
+                $httpResponse = Invoke-WebRequest @iwrParams
+
+                $responseHeaders = $null
+                if ($null -eq $httpResponse) {
+                    Write-Error -Exception $WebException -Category ResourceUnavailable -ErrorAction Stop
+                }
+                else {
+                    $responseHeaders = $httpResponse | Select-Object -ExpandProperty Headers -ErrorAction Stop
+                }
 
                 [System.Collections.Hashtable]$responseHeaderTable = $responseHeaders
 
                 [string]$ipAddress = ""
                 if ($PSBoundParameters.ContainsKey("IncludeTargetInformation")) {
-                    $ipAddress = Test-TcpConnection -DNSHostName $targetUri.DnsSafeHost -Port $targetUri.Port | Select-Object -ExpandProperty IPAddress
+                    $ipAddress = $tcpConnectionTestResults | Select-Object -ExpandProperty IPAddress
 
                     $hostName = $targetUri.DnsSafeHost
                     $absoluteUri = $targetUri.AbsoluteUri
@@ -832,14 +847,10 @@ function Get-HttpResponseHeader {
                 }
             }
             catch {
-                $webExceptionMessage = "Unable to connect to the following endpoint: $targetUri. Reason: {0}" -f $_.Exception.Message
-                $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
-                Write-Error -Exception $WebException -ErrorAction Stop
+                Write-Error -Exception $WebException -Category ResourceUnavailable -ErrorAction Stop
             }
         }
         else {
-            $webExceptionMessage = "Unable to connect to the following endpoint: $targetUri"
-            $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
             Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Stop
         }
     }
