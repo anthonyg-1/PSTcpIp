@@ -761,7 +761,7 @@ function Get-HttpResponseHeader {
             if ($hostNameIsUri) {
                 $argumentExceptionMessage = "Value passed to HostName is a URI. Use the Uri parameter instead."
                 $ArgumentException = [ArgumentException]::new($argumentExceptionMessage)
-                Write-Error -Exception $ArgumentException -Category InvalidArgument -ErrorAction Stop
+                Write-Error -Exception $ArgumentException -Category InvalidArgument -ErrorAction $ErrorActionPreference
             }
 
             $uriString = "{0}://{1}:{2}" -f $ProtocolScheme.ToLower(), $HostName, $Port
@@ -776,7 +776,7 @@ function Get-HttpResponseHeader {
 
         if (-not($isValidUri)) {
             $ArgumentException = [ArgumentException]::new("Invalid data passed to Uri parameter.")
-            Write-Error -Exception $ArgumentException -Category InvalidArgument -ErrorAction Stop
+            Write-Error -Exception $ArgumentException -Category InvalidArgument -ErrorAction $ErrorActionPreference
         }
 
         $tcpConnectionTestResults = Test-TcpConnection -DNSHostName $targetUri.DnsSafeHost -Port $targetUri.Port
@@ -804,10 +804,10 @@ function Get-HttpResponseHeader {
 
                 $responseHeaders = $null
                 if ($null -eq $httpResponse) {
-                    Write-Error -Exception $WebException -Category ResourceUnavailable -ErrorAction Stop
+                    Write-Error -Exception $WebException -Category ResourceUnavailable -ErrorAction $ErrorActionPreference
                 }
                 else {
-                    $responseHeaders = $httpResponse | Select-Object -ExpandProperty Headers -ErrorAction Stop
+                    $responseHeaders = $httpResponse | Select-Object -ExpandProperty Headers -ErrorAction $ErrorActionPreference
                 }
 
                 [System.Collections.Hashtable]$responseHeaderTable = $responseHeaders
@@ -850,15 +850,14 @@ function Get-HttpResponseHeader {
                 }
             }
             catch {
-                Write-Error -Exception $WebException -Category ResourceUnavailable -ErrorAction Stop
+                Write-Error -Exception $WebException -Category ResourceUnavailable -ErrorAction $ErrorActionPreference
             }
         }
         else {
-            Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Stop
+            Write-Error -Exception $WebException -Category ConnectionError -ErrorAction $ErrorActionPreference
         }
     }
 }
-
 
 function Get-TlsInformation {
     <#
