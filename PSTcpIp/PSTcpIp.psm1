@@ -754,7 +754,7 @@ function Get-HttpResponseHeader {
         [Uri]$targetUri = $Uri
         if ($PSBoundParameters.ContainsKey("HostName")) {
 
-            $webExceptionMessage = "Unable to connect to the following endpoint: $HostName. Verify hostname and try again."
+            $webExceptionMessage = "Unable to connect to {0} over port {1}. Verify hostname and port and try again." -f $HostName, $Port
             $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
 
             [bool]$hostNameIsUri = [System.Uri]::IsWellFormedUriString($HostName, 1)
