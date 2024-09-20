@@ -3,6 +3,7 @@ access
 accounting
 accounts
 ad
+adfs
 adm
 admin
 administrator
@@ -314,7 +315,9 @@ jobs
 jp
 js
 jupiter
+jwt
 k
+k8s
 kb
 kerberos
 kubernetes
@@ -472,6 +475,7 @@ o
 oa
 office
 office2
+oidc
 old
 oldmail
 oldsite
@@ -647,6 +651,7 @@ storage
 store
 stream
 streaming
+sts
 student
 sun
 support
