@@ -119,6 +119,7 @@ customers
 cvs
 d
 da
+daemon
 dashboard
 data
 database
@@ -132,7 +133,6 @@ de
 default
 demo
 demo2
-daemon
 demostration
 descargas
 design
@@ -158,10 +158,10 @@ dns4
 doc
 docs
 domain
+domain-controller
 domainadmin
 domaincontrol
 domaincontroller
-domain-controller
 domaincontrolpanel
 domainmanagement
 domains
@@ -419,6 +419,8 @@ mssql
 munin
 music
 mx
+mx-a
+mx-b
 mx0
 mx01
 mx02
@@ -426,8 +428,6 @@ mx03
 mx1
 mx2
 mx3
-mx-a
-mx-b
 my
 mysql
 mysql2
@@ -533,9 +533,9 @@ postmaster
 pp
 ppp
 pr
-preprod
 pre-prod
 pre-production
+preprod
 press
 preview
 private
@@ -773,6 +773,7 @@ ww1
 ww2
 ww3
 www
+www-test
 www0
 www01
 www02
@@ -786,7 +787,6 @@ www6
 www7
 wwwm
 wwwold
-www-test
 wwww
 x
 xml
