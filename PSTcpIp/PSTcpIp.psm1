@@ -337,7 +337,7 @@ function Test-TcpConnection {
     .PARAMETER Count
         The amount of iterations. Default is 1.
     .PARAMETER Timeout
-        The timeout value expressed in milliseconds. The default value is 1200.
+        The timeout value expressed in milliseconds. The default value is 2000.
     .PARAMETER Quiet
         Returns a boolean result only.
     .PARAMETER ShowConnectedOnly
