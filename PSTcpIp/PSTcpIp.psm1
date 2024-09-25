@@ -1826,15 +1826,15 @@ function New-IPAddressList {
         Test-TcpConnection
 #>
     [CmdletBinding()]
-    [Alias('gipl')]
-    [OutputType([System.String])]
-    Param (
+    [Alias('gipl', 'New-IPList')]
+    [OutputType([String])]
+    param (
         [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true,
             Position = 0)]
         [ValidateLength(7, 15)]
-        [Alias('BaseNetwork', 's', 'is', 'New-IPList')]
+        [Alias('BaseNetwork', 's', 'is')]
         [string]$IPV4Subnet
     )
     PROCESS {
@@ -1856,11 +1856,8 @@ function New-IPAddressList {
         # Split the subnet into octets
         $octets = $IPV4Subnet.Split('.')
 
-        # Determine the number of octets provided and fill missing ones with 0s
-        $numOctets = $octets.Count
-
         # Ensure we're working with a valid 4-octet base (e.g., 192.168.0.0)
-        while ($numOctets.Count -lt 4) {
+        while ($octets.Count -lt 4) {
             $octets += '0'
         }
 
