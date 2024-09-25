@@ -1796,12 +1796,12 @@ function Get-Whois {
     }
 }
 
-function New-IpList {
+function New-IPAddressList {
     <#
     .SYNOPSIS
         Generates a list of IPv4 addresses from a given subnet.
     .DESCRIPTION
-        The New-IpList function takes an IPv4 subnet as input and generates a list of all possible IP addresses within that subnet. The function expects a valid base network with at least two octets, and it will iterate over the third and fourth octets to create the full range of IP addresses. The generated IP addresses are output to the pipeline. The function supports IPv4 subnets and validates the format of the provided subnet.
+        The New-IPAddressList function takes an IPv4 subnet as input and generates a list of all possible IP addresses within that subnet. The function expects a valid base network with at least two octets, and it will iterate over the third and fourth octets to create the full range of IP addresses. The generated IP addresses are output to the pipeline. The function supports IPv4 subnets and validates the format of the provided subnet.
     .PARAMETER IPV4Subnet
         Specifies the base network (IPv4 subnet) from which to generate the list of IP addresses. The parameter is mandatory and supports pipeline input by both value and property name. The value must be a valid IPv4 address in the format of four octets (e.g., 192.168.0.0).
     .INPUTS
@@ -1811,14 +1811,14 @@ function New-IpList {
         System.String
         The function outputs the generated IPv4 addresses as strings to the pipeline.
     .EXAMPLE
-        New-IpList -IPV4Subnet "192.168.0.0
+        New-IPAddressList -IPV4Subnet "192.168.0.0
         This command will generate a list of all possible IP addresses in the 192.168.x.x subnet and output them to the pipeline.
     .EXAMPLE
-        "192.168.0.0" | New-IpList
+        "192.168.0.0" | New-IPAddressList
         This example demonstrates how the function can accept input from the pipeline. The base IPv4 subnet "192.168.0.0" is passed through the pipeline, and the function will output all possible IP addresses in that subnet.
     .EXAMPLE
-        "192.168.0.0" | New-IpList | Test-TcpConnection -Port 80 -WhereConnected
-        TThe base IPv4 subnet "192.168.0.0" is passed through the pipeline, and the New-IpList function will output all possible IP addresses in that subnet, which are then passed to Test-TcpConnection to determine what IP addresses are listening on TCP port 80.
+        "192.168.0.0" | New-IPAddressList | Test-TcpConnection -Port 80 -WhereConnected
+        TThe base IPv4 subnet "192.168.0.0" is passed through the pipeline, and the New-IPAddressList function will output all possible IP addresses in that subnet, which are then passed to Test-TcpConnection to determine what IP addresses are listening on TCP port 80.
     .NOTES
         The function validates the format of the input subnet. If the input is not a valid IPv4 subnet, an error is thrown.
         The generated IP addresses include all combinations of the third and fourth octets, with a maximum value of 254 for each octet.
@@ -1834,7 +1834,7 @@ function New-IpList {
             ValueFromPipelineByPropertyName = $true,
             Position = 0)]
         [ValidateLength(7, 15)]
-        [Alias('BaseNetwork', 's', 'is')]
+        [Alias('BaseNetwork', 's', 'is', 'New-IPList')]
         [string]$IPV4Subnet
     )
     PROCESS {
@@ -1913,7 +1913,7 @@ Export-ModuleMember -Function Invoke-WebCrawl
 if ($IsLinux) {
     Export-ModuleMember -Function Get-Whois
 }
-Export-ModuleMember -Function New-IpList
+Export-ModuleMember -Function New-IPAddressList
 
 Export-ModuleMember -Alias ttc
 Export-ModuleMember -Alias gtls
@@ -1934,5 +1934,6 @@ if ($IsLinux) {
     Export-ModuleMember -Alias pswhois
 }
 Export-ModuleMember -Alias gipl
+Export-ModuleMember -Alias New-IPList
 
 #endregion
