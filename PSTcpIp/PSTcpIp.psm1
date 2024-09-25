@@ -1796,6 +1796,108 @@ function Get-Whois {
     }
 }
 
+function New-IpList {
+    <#
+    .SYNOPSIS
+        Generates a list of IPv4 addresses from a given subnet.
+    .DESCRIPTION
+        The New-IpList function takes an IPv4 subnet as input and generates a list of all possible IP addresses within that subnet. The function expects a valid base network with at least two octets, and it will iterate over the third and fourth octets to create the full range of IP addresses. The generated IP addresses are output to the pipeline. The function supports IPv4 subnets and validates the format of the provided subnet.
+    .PARAMETER IPV4Subnet
+        Specifies the base network (IPv4 subnet) from which to generate the list of IP addresses. The parameter is mandatory and supports pipeline input by both value and property name. The value must be a valid IPv4 address in the format of four octets (e.g., 192.168.0.0).
+    .INPUTS
+        System.String
+        The function accepts pipeline input in the form of a string representing the base IPv4 subnet.
+    .OUTPUTS
+        System.String
+        The function outputs the generated IPv4 addresses as strings to the pipeline.
+    .EXAMPLE
+        New-IpList -IPV4Subnet "192.168.0.0
+        This command will generate a list of all possible IP addresses in the 192.168.x.x subnet and output them to the pipeline.
+    .EXAMPLE
+        "192.168.0.0" | New-IpList
+        This example demonstrates how the function can accept input from the pipeline. The base IPv4 subnet "192.168.0.0" is passed through the pipeline, and the function will output all possible IP addresses in that subnet.
+    .EXAMPLE
+        "192.168.0.0" | New-IpList | Test-TcpConnection -Port 80 -WhereConnected
+        TThe base IPv4 subnet "192.168.0.0" is passed through the pipeline, and the New-IpList function will output all possible IP addresses in that subnet, which are then passed to Test-TcpConnection to determine what IP addresses are listening on TCP port 80.
+    .NOTES
+        The function validates the format of the input subnet. If the input is not a valid IPv4 subnet, an error is thrown.
+        The generated IP addresses include all combinations of the third and fourth octets, with a maximum value of 254 for each octet.
+    .LINK
+        Test-TcpConnection
+#>
+    [CmdletBinding()]
+    [Alias('gipl')]
+    [OutputType([System.String])]
+    Param (
+        [Parameter(Mandatory = $true,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true,
+            Position = 0)]
+        [ValidateLength(7, 15)]
+        [Alias('BaseNetwork', 's', 'is')]
+        [string]$IPV4Subnet
+    )
+    PROCESS {
+        # Ensure the input is a valid IP subnet format
+        $isIp = $false
+        try {
+            [IPAddress]::Parse($IPV4Subnet) | Out-Null
+            $isIp = $true
+        }
+        catch {
+            $isIp = $false
+        }
+
+        if (-not($isIp)) {
+            $ArgumentException = [ArgumentException]::new("The value passed to the IPV4Subnet parameter is not a valid IPv4 subnet: $IPV4Subnet")
+            Write-Error -Exception $ArgumentException -Category ArgumentException -ErrorAction Stop
+        }
+
+        # Split the subnet into octets
+        $octets = $IPV4Subnet.Split('.')
+
+        # Determine the number of octets provided and fill missing ones with 0s
+        $numOctets = $octets.Count
+
+        # Ensure we're working with a valid 4-octet base (e.g., 192.168.0.0)
+        while ($numOctets.Count -lt 4) {
+            $octets += '0'
+        }
+
+        # Class A (e.g., 10.0.0.0/8): Iterate over the last three octets
+        if ($octets[1] -eq '0' -and $octets[2] -eq '0' -and $octets[3] -eq '0') {
+            for ($i = 0; $i -le 254; $i++) {
+                for ($j = 0; $j -le 254; $j++) {
+                    for ($k = 0; $k -le 254; $k++) {
+                        $ip = "$($octets[0]).$i.$j.$k"
+                        Write-Output $ip
+                    }
+                }
+            }
+        }
+        # Class B (e.g., 172.16.0.0/16): Iterate over the last two octets
+        elseif ($octets[2] -eq '0' -and $octets[3] -eq '0') {
+            for ($i = 0; $i -le 254; $i++) {
+                for ($j = 0; $j -le 254; $j++) {
+                    $ip = "$($octets[0]).$($octets[1]).$i.$j"
+                    Write-Output $ip
+                }
+            }
+        }
+        # Class C (e.g., 192.168.1.0/24): Iterate over the last octet
+        elseif ($octets[3] -eq '0') {
+            for ($i = 0; $i -le 254; $i++) {
+                $ip = "$($octets[0]).$($octets[1]).$($octets[2]).$i"
+                Write-Output $ip
+            }
+        }
+        # Case when the subnet is fully defined (e.g., 192.168.1.1)
+        else {
+            Write-Warning "The provided subnet seems to have all octets defined. Please provide a subnet with fewer defined octets to generate a list."
+        }
+    }
+}
+
 #endregion
 
 
@@ -1811,6 +1913,7 @@ Export-ModuleMember -Function Invoke-WebCrawl
 if ($IsLinux) {
     Export-ModuleMember -Function Get-Whois
 }
+Export-ModuleMember -Function New-IpList
 
 Export-ModuleMember -Alias ttc
 Export-ModuleMember -Alias gtls
@@ -1830,5 +1933,6 @@ Export-ModuleMember -Alias webcrawl
 if ($IsLinux) {
     Export-ModuleMember -Alias pswhois
 }
+Export-ModuleMember -Alias gipl
 
 #endregion
