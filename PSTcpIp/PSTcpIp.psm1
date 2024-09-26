@@ -1796,37 +1796,50 @@ function Get-Whois {
     }
 }
 
+
 function New-IPAddressList {
     <#
-    .SYNOPSIS
-        Generates a list of IPv4 addresses from a given subnet.
-    .DESCRIPTION
-        The New-IPAddressList function takes an IPv4 subnet as input and generates a list of all possible IP addresses within that subnet. The function expects a valid base network with at least two octets, and it will iterate over the third and fourth octets to create the full range of IP addresses. The generated IP addresses are output to the pipeline. The function supports IPv4 subnets and validates the format of the provided subnet.
-    .PARAMETER IPV4Subnet
-        Specifies the base network (IPv4 subnet) from which to generate the list of IP addresses. The parameter is mandatory and supports pipeline input by both value and property name. The value must be a valid IPv4 address in the format of four octets (e.g., 192.168.0.0).
-    .INPUTS
-        System.String
-        The function accepts pipeline input in the form of a string representing the base IPv4 subnet.
-    .OUTPUTS
-        System.String
-        The function outputs the generated IPv4 addresses as strings to the pipeline.
-    .EXAMPLE
-        New-IPAddressList -IPV4Subnet "192.168.0.0
-        This command will generate a list of all possible IP addresses in the 192.168.x.x subnet and output them to the pipeline.
-    .EXAMPLE
-        "192.168.0.0" | New-IPAddressList
-        This example demonstrates how the function can accept input from the pipeline. The base IPv4 subnet "192.168.0.0" is passed through the pipeline, and the function will output all possible IP addresses in that subnet.
-    .EXAMPLE
-        "192.168.0.0" | New-IPAddressList | Test-TcpConnection -Port 80 -WhereConnected
-        TThe base IPv4 subnet "192.168.0.0" is passed through the pipeline, and the New-IPAddressList function will output all possible IP addresses in that subnet, which are then passed to Test-TcpConnection to determine what IP addresses are listening on TCP port 80.
-    .NOTES
-        The function validates the format of the input subnet. If the input is not a valid IPv4 subnet, an error is thrown.
-        The generated IP addresses include all combinations of the third and fourth octets, with a maximum value of 254 for each octet.
-    .LINK
-        Test-TcpConnection
+.SYNOPSIS
+    Generates a list of IPv4 addresses from a given network address (Class A, B, or C).
+.DESCRIPTION
+    The New-IPAddressList function takes an IPv4 network address as input and generates a list of all possible IP addresses within that subnet.
+    The function expects a valid network address, meaning the last one or more octets of the address should be set to `0` to represent the network portion (e.g., `192.168.1.0` for a /24 subnet, or `10.0.0.0` for a /8 subnet).
+    It works with Class A, B, and C network addresses but does not support Variable Length Subnet Masking (VLSM) or CIDR notation directly.
+
+    Specifically, the function assumes:
+    - Class A: Network addresses like `10.0.0.0` (generating all possible IPs in the range `10.x.x.x`).
+    - Class B: Network addresses like `172.16.0.0` (generating all possible IPs in the range `172.16.x.x`).
+    - Class C: Network addresses like `192.168.1.0` (generating all possible IPs in the range `192.168.1.x`).
+
+    The function does not support generating IP addresses for subnets defined with more specific subnet masks (e.g., `192.168.1.128/25`) or with VLSM configurations.
+
+    If a fully defined IP address is provided (e.g., `192.168.1.1`), the function will issue a warning.
+.PARAMETER IPV4Subnet
+    Specifies the base network address (IPv4 network) from which to generate the list of IP addresses. The parameter is mandatory and supports pipeline input by both value and property name.
+    The value must be a valid IPv4 address in the format of four octets, where the network portion is represented with zeroed-out host bits (e.g., `192.168.1.0` for a /24 subnet).
+.INPUTS
+    System.String
+        The function accepts pipeline input in the form of a string representing the base IPv4 network address.
+.OUTPUTS
+System.String
+    The function outputs the generated IPv4 addresses as strings to the pipeline.
+.EXAMPLE
+    New-IPAddressList -IPV4Subnet "192.168.1.0"
+    This command will generate a list of all possible IP addresses in the `192.168.1.x` subnet.
+.EXAMPLE
+    "10.0.0.0" | New-IPAddressList
+    This example demonstrates how the function can accept input from the pipeline. The base IPv4 network address "10.0.0.0" is passed through the pipeline, and the function will output all possible IP addresses in the `10.x.x.x` range.
+.EXAMPLE
+    "192.168.0.0" | New-IPAddressList | Test-TcpConnection -Port 80 -WhereConnected
+    TThe base IPv4 subnet "192.168.0.0" is passed through the pipeline, and the New-IPAddressList function will output all possible IP addresses in that subnet, which are then passed to Test-TcpConnection to determine what IP addresses are listening on TCP port 80.
+.NOTES
+    - This function works with network addresses and does not support VLSM subnets or CIDR notation directly.
+    - Use a network address with one or more trailing octets set to zero (e.g., `192.168.1.0`).
+.LINK
+    Test-TcpConnection
 #>
     [CmdletBinding()]
-    [Alias('gipl', 'New-IPList')]
+    [Alias('Get-IPAddressList', 'gipl', 'New-IPList')]
     [OutputType([String])]
     param (
         [Parameter(Mandatory = $true,
@@ -1932,5 +1945,6 @@ if ($IsLinux) {
 }
 Export-ModuleMember -Alias gipl
 Export-ModuleMember -Alias New-IPList
+Export-ModuleMember -Alias Get-IPAddressList
 
 #endregion
