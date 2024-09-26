@@ -27,6 +27,9 @@ Test-TcpConnection -DNSHostName 'myserver' -Port 80
 # Tests LDAP connectivity on the server 'mydomaincontroller' using the parameter alias ComputerName with a boolean return value
 Test-TcpConnection -ComputerName 'mydomaincontroller' -Port 389 -Quiet
 
+# Scans the 192.168.1.0 subnet for any nodes listening on port 80 (HTTP)
+New-IPAddressList -IPV4Subnet 192.168.1.0 | Test-TcpConnection -Port 80 -ShowConnectedOnly
+
 # Tests SSL connectivity on the server 'mywebserver' twelve times as opposed to the default four attempts
 Test-TcpConnection -DNSHostName 'mywebserver' -Port 443 -Count 12
 
