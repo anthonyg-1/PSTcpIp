@@ -1847,7 +1847,7 @@ System.String
             ValueFromPipelineByPropertyName = $true,
             Position = 0)]
         [ValidateLength(7, 15)]
-        [Alias('BaseNetwork', 's', 'is')]
+        [Alias('BaseNetwork', 'NetworkAddress', 'SubnetAddress', 'bn', 'na', 'sa')]
         [string]$IPV4Subnet
     )
     PROCESS {
