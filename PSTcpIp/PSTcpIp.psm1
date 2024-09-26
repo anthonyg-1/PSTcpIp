@@ -764,7 +764,12 @@ function Get-HttpResponseHeader {
                 Write-Error -Exception $ArgumentException -Category InvalidArgument -ErrorAction $ErrorActionPreference
             }
 
-            $uriString = "{0}://{1}:{2}" -f $ProtocolScheme.ToLower(), $HostName, $Port
+            $targetPort = $Port
+            if (($PSBoundParameters.ContainsKey("ProtocolScheme")) -and ($ProtocolScheme.ToLower() -eq "http") -and (-not($PSBoundParameters.ContainsKey("Port")))) {
+                $targetPort = 80
+            }
+
+            $uriString = "{0}://{1}:{2}" -f $ProtocolScheme.ToLower(), $HostName, $targetPort
             $targetUri = [System.Uri]::new($uriString)
         }
         else {
