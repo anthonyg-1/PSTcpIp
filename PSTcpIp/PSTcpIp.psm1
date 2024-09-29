@@ -381,6 +381,10 @@ function Test-TcpConnection {
         Get-ADDomainController -Filter * | Test-TcpConnection -Port 636 -ShowConnectedOnly | Get-TlsCertificate | Select Subject, NotAfter
 
         Get an expiration report of LDAPS certificates from Active Directory domain controllers.
+    .EXAMPLE
+      "192.168.0.0" | New-IPAddressList | Test-TcpConnection -Port 80 -WhereConnected
+
+       The base IPv4 subnet "192.168.0.0" is passed through the pipeline, and the New-IPAddressList function will output all possible IP addresses in that subnet, which are then passed to Test-TcpConnection to determine what IP addresses are listening on TCP port 80.
     .INPUTS
         System.String
 
@@ -399,6 +403,7 @@ function Test-TcpConnection {
         Get-ADDomainController
         Get-ADComputer
         Get-TlsCertificate
+        New-IPAddressList
         https://github.com/anthonyg-1/PSTcpIp
 	#>
     [CmdletBinding(DefaultParameterSetName = 'Default')]
@@ -1830,13 +1835,16 @@ System.String
     The function outputs the generated IPv4 addresses as strings to the pipeline.
 .EXAMPLE
     New-IPAddressList -IPV4Subnet "192.168.1.0"
+
     This command will generate a list of all possible IP addresses in the `192.168.1.x` subnet.
 .EXAMPLE
     "10.0.0.0" | New-IPAddressList
+
     This example demonstrates how the function can accept input from the pipeline. The base IPv4 network address "10.0.0.0" is passed through the pipeline, and the function will output all possible IP addresses in the `10.x.x.x` range.
 .EXAMPLE
     "192.168.0.0" | New-IPAddressList | Test-TcpConnection -Port 80 -WhereConnected
-    TThe base IPv4 subnet "192.168.0.0" is passed through the pipeline, and the New-IPAddressList function will output all possible IP addresses in that subnet, which are then passed to Test-TcpConnection to determine what IP addresses are listening on TCP port 80.
+
+    The base IPv4 subnet "192.168.0.0" is passed through the pipeline, and the New-IPAddressList function will output all possible IP addresses in that subnet, which are then passed to Test-TcpConnection to determine what IP addresses are listening on TCP port 80.
 .NOTES
     - This function works with network addresses and does not support VLSM subnets or CIDR notation directly.
     - Use a network address with one or more trailing octets set to zero (e.g., `192.168.1.0`).
@@ -1844,7 +1852,7 @@ System.String
     Test-TcpConnection
 #>
     [CmdletBinding()]
-    [Alias('Get-IPAddressList', 'gipl', 'New-IPList')]
+    [Alias('Get-IPAddressList', 'Get-IPList', 'gipl', 'New-IPList')]
     [OutputType([String])]
     param (
         [Parameter(Mandatory = $true,
