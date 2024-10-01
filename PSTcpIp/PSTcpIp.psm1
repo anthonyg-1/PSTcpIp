@@ -1074,6 +1074,7 @@ function Get-TlsInformation {
                 foreach ($x509cert in $fullCertChain) {
                     if (-not($x509cert.Verify())) {
                         $certChainIsTrusted = $false
+                        break
                     }
                 }
 
