@@ -448,6 +448,10 @@
         "description": "Oracle"
     },
     {
+        "port": "2144",
+        "description": "Oracle Containers for J2EE"
+    },
+    {
         "port": "2222",
         "description": "DirectAdmin"
     },
@@ -708,6 +712,10 @@
         "description": "Napster"
     },
     {
+        "port": "6969",
+        "description": "Java RMI"
+    },
+    {
         "port": "6970",
         "description": "Quicktime"
     },
@@ -806,6 +814,10 @@
     {
         "port": "8118",
         "description": "Privoxy"
+    },
+    {
+        "port": "8180",
+        "description": "HTTP"
     },
     {
         "port": "8200",
