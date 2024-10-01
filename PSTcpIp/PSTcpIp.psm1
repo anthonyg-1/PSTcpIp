@@ -97,12 +97,13 @@ namespace PSTcpIp
         public string Thumbprint { get; set; }
         public string Subject { get; set; }
         public string Issuer { get; set; }
+        public System.Security.Cryptography.X509Certificates.X509Certificate2[] CertificateChain { get; set; }
+        public bool? CertificateIsTrusted { get; set; }
         public DateTime ValidFrom { get; set; }
         public DateTime ValidTo { get; set; }
         public int CertificateValidityPeriodInYears { get; set; }
         public int CertificateValidityPeriodInDays { get; set; }
         public bool? CertificateIsExpired { get; set; }
-        public bool? CertificateVerifies { get; set; }
         public bool CertificateSubjectMatchesHostName { get; set; }
         public bool? IsWildcardCertificate { get; set; }
         public string SignatureAlgorithm { get; set; }
@@ -908,18 +909,70 @@ function Get-TlsInformation {
                 This function returns a TlsInfo object. Example output against "https://www.microsoft.com/en-us" using the Uri parameter:
 
                 HostName                          : www.microsoft.com
-                IPAddress                         : 23.47.169.232
+                IPAddress                         : 23.33.242.16
                 Port                              : 443
-                SerialNumber                      : 330003E2CD1066AD8DB81C060800000003E2CD
-                Thumbprint                        : E1579BA55125CEC3A78E39F55CF81DA8BFA94F88
+                SerialNumber                      : 33009F7B734DB0480411EB0BBA0000009F7B73
+                Thumbprint                        : C0CF0C1580E20618EA15357FC1028622518DDC4D
                 Subject                           : CN=www.microsoft.com, O=Microsoft Corporation, L=Redmond, S=WA, C=US
-                Issuer                            : CN=Microsoft Azure RSA TLS Issuing CA 07, O=Microsoft Corporation, C=US
-                ValidFrom                         : 9/14/2023 1:24:20 PM
-                ValidTo                           : 9/8/2024 1:24:20 PM
+                Issuer                            : CN=Microsoft Azure RSA TLS Issuing CA 04, O=Microsoft Corporation, C=US
+                CertificateChain                  : {[Subject]
+                                                    CN=www.microsoft.com, O=Microsoft Corporation, L=Redmond, S=WA, C=US
+
+                                                    [Issuer]
+                                                    CN=Microsoft Azure RSA TLS Issuing CA 04, O=Microsoft Corporation, C=US
+
+                                                    [Serial Number]
+                                                    33009F7B734DB0480411EB0BBA0000009F7B73
+
+                                                    [Not Before]
+                                                    8/26/2024 12:01:06 PM
+
+                                                    [Not After]
+                                                    8/21/2025 12:01:06 PM
+
+                                                    [Thumbprint]
+                                                    C0CF0C1580E20618EA15357FC1028622518DDC4D
+                                                    , [Subject]
+                                                    CN=Microsoft Azure RSA TLS Issuing CA 04, O=Microsoft Corporation, C=US
+
+                                                    [Issuer]
+                                                    CN=DigiCert Global Root G2, OU=www.digicert.com, O=DigiCert Inc, C=US
+
+                                                    [Serial Number]
+                                                    09F96EC295555F24749EAF1E5DCED49D
+
+                                                    [Not Before]
+                                                    6/7/2023 8:00:00 PM
+
+                                                    [Not After]
+                                                    8/25/2026 7:59:59 PM
+
+                                                    [Thumbprint]
+                                                    BE68D0ADAA2345B48E507320B695D386080E5B25
+                                                    , [Subject]
+                                                    CN=DigiCert Global Root G2, OU=www.digicert.com, O=DigiCert Inc, C=US
+
+                                                    [Issuer]
+                                                    CN=DigiCert Global Root G2, OU=www.digicert.com, O=DigiCert Inc, C=US
+
+                                                    [Serial Number]
+                                                    033AF1E6A711A9A0BB2864B11D09FAE5
+
+                                                    [Not Before]
+                                                    8/1/2013 8:00:00 AM
+
+                                                    [Not After]
+                                                    1/15/2038 7:00:00 AM
+
+                                                    [Thumbprint]
+                                                    DF3C24F9BFD666761B268073FE06D1CC8D4F82A4
+                                                    }
+                CertificateIsTrusted              : True
+                ValidFrom                         : 8/26/2024 12:01:06 PM
+                ValidTo                           : 8/21/2025 12:01:06 PM
                 CertificateValidityPeriodInYears  : 1
                 CertificateValidityPeriodInDays   : 360
                 CertificateIsExpired              : False
-                CertificateVerifies               : True
                 CertificateSubjectMatchesHostName : True
                 IsWildcardCertificate             : False
                 SignatureAlgorithm                : sha384RSA
@@ -935,6 +988,7 @@ function Get-TlsInformation {
                 Tls11                             : False
                 Tls12                             : True
                 Tls13                             : False
+
         .NOTES
             If StrictTransportSecurity returns "Unable to acquire HSTS value" or "No value specified for strict transport security (HSTS)" with the HostName parameter set, try the fully qualified web address with the Uri parameter.
         .LINK
@@ -1014,8 +1068,17 @@ function Get-TlsInformation {
             [X509Certificate2]$sslCert = $null
             [bool]$handshakeSucceeded = $false
             try {
-                $sslCert = Get-WebServerCertificate -TargetHost $targetHost -Port $targetPort
-                $tlsInfo.CertificateVerifies = $sslCert.Verify()
+                $fullCertChain = Get-TlsCertificate -HostName $targetHost -Port $targetPort -IncludeChain
+
+                [bool]$certChainIsTrusted = $true
+                foreach ($x509cert in $fullCertChain) {
+                    if (-not($x509cert.Verify())) {
+                        $certChainIsTrusted = $false
+                    }
+                }
+
+                $sslCert = $fullCertChain | Select-Object -First 1
+                $tlsInfo.CertificateIsTrusted = $certChainIsTrusted
                 $tlsInfo.ValidFrom = $sslCert.NotBefore
                 $tlsInfo.ValidTo = $sslCert.NotAfter
                 $tlsInfo.CertificateValidityPeriodInYears = [Math]::Round((($sslCert.NotAfter - $sslCert.NotBefore).Days * 0.00273973), 1)
@@ -1025,6 +1088,7 @@ function Get-TlsInformation {
                 $tlsInfo.Thumbprint = $sslCert.Thumbprint
                 $tlsInfo.Subject = $sslCert.Subject
                 $tlsInfo.Issuer = $sslCert.Issuer
+                $tlsInfo.CertificateChain = $fullCertChain
                 $handshakeSucceeded = $true
             }
             catch {
