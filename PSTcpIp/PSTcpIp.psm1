@@ -1097,15 +1097,7 @@ function Get-TlsInformation {
                     throw $WebException
                 }
 
-                [bool]$certChainIsTrusted = $true
-                foreach ($x509cert in $fullCertChain) {
-                    if (-not($x509cert.Verify())) {
-                        $certChainIsTrusted = $false
-                        break
-                    }
-                }
-
-                $tlsInfo.CertificateIsTrusted = $certChainIsTrusted
+                $tlsInfo.CertificateIsTrusted = $sslCert.Verify()
                 $tlsInfo.ValidFrom = $sslCert.NotBefore
                 $tlsInfo.ValidTo = $sslCert.NotAfter
                 $tlsInfo.CertificateValidityPeriodInYears = [Math]::Round((($sslCert.NotAfter - $sslCert.NotBefore).Days * 0.00273973), 1)
