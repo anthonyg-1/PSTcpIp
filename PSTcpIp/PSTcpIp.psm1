@@ -256,6 +256,29 @@ function Get-WebServerCertificate([string]$TargetHost, [int]$Port = 443, [int]$T
     }
 }
 
+function Get-X509CertificateChain {
+    [CmdletBinding()]
+    [OutputType([System.Security.Cryptography.X509Certificates.X509Certificate2])]
+    Param
+    (
+        [Parameter(Mandatory = $true,
+            ValueFromPipelineByPropertyName = $true,
+            Position = 0)][System.Security.Cryptography.X509Certificates.X509Certificate2]$Certificate
+    )
+    PROCESS {
+        $allCertsInChain = $null
+
+        $chain = [X509Chain]::new()
+        $chain.ChainPolicy.RevocationMode = [X509RevocationMode]::NoCheck
+        $chain.ChainPolicy.VerificationFlags = [X509VerificationFlags]::AllowUnknownCertificateAuthority
+        $chain.Build($Certificate) | Out-Null
+
+        $allCertsInChain = $chain.ChainElements | Select-Object -ExpandProperty Certificate
+
+        return $allCertsInChain
+    }
+}
+
 function Invoke-TimedWait {
     [CmdletBinding()]
     [OutputType([void])]
@@ -653,12 +676,7 @@ function Get-TlsCertificate {
 
             if ($handshakeSucceeded) {
                 if ($PSBoundParameters.ContainsKey("IncludeChain")) {
-                    $chain = [X509Chain]::new()
-                    $chain.ChainPolicy.RevocationMode = [X509RevocationMode]::NoCheck
-                    $chain.ChainPolicy.VerificationFlags = [X509VerificationFlags]::AllowUnknownCertificateAuthority
-                    $chain.Build($sslCert) | Out-Null
-                    $allCertsInChain = $chain.ChainElements | Select-Object -ExpandProperty Certificate
-
+                    $allCertsInChain = Get-X509CertificateChain -Certificate $sslCert
                     return $allCertsInChain
                 }
                 else {
@@ -1068,7 +1086,16 @@ function Get-TlsInformation {
             [X509Certificate2]$sslCert = $null
             [bool]$handshakeSucceeded = $false
             try {
-                $fullCertChain = Get-TlsCertificate -HostName $targetHost -Port $targetPort -IncludeChain
+                $sslCert = Get-WebServerCertificate -TargetHost $targetHost -Port $targetPort
+
+                # Obtain certificate chain:
+                $fullCertChain = Get-X509CertificateChain -Certificate $sslCert
+
+                if ($null -eq $fullCertChain) {
+                    $webExceptionMessage = "Unable to establish TLS session with {0} over port {1}." -f $targetHost, $targetHost
+                    $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
+                    throw $WebException
+                }
 
                 [bool]$certChainIsTrusted = $true
                 foreach ($x509cert in $fullCertChain) {
@@ -1078,7 +1105,6 @@ function Get-TlsInformation {
                     }
                 }
 
-                $sslCert = $fullCertChain | Select-Object -First 1
                 $tlsInfo.CertificateIsTrusted = $certChainIsTrusted
                 $tlsInfo.ValidFrom = $sslCert.NotBefore
                 $tlsInfo.ValidTo = $sslCert.NotAfter
