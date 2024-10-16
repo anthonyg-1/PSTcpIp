@@ -1809,7 +1809,7 @@ function Get-Whois {
             https://who.is/
     #>
     [CmdletBinding()]
-    [Alias('pswhois')]
+    [Alias('pswhois', 'Get-DnsWhois')]
     [OutputType([PSCustomObject])]
     Param
     (
@@ -2038,6 +2038,7 @@ Export-ModuleMember -Alias iwc
 Export-ModuleMember -Alias webcrawl
 if ($IsLinux) {
     Export-ModuleMember -Alias pswhois
+    Export-ModuleMember -Alias Get-DnsWhois
 }
 Export-ModuleMember -Alias gipl
 Export-ModuleMember -Alias New-IPList
