@@ -212,6 +212,10 @@
         "description": "UUCP"
     },
     {
+        "port": "541",
+        "description": "FortiGuard"
+    },
+    {
         "port": "546",
         "description": "DHCPv6"
     },
