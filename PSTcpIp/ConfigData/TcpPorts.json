@@ -896,6 +896,10 @@
         "description": "ADWS"
     },
     {
+        "port": "9444",
+        "description": "wso2esb-console"
+    },
+    {
         "port": "9800",
         "description": "WebDAV"
     },
