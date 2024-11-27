@@ -107,7 +107,7 @@ Get-TlsCertificate -HostName $targetServerName -IncludeChain | Convert-X509Certi
 Get-TlsInformation -HostName mysite.com -Port 443
 
 # Gets TLS status on "https://www.mysite.com" 
-Get-TlsInformation -Uri "https://www.mysite.com"
+Get-TlsInformation -Uri https://www.mysite.com
 
 # Attempts to connect to an array of hostnames on TCP port 443 and if the target host is listening and obtain TLS information for the target
 $targets = "www.mywebsite1.com", "www.mywebsite2.com", "www.mywebsite3.com", "www.mywebsite4.com"
@@ -117,7 +117,10 @@ $targets | Test-TcpConnection -Port 443 -WhereConnected | Get-TlsInformation
 Get-TlsInformation -HostName www.mysite.com | Select -Expand SubjectAlternativeNames
 
 # Gets TLS security information from https://mysite.com using the aliased version of Get-TlsInformation
-gtls -u "https://mysite.com/"
+gtls -u https://mysite.com/
+
+# Gets TLS versions from https://mysite.com
+Get-TlsInformation -Uri https://mysite.com | Select Tls*
 ```
 
 ### DNS record enumeration examples
