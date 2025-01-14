@@ -393,7 +393,7 @@
     },
     {
         "port": "1723",
-        "description": "MS"
+        "description": "PPTP"
     },
     {
         "port": "1725",
@@ -405,7 +405,7 @@
     },
     {
         "port": "1755",
-        "description": "MS"
+        "description": "Microsoft"
     },
     {
         "port": "1812",
