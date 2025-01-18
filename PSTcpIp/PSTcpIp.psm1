@@ -330,15 +330,19 @@ function Resolve-DNSHostName {
     PROCESS {
         [string]$ipAddress = ""
 
-        try {
-            $ipAddress = $([System.Net.Dns]::GetHostEntry($DNSHostName)[0] | Select-Object -ExpandProperty AddressList | Select-Object -ExpandProperty IPAddressToString )
+        if (Test-IPAddress -InputString $DNSHostName) {
+            $ipAddress = $DNSHostName
         }
-        catch {
-            $webExMessage = "Unable to resolve {0} to an IP address." -f $HostName
-            $WebException = [System.Net.WebException]::new($webExMessage)
-            throw $WebException
+        else {
+            try {
+                $ipAddress = $([System.Net.Dns]::GetHostEntry($DNSHostName)[0] | Select-Object -ExpandProperty AddressList | Select-Object -ExpandProperty IPAddressToString -First 1 )
+            }
+            catch {
+                $webExMessage = "Unable to resolve {0} to an IP address." -f $HostName
+                $WebException = [System.Net.WebException]::new($webExMessage)
+                throw $WebException
+            }
         }
-
         return $ipAddress
     }
 }
