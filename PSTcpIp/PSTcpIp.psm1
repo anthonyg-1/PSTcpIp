@@ -1554,8 +1554,12 @@ function Invoke-WebCrawl {
                 - BaseUri: The base URI from which the web crawl started.
                 - Uri: The URI of the visited link.
                 - HostName: The hostname of the visited link.
+                - IPAddress: the resolved IPv4 address for the given URI
+                - Port: The TCP port for the given URI
                 - StatusCode: The HTTP status code returned for the visited link.
                 - StatusDescription: The status description returned for the visited link.
+                - ResponseHeaders: The HTTP response headers expressed as a hashtable
+                - Cookies: The HTTP cookies returned from the request to the target URI
         .LINK
             Where-Object
             Get-HttpResponseHeader
@@ -1627,6 +1631,7 @@ function Invoke-WebCrawl {
 
                 $parsedUri = [Uri]::new($targetUri)
                 $targetHost = $parsedUri.Host
+                $targetPort = $parsedUri.Port
 
                 [PSObject]$response = $null
                 [int]$statusCode = 0
@@ -1671,6 +1676,7 @@ function Invoke-WebCrawl {
                     Uri               = $targetUri
                     HostName          = $targetHost
                     IPAddress         = $targetIP
+                    Port              = $targetPort
                     StatusCode        = $statusCode
                     StatusDescription = $statusDescription
                     ResponseHeaders   = $responseHeaders
