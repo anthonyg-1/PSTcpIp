@@ -164,7 +164,10 @@ function Get-SourceAddress([string]$Destination = "8.8.8.8") {
     return $sourceAddress
 }
 
-function Get-WebServerCertificate([string]$TargetHost, [int]$Port = 443, [int]$Timeout = 10) {
+function Get-WebServerCertificate {
+    
+    [CmdletBinding()]
+    param ([string]$TargetHost, [int]$Port = 443, [int]$Timeout = 10)
 
     $cryptographicExceptionMessage = "Unable to establish TLS session with {0} over port {1}." -f $TargetHost, $Port
     $CryptographicException = [System.Security.Cryptography.CryptographicException]::new($cryptographicExceptionMessage)
@@ -196,7 +199,16 @@ function Get-WebServerCertificate([string]$TargetHost, [int]$Port = 443, [int]$T
             Write-Output -InputObject $sslCert
         }
         catch {
-            throw $CryptographicException
+            switch ($ErrorActionPreference) {
+                'SilentlyContinue' { return $null }
+                'Ignore' { return $null }
+                'Continue' {
+                    Write-Error -Message $_.Exception.Message
+                    return $null
+                }
+                'Stop' { throw }
+                default { throw }
+            }
         }
     }
 
@@ -247,11 +259,29 @@ function Get-WebServerCertificate([string]$TargetHost, [int]$Port = 443, [int]$T
                 return $tlsCert
             }
             catch {
-                throw $CryptographicException
+                switch ($ErrorActionPreference) {
+                    'SilentlyContinue' { return $null }
+                    'Ignore' { return $null }
+                    'Continue' {
+                        Write-Error -Message $_.Exception.Message
+                        return $null
+                    }
+                    'Stop' { throw }
+                    default { throw }
+                }
             }
         }
         else {
-            throw $CryptographicException
+            switch ($ErrorActionPreference) {
+                'SilentlyContinue' { return $null }
+                'Ignore' { return $null }
+                'Continue' {
+                    Write-Error -Message $cryptographicExceptionMessage
+                    return $null
+                }
+                'Stop' { throw $CryptographicException }
+                default { throw $CryptographicException }
+            }
         }
     }
 }
@@ -569,67 +599,17 @@ function Test-TcpConnection {
 
 
 function Get-TlsCertificate {
-    <#
-        .SYNOPSIS
-            Gets a TLS certificate from an endpoint.
-        .DESCRIPTION
-            Gets a TLS certificate from an endpoint specified as a host name and port or URI.
-        .PARAMETER HostName
-            The target host to obtain an TLS certificate from.
-        .PARAMETER Port
-            The port for the target host. This parameter is only applicable when using the HostName parameter. Default value is 443.
-        .PARAMETER Uri
-            Specifies the Uniform Resource Identifier (URI) of the internet resource to which the request for the TLS certificate is sent. This parameter supports HTTPS only.
-        .PARAMETER IncludeChain
-            Instructs the function to return the x509 certificate chain for the given certificate as a list starting with the end-entity certificate followed by one or more CA certificates.
-        .EXAMPLE
-            Get-TlsCertificate -HostName www.mysite.com
-
-            Gets a TLS certificate from www.mysite.com over port 443 (default).
-        .EXAMPLE
-            Get-TlsCertificate -HostName www.mysite.com -Port 8181
-
-            Gets a TLS certificate from www.mysite.com over port 8181.
-        .EXAMPLE
-            Get-TlsCertificate -HostName www.mysite.com -Port 443 | Select Thumbprint, Subject, NotAfter | Format-List
-
-            Gets a TLS certificate from www.mysite.com over port 443, selects three properties (Thumprint, Subject, NotAfter) and formats the output as a list.
-        .EXAMPLE
-            Get-TlsCertificate -Uri https://www.mysite.com/default.htm | Select Thumbprint, Subject, NotAfter | Format-List
-
-            Gets a TLS certificate from https://www.mysite.com, selects three properties (Thumprint, Subject, NotAfter) and formats the output as a list.
-        .EXAMPLE
-            Get-TlsCertificate -HostName www.mysite.com -IncludeChain | Select Subject, Thumbprint, NotAfter | Format-List
-
-            Gets a TLS certificate from https://www.mysite.com including the full certificate chain and writes the full chain's thumbprint, and expiration as a list to the console.
-        .EXAMPLE
-            $targets = "www.mywebsite1.com", "www.mywebsite2.com", "www.mywebsite3.com", "www.mywebsite4.com"
-            $targets | Test-TcpConnection -Port 443 -ShowConnectedOnly | Get-TlsCertificate | Select Subject, NotAfter | Format-List
-
-            Attempts to connect to an array of hostnames on TCP port 443 and if the target host is listening obtain the TLS certificate, select the subject and expiration, and output the results as a list.
-        .INPUTS
-            System.String
-
-                A string value is received by the HostName parameter
-        .OUTPUTS
-            System.Security.Cryptography.X509Certificates.X509Certificate2
-        .LINK
-            Test-TcpConnection
-            Select-Object
-            Format-List
-            https://github.com/anthonyg-1/PSTcpIp
-    #>
-    [CmdletBinding(DefaultParameterSetName = 'HostName')]
+    [CmdletBinding()]
     [Alias('gtls', 'gtlsc', 'gssl', 'Get-SslCertificate')]
     [OutputType([System.Security.Cryptography.X509Certificates.X509Certificate2])]
     param(
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "HostName")][ValidateLength(1, 250)][Alias('ComputerName', 'IPAddress', 'Name', 'h', 'i')][String]$HostName,
-        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, Position = 1, ParameterSetName = "HostName")][ValidateRange(1, 65535)][Alias('PortNumber', 'p')][Int]$Port = 443,
-        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "Uri")][Alias('u', 'Url')][Uri]$Uri,
-        [Parameter(Mandatory = $false, Position = 2)][Alias('ic')][Switch]$IncludeChain
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "HostName")][ValidateLength(1, 250)][Alias('ComputerName', 'IPAddress', 'Name', 'Host')] [string] $HostName,
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, Position = 1, ParameterSetName = "HostName")][ValidateRange(1, 65535)][Alias('PortNumber', 'p')][Int] $Port = 443,
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "Uri")][Alias('u', 'Url')] [Uri] $Uri,
+        [Parameter(Mandatory = $false, Position = 2)][Alias('ic')][Switch] $IncludeChain
     )
     BEGIN {
-        $ErrorActionPreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
+        $originalErrorActionPreference = $ErrorActionPreference
     }
     PROCESS {
         [string]$targetHost = ""
@@ -639,19 +619,29 @@ function Get-TlsCertificate {
             if ($Uri -like "https://*") {
                 $targetHost = $Uri.Authority
                 $targetPort = $Uri.Port
-            }
-            else {
-                $argumentExceptionMessage = "Provided URI is not does not contain the necessary https:// prefix."
+            } else {
+                $argumentExceptionMessage = "Provided URI does not contain the necessary https:// prefix."
                 $ArgumentException = New-Object ArgumentException -ArgumentList $argumentExceptionMessage
                 Write-Error -Exception $ArgumentException -Category InvalidArgument -ErrorAction Stop
+                return $null
             }
-        }
-        else {
+        } else {
             $targetHost = $HostName
             $targetPort = $Port
         }
 
-        $connectionTestResult = Test-TcpConnection -DNSHostName $targetHost -Port $targetPort
+        try {
+            $connectionTestResult = Test-TcpConnection -DNSHostName $targetHost -Port $targetPort
+        } catch {
+            if ($originalErrorActionPreference -eq 'SilentlyContinue' -or $originalErrorActionPreference -eq 'Ignore') {
+                return $null
+            } elseif ($originalErrorActionPreference -eq 'Continue') {
+                Write-Error -Message $_.Exception.Message
+                return $null
+            } else {
+                throw
+            }
+        }
 
         [bool]$isIp = Test-IPAddress -InputString $targetHost
 
@@ -662,7 +652,14 @@ function Get-TlsCertificate {
         if ($null -eq $targetHost) {
             $webExceptionMessage = "Host not specified. Unable to connect."
             $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
-            Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Stop
+            if ($originalErrorActionPreference -eq 'SilentlyContinue' -or $originalErrorActionPreference -eq 'Ignore') {
+                return $null
+            } elseif ($originalErrorActionPreference -eq 'Continue') {
+                Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Continue
+                return $null
+            } else {
+                throw $WebException
+            }
         }
 
         if ($connectionTestResult.Connected) {
@@ -671,31 +668,41 @@ function Get-TlsCertificate {
             try {
                 $sslCert = Get-WebServerCertificate -TargetHost $targetHost -Port $Port
                 $handshakeSucceeded = $true
-            }
-            catch {
-                $cryptographicExceptionMessage = $_.Exception.Message
-                $CryptographicException = New-Object -TypeName CryptographicException -ArgumentList $cryptographicExceptionMessage
-                Write-Error -Exception $CryptographicException -Category SecurityError -ErrorAction Continue
+            } catch {
+                if ($originalErrorActionPreference -eq 'SilentlyContinue' -or $originalErrorActionPreference -eq 'Ignore') {
+                    return $null
+                } elseif ($originalErrorActionPreference -eq 'Continue') {
+                    $cryptographicExceptionMessage = $_.Exception.Message
+                    $CryptographicException = New-Object -TypeName CryptographicException -ArgumentList $cryptographicExceptionMessage
+                    Write-Error -Exception $CryptographicException -Category SecurityError -ErrorAction Continue
+                    return $null
+                } else {
+                    throw
+                }
             }
 
             if ($handshakeSucceeded) {
                 if ($PSBoundParameters.ContainsKey("IncludeChain")) {
                     $allCertsInChain = Get-X509CertificateChain -Certificate $sslCert
                     return $allCertsInChain
-                }
-                else {
+                } else {
                     return $sslCert
                 }
             }
-        }
-        else {
+        } else {
             $webExceptionMessage = "Unable to connect to {0} over the following port: {1}" -f $targetHost, $targetPort
             $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
-            Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Continue
+            if ($originalErrorActionPreference -eq 'SilentlyContinue' -or $originalErrorActionPreference -eq 'Ignore') {
+                return $null
+            } elseif ($originalErrorActionPreference -eq 'Continue') {
+                Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Continue
+                return $null
+            } else {
+                throw $WebException
+            }
         }
     }
 }
-
 
 function Get-HttpResponseHeader {
     <#
