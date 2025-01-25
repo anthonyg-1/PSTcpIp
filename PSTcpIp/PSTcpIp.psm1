@@ -1025,9 +1025,6 @@ function Get-TlsInformation {
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, Position = 1, ParameterSetName = "HostName")][ValidateRange(1, 65535)][Alias('PortNumber', 'p')][Int]$Port = 443,
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "Uri")][Alias('u', 'Url')][Uri]$Uri
     )
-    BEGIN {
-        $ErrorActionPreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
-    }
     PROCESS {
         [string]$targetHost = ""
         [string]$targetPort = ""
@@ -1072,6 +1069,8 @@ function Get-TlsInformation {
             Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Stop
         }
 
+        [bool]$handshakeSucceeded = $false
+
         [bool]$canConnect = $connectionTestResult.Connected
         if ($canConnect) {
             $tlsInfo = New-Object -TypeName PSTcpIp.TlsInfo
@@ -1085,7 +1084,7 @@ function Get-TlsInformation {
             $tlsInfo.Port = $targetPort
 
             [X509Certificate2]$sslCert = $null
-            [bool]$handshakeSucceeded = $false
+
             try {
                 $sslCert = Get-WebServerCertificate -TargetHost $targetHost -Port $targetPort
 
@@ -1114,7 +1113,7 @@ function Get-TlsInformation {
             catch {
                 $cryptographicExceptionMessage = $_.Exception.Message
                 $CryptographicException = New-Object -TypeName CryptographicException -ArgumentList $cryptographicExceptionMessage
-                Write-Error -Exception $CryptographicException -Category SecurityError -ErrorAction Continue
+                Write-Error -Exception $CryptographicException -Category SecurityError -ErrorAction $ErrorActionPreference
             }
 
             if ($handshakeSucceeded) {
@@ -1272,7 +1271,7 @@ function Get-TlsInformation {
         else {
             $webExceptionMessage = "Unable to connect to {0} over the following port: {1}" -f $targetHost, $targetPort
             $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
-            Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Continue
+            Write-Error -Exception $WebException -Category ConnectionError -ErrorAction $ErrorActionPreference
         }
     }
 }
