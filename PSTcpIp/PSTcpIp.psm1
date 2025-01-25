@@ -165,7 +165,6 @@ function Get-SourceAddress([string]$Destination = "8.8.8.8") {
 }
 
 function Get-WebServerCertificate([string]$TargetHost, [int]$Port = 443, [int]$Timeout = 10) {
-
     $cryptographicExceptionMessage = "Unable to establish TLS session with {0} over port {1}." -f $TargetHost, $Port
     $CryptographicException = [System.Security.Cryptography.CryptographicException]::new($cryptographicExceptionMessage)
 
@@ -628,16 +627,13 @@ function Get-TlsCertificate {
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "Uri")][Alias('u', 'Url')][Uri]$Uri,
         [Parameter(Mandatory = $false, Position = 2)][Alias('ic')][Switch]$IncludeChain
     )
-    BEGIN {
-        $ErrorActionPreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
-    }
     PROCESS {
         [string]$targetHost = ""
         [string]$targetPort = ""
 
         if ($PSBoundParameters.ContainsKey("Uri")) {
             if ($Uri -like "https://*") {
-                $targetHost = $Uri.Authority
+                $targetHost = $Uri.DnsSafeHost
                 $targetPort = $Uri.Port
             }
             else {
@@ -675,7 +671,7 @@ function Get-TlsCertificate {
             catch {
                 $cryptographicExceptionMessage = $_.Exception.Message
                 $CryptographicException = New-Object -TypeName CryptographicException -ArgumentList $cryptographicExceptionMessage
-                Write-Error -Exception $CryptographicException -Category SecurityError -ErrorAction Continue
+                Write-Error -Exception $CryptographicException -Category SecurityError -ErrorAction $ErrorActionPreference
             }
 
             if ($handshakeSucceeded) {
@@ -691,7 +687,7 @@ function Get-TlsCertificate {
         else {
             $webExceptionMessage = "Unable to connect to {0} over the following port: {1}" -f $targetHost, $targetPort
             $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
-            Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Continue
+            Write-Error -Exception $WebException -Category ConnectionError -ErrorAction $ErrorActionPreference
         }
     }
 }
@@ -891,6 +887,7 @@ function Get-HttpResponseHeader {
         }
     }
 }
+
 
 function Get-TlsInformation {
     <#
@@ -1279,7 +1276,6 @@ function Get-TlsInformation {
         }
     }
 }
-
 
 
 function Invoke-DnsEnumeration {
