@@ -148,8 +148,8 @@ Invoke-DnsEnumeration -Domain mydomain.com | Test-TcpConnection -Port 443 -Where
 ```powershell
 #requires -Module ActiveDirectory
 
-# Get all Server 2019 instances from Active Directory and determine which ones are listening on port 443
-Get-ADComputer -Filter {OperatingSystem -like "*2019*"} | Test-TcpConnection -Port 443 -Timeout 100 -ShowConnectedOnly
+# Get all Windows Server 2022 instances from Active Directory and determine which ones are listening on port 443
+Get-ADComputer -Filter {OperatingSystem -like "*2022*"} | Test-TcpConnection -Port 443 -Timeout 100 -ShowConnectedOnly
 
 # Get an expiration report of LDAPS certificates from Active Directory domain controllers
 Get-ADDomainController -Filter * | % { Test-TcpConnection -HostName $_.HostName -Port 636 -WhereConnected | Get-TlsCertificate | Select Subject, NotAfter }
