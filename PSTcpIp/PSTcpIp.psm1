@@ -1120,7 +1120,7 @@ function Get-TlsInformation {
                 # Get HTTP Strict Transport Security values:
                 [string]$strictTransportSecurityValue = "No value specified for strict transport security (HSTS)"
                 try {
-                    [Hashtable]$responseHeaders = Get-HttpResponseHeader -Uri $targetUri -AsHashtable
+                    [Hashtable]$responseHeaders = Get-HttpResponseHeader -Uri $targetUri -AsHashtable -ErrorAction Stop
 
                     $strictTransportSecurityValue = $responseHeaders['Strict-Transport-Security']
 
