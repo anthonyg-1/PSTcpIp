@@ -1964,7 +1964,7 @@ System.String
 
         if (-not($isIp)) {
             $ArgumentException = [ArgumentException]::new("The value passed to the IPV4Subnet parameter is not a valid IPv4 subnet: $IPV4Subnet")
-            Write-Error -Exception $ArgumentException -Category ArgumentException -ErrorAction Stop
+            Write-Error -Exception $ArgumentException -Category InvalidArgument -ErrorAction Stop
         }
 
         # Split the subnet into octets
