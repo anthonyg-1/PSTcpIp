@@ -177,6 +177,8 @@ edu
 ektron
 elearning
 email
+employee
+employees
 en
 eng
 english
