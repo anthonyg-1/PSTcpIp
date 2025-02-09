@@ -150,9 +150,15 @@ function Get-SourceAddress([string]$Destination = "8.8.8.8") {
             }
             else {
                 try {
-                    Get-Command -Name ip -ErrorAction Stop | Out-Null
-                    $output = $(ip route get $targetIP)
-                    $sourceAddress = $output.Split("src")[1].Split(" ")[1]
+                    $getCommandResult = Get-Command -Name ip -ErrorAction Ignore
+                    if ($null -ne $getCommandResult) {
+                        $output = $(ip route get $targetIP)
+                        $sourceAddress = $output.Split("src")[1].Split(" ")[1]
+                    }
+                    else {
+                        $warningMessage = "ip command not installed. Unable to determine source IP address."
+                        Write-Warning -Message $warningMessage -WarningAction $WarningPreference
+                    }
                 }
                 catch {
                     return $sourceAddress
