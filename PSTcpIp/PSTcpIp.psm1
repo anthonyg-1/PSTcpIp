@@ -237,16 +237,24 @@ function Get-WebServerCertificate([string]$TargetHost, [int]$Port = 443, [int]$T
                 # Get the cert:
                 $openSslResult = "Q" | openssl s_client -connect $targetHostAndPort 2>$null
 
-                # Parse the relevant base64 cert resulting from openssl:
-                $beginString = "BEGIN CERTIFICATE"
-                $endString = "END CERTIFICATE"
-                $base64CertString = (($openSslResult -join "").Split($beginString)[1].Split($endString)[0]).Replace("-", "")
+                $openSslResultString = $openSslResult -join ""
 
-                # Convert the base64 string to a byte array to be fed to the X509Certificate2 constructor:
-                [byte[]]$certBytes = [System.Convert]::FromBase64String($base64CertString)
+                # Determine that the results of the openssl command contain the header and footer for the base64 cert:
+                if (($openSslResultString.Contains($beginString)) -and ($openSslResultString.Contains($endString))) {
+                    # Parse the relevant base64 cert resulting from openssl:
+                    $beginString = "BEGIN CERTIFICATE"
+                    $endString = "END CERTIFICATE"
+                    $base64CertString = ($openSslResultString.Split($beginString)[1].Split($endString)[0]).Replace("-", "")
 
-                # Instantiate the certificate from the deserialized byte array:
-                $tlsCert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($certBytes)
+                    # Convert the base64 string to a byte array to be fed to the X509Certificate2 constructor:
+                    [byte[]]$certBytes = [System.Convert]::FromBase64String($base64CertString)
+
+                    # Instantiate the certificate from the deserialized byte array:
+                    $tlsCert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($certBytes)
+                }
+                else {
+                    throw $CryptographicException
+                }
 
                 # return the TLS cert:
                 return $tlsCert
