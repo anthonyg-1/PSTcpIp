@@ -544,6 +544,10 @@
         "description": "MySQL"
     },
     {
+        "port": "3333",
+        "description": "dec-notes"
+    },
+    {
         "port": "3389",
         "description": "RDP"
     },
@@ -828,6 +832,10 @@
         "description": "VMware"
     },
     {
+        "port": "8300",
+        "description": "Transport Management Interface"
+    },
+    {
         "port": "8443",
         "description": "HTTPS"
     },
@@ -898,6 +906,10 @@
     {
         "port": "9444",
         "description": "wso2esb-console"
+    },
+    {
+        "port": "9500",
+        "description": "ismserver"
     },
     {
         "port": "9800",
