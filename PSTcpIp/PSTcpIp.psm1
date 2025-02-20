@@ -239,11 +239,13 @@ function Get-WebServerCertificate([string]$TargetHost, [int]$Port = 443, [int]$T
 
                 $openSslResultString = $openSslResult -join ""
 
+                # Header and footer values for base64 cert:
+                $beginString = "BEGIN CERTIFICATE"
+                $endString = "END CERTIFICATE"
+
                 # Determine that the results of the openssl command contain the header and footer for the base64 cert:
                 if (($openSslResultString.Contains($beginString)) -and ($openSslResultString.Contains($endString))) {
                     # Parse the relevant base64 cert resulting from openssl:
-                    $beginString = "BEGIN CERTIFICATE"
-                    $endString = "END CERTIFICATE"
                     $base64CertString = ($openSslResultString.Split($beginString)[1].Split($endString)[0]).Replace("-", "")
 
                     # Convert the base64 string to a byte array to be fed to the X509Certificate2 constructor:
