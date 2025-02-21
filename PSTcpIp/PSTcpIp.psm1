@@ -1993,7 +1993,7 @@ System.String
 
         # Class A (e.g., 10.0.0.0/8): Iterate over the last three octets
         if ($octets[1] -eq '0' -and $octets[2] -eq '0' -and $octets[3] -eq '0') {
-            for ($i = 0; $i -le 254; $i++) {
+            for ($i = 1; $i -le 254; $i++) {
                 for ($j = 0; $j -le 254; $j++) {
                     for ($k = 0; $k -le 254; $k++) {
                         $ip = "$($octets[0]).$i.$j.$k"
@@ -2004,7 +2004,7 @@ System.String
         }
         # Class B (e.g., 172.16.0.0/16): Iterate over the last two octets
         elseif ($octets[2] -eq '0' -and $octets[3] -eq '0') {
-            for ($i = 0; $i -le 254; $i++) {
+            for ($i = 1; $i -le 254; $i++) {
                 for ($j = 0; $j -le 254; $j++) {
                     $ip = "$($octets[0]).$($octets[1]).$i.$j"
                     Write-Output $ip
@@ -2013,7 +2013,7 @@ System.String
         }
         # Class C (e.g., 192.168.1.0/24): Iterate over the last octet
         elseif ($octets[3] -eq '0') {
-            for ($i = 0; $i -le 254; $i++) {
+            for ($i = 1; $i -le 254; $i++) {
                 $ip = "$($octets[0]).$($octets[1]).$($octets[2]).$i"
                 Write-Output $ip
             }
