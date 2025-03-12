@@ -131,7 +131,7 @@ Add-Type -TypeDefinition $tlsStatusDefinition -ErrorAction Stop
 
 #region Private Functions
 
-function Get-SourceAddress([string]$Destination = "8.8.8.8") {
+function Get-SourceIPAddress([string]$Destination = "8.8.8.8") {
     [string]$sourceAddress = ""
 
     if ($Destination) {
@@ -141,6 +141,7 @@ function Get-SourceAddress([string]$Destination = "8.8.8.8") {
             $targetIP = $targetAddresses | Select-Object -ExpandProperty IPAddressToString -First 1
         }
         catch {
+            $sourceAddress = Find-NetRoute -RemoteIPAddress "8.8.8.8" | Select-Object -ExpandProperty IPAddress -First 1
             return $sourceAddress
         }
 
@@ -465,6 +466,8 @@ function Test-TcpConnection {
         $ipv4Addresses = $null
         $ipv4Address = $null
         $tcpClient = $null
+
+        $sourceIpAddress = Get-SourceIPAddress -Destination $DNSHostName
     }
     PROCESS {
         $__ComputerNames = $DNSHostName
@@ -516,7 +519,7 @@ function Test-TcpConnection {
                     $connectionStatusObject = [PSTcpIp.TcpConnectionStatus]::new()
 
                     if ($nameResolved) {
-                        $connectionStatusObject.SourceAddress = Get-SourceAddress -Destination $ipv4Address
+                        $connectionStatusObject.SourceAddress = $sourceIpAddress
                         $tcpClient = New-Object -TypeName System.Net.Sockets.TcpClient
                         try {
                             ($tcpClient.BeginConnect($ipv4Address, $__PortNumber, $null, $null).AsyncWaitHandle.WaitOne($Timeout)) | Out-Null
@@ -536,7 +539,7 @@ function Test-TcpConnection {
                         }
                     }
                     else {
-                        $connectionStatusObject.SourceAddress = Get-SourceAddress
+                        $connectionStatusObject.SourceAddress = Get-SourceIPAddress
                     }
 
                     $connectionStatusObject.HostName = $destination
