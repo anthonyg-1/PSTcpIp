@@ -365,6 +365,11 @@ function Resolve-DNSHostName {
 
 #endregion
 
+#region Global Variables
+
+$MySourceIPAddress = Get-SourceIPAddress
+
+#endregion
 
 #region Exported Functions
 
@@ -467,7 +472,7 @@ function Test-TcpConnection {
         $ipv4Address = $null
         $tcpClient = $null
 
-        $sourceIpAddress = Get-SourceIPAddress -Destination $DNSHostName
+        $sourceIpAddress = $MySourceIPAddress
     }
     PROCESS {
         $__ComputerNames = $DNSHostName
