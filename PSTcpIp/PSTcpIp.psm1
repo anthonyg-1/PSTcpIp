@@ -106,6 +106,7 @@ namespace PSTcpIp
         public bool? CertificateIsExpired { get; set; }
         public bool CertificateSubjectMatchesHostName { get; set; }
         public bool? IsWildcardCertificate { get; set; }
+        public bool? IsSelfSignedCertificate { get; set; }
         public string SignatureAlgorithm { get; set; }
         public string[] NegotiatedCipherSuites { get; set; }
         public string CipherAlgorithm { get; set; }
@@ -365,11 +366,13 @@ function Resolve-DNSHostName {
 
 #endregion
 
+
 #region Global Variables
 
 $MySourceIPAddress = Get-SourceIPAddress
 
 #endregion
+
 
 #region Exported Functions
 
@@ -1229,6 +1232,9 @@ function Get-TlsInformation {
 
                 $tlsInfo.CertificateSubjectMatchesHostName = $certSubjectMatchesHostName
                 $tlsInfo.IsWildcardCertificate = $wildcardFound
+
+                [bool]$isSelfSigned = $sslCert.Subject -eq $sslCert.Issuer
+                $tlsInfo.IsSelfSignedCertificate = $isSelfSigned
 
                 #!SECTION
 
