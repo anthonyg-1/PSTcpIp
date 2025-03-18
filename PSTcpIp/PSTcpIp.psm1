@@ -1977,7 +1977,7 @@ System.String
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true,
             Position = 0)]
-        [ValidateLength(5, 13)]
+        [ValidateLength(5, 15)]
         [Alias('BaseNetwork', 'NetworkAddress', 'SubnetAddress', 'bn', 'na', 'sa')]
         [string]$IPV4Subnet
     )
@@ -2000,41 +2000,41 @@ System.String
         # Split the subnet into octets
         $octets = $IPV4Subnet.Split('.')
 
-        # Ensure we're working with a valid 4-octet base (e.g., 192.168.0.0)
+        # Ensure we're working with a valid 4-octet base (e.g., 192.168.0.0):
         while ($octets.Count -lt 4) {
             $octets += '0'
         }
 
-        # Class A (e.g., 10.0.0.0/8): Iterate over the last three octets
+        # Class A (e.g., 10.0.0.0/8): Iterate over the last three octets:
         if ($octets[1] -eq '0' -and $octets[2] -eq '0' -and $octets[3] -eq '0') {
             for ($i = 1; $i -le 254; $i++) {
                 for ($j = 0; $j -le 254; $j++) {
                     for ($k = 1; $k -le 254; $k++) {
                         $ip = "$($octets[0]).$i.$j.$k"
-                        Write-Output $ip
+                        Write-Output -InputObject $ip
                     }
                 }
             }
         }
-        # Class B (e.g., 172.16.0.0/16): Iterate over the last two octets
+        # Class B (e.g., 172.16.0.0/16): Iterate over the last two octets:
         elseif ($octets[2] -eq '0' -and $octets[3] -eq '0') {
             for ($i = 1; $i -le 254; $i++) {
                 for ($j = 1; $j -le 254; $j++) {
                     $ip = "$($octets[0]).$($octets[1]).$i.$j"
-                    Write-Output $ip
+                    Write-Output -InputObject $ip
                 }
             }
         }
-        # Class C (e.g., 192.168.1.0/24): Iterate over the last octet
+        # Class C (e.g., 192.168.1.0/24): Iterate over the last octet:
         elseif ($octets[3] -eq '0') {
             for ($i = 1; $i -le 254; $i++) {
                 $ip = "$($octets[0]).$($octets[1]).$($octets[2]).$i"
-                Write-Output $ip
+                Write-Output -InputObject $ip
             }
         }
-        # Case when the subnet is fully defined (e.g., 192.168.1.1)
+        # Case when the subnet is fully defined (e.g., 192.168.1.1):
         else {
-            Write-Warning "The provided subnet seems to have all octets defined. Please provide a subnet with fewer defined octets to generate a list."
+            Write-Output -InputObject -InputObject $IPV4Subnet
         }
     }
 }
