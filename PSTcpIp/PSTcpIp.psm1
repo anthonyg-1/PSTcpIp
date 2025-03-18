@@ -2034,7 +2034,7 @@ System.String
         }
         # Case when the subnet is fully defined (e.g., 192.168.1.1):
         else {
-            Write-Output -InputObject -InputObject $IPV4Subnet
+            Write-Output -InputObject $IPV4Subnet
         }
     }
 }
