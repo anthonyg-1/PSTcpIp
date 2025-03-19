@@ -2039,6 +2039,89 @@ System.String
     }
 }
 
+
+function Test-PrivateIPAddress {
+    <#
+    .SYNOPSIS
+        Determines if an IP address is private.
+    .DESCRIPTION
+        This function checks if an IPv4 or IPv6 address falls within the known private address ranges and returns a Boolean value.
+
+        - IPv4 Private Ranges:
+          - 10.0.0.0/8        (10.0.0.0 - 10.255.255.255)
+          - 172.16.0.0/12     (172.16.0.0 - 172.31.255.255)
+          - 192.168.0.0/16    (192.168.0.0 - 192.168.255.255)
+
+        - IPv6 Private Ranges:
+          - fc00::/7 (Unique Local Address)
+    .PARAMETER IPAddress
+        The IP address to evaluate. Accepts pipeline input.
+    .OUTPUTS
+        [Boolean]
+        Returns `$true` if the IP is private, `$false` if it is public.
+
+    .EXAMPLE
+        Test-PrivateIPAddress -IPAddress "192.168.1.1"
+        Returns: `$true`
+
+    .EXAMPLE
+        "192.168.1.1", "8.8.8.8" | Test-PrivateIPAddress
+        Returns:
+        ```
+        True
+        False
+        ```
+    .EXAMPLE
+        Get-Content IPs.txt | Test-PrivateIPAddress
+        Processes IP addresses from a text file and returns `$true` or `$false` for each.
+    #>
+
+    [CmdletBinding()]
+    [OutputType([System.Boolean])]
+    [Alias("tpip", "Test-PrivateIP")]
+    param (
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, HelpMessage = "Enter a valid IPv4 or IPv6 address.")]
+        [string]$IPAddress
+    )
+
+    process {
+        if (-not (Test-IPAddress -InputString $IPAddress)) {
+            $argExceptionMessage = "Invalid IP address format: '$IPAddress'. Please provide a valid IPv4 or IPv6 address."
+            $ArgumentException = [ArgumentException]::new($argExceptionMessage)
+            Write-Error -Exception $ArgumentException -Category InvalidArgument -ErrorAction $ErrorActionPreference
+        }
+        else {
+            # Convert string to IP object:
+            $ip = [System.Net.IPAddress]::Parse($IPAddress)
+
+            if ($ip.AddressFamily -eq 'InterNetwork') {
+                # IPv4
+                # Parse and split:
+                $ipStringArray = $($ip.IPAddressToString).Split(".")
+
+                [int]$firstOctet = $ipStringArray[0]
+                [int]$secondOctet = $ipStringArray[1]
+
+                # Private IPv4 ranges:
+                if (
+                ($firstOctet -eq 10) -or
+                ($firstOctet -eq 192 -and $secondOctet -eq 168) -or
+                ($firstOctet -eq 172 -and $secondOctet -ge 16 -and $secondOctet -le 31)
+                ) {
+                    return $true
+                }
+            }
+            elseif ($ip.AddressFamily -eq 'InterNetworkV6') {
+                # IPv6
+                if ($IPAddress -match "^fc|^fd") {
+                    return $true
+                }
+            }
+            return $false
+        }
+    }
+}
+
 #endregion
 
 
@@ -2055,6 +2138,7 @@ if ($IsLinux) {
     Export-ModuleMember -Function Get-Whois
 }
 Export-ModuleMember -Function New-IPAddressList
+Export-ModuleMember -Function Test-PrivateIPAddress
 
 Export-ModuleMember -Alias ttc
 Export-ModuleMember -Alias gtls
@@ -2078,5 +2162,7 @@ if ($IsLinux) {
 Export-ModuleMember -Alias gipl
 Export-ModuleMember -Alias New-IPList
 Export-ModuleMember -Alias Get-IPAddressList
+Export-ModuleMember -Alias tpip
+Export-ModuleMember -Alias Test-PrivateIP
 
 #endregion
