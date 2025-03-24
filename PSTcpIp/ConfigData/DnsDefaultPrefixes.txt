@@ -674,6 +674,7 @@ php
 phpmyadmin
 pm
 pma
+poc
 poczta
 pop
 pop3
@@ -745,6 +746,7 @@ sales
 sample
 samples
 sandbox
+sandboxlogin
 sc
 search
 secure
@@ -895,6 +897,7 @@ vps2
 w
 w3
 wap
+was
 wc
 web
 web0
@@ -928,6 +931,7 @@ win
 win32
 windows
 wordpress
+wordpress-staging
 work
 world2
 wp
@@ -967,6 +971,7 @@ wwwassets-d
 wwwassets-qa
 wwwm
 wwwold
+wwwtest
 wwww
 x
 xml
