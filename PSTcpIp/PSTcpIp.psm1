@@ -874,6 +874,7 @@ function Get-HttpResponseHeader {
 
                     $hostName = $targetUri.DnsSafeHost
                     $absoluteUri = $targetUri.AbsoluteUri
+                    $port = $targetUri.Port
 
                     if (-not($responseHeaderTable.ContainsKey("HostName"))) {
                         $responseHeaderTable.Add("HostName", $hostName)
@@ -881,6 +882,10 @@ function Get-HttpResponseHeader {
 
                     if (-not($responseHeaderTable.ContainsKey("IPAddress"))) {
                         $responseHeaderTable.Add("IPAddress", $ipAddress)
+                    }
+
+                    if (-not($responseHeaderTable.ContainsKey("Port"))) {
+                        $responseHeaderTable.Add("Port", $port)
                     }
 
                     if (-not($responseHeaderTable.ContainsKey("Uri"))) {
