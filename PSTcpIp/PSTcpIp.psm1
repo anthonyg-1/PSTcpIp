@@ -739,7 +739,7 @@ function Get-HttpResponseHeader {
     .PARAMETER IncludeTargetInformation
          Instructs the function to also return the target computer's host name, IPv4 address, and target URI.
     .PARAMETER Headers
-        Specifies the request headers as a hash table.
+        Specifies the HTTP request headers as a hash table.
     .EXAMPLE
         Get-HttpResponseHeader -Uri "https://example.com"
 
@@ -845,7 +845,7 @@ function Get-HttpResponseHeader {
                 $iwrParams = @{
                     Uri                      = $targetUri.AbsoluteUri
                     AllowInsecureRedirect    = $true
-                    ConnectionTimeoutSeconds = 10
+                    ConnectionTimeoutSeconds = 60
                     ErrorAction              = "SilentlyContinue"
                     MaximumRedirection       = 0
                     SkipCertificateCheck     = $true
@@ -853,7 +853,10 @@ function Get-HttpResponseHeader {
                 }
 
                 if ($PSBoundParameters.ContainsKey("Headers")) {
-                    $iwrParams.Add("Headers", $Headers)
+                    if ($iwrParams.ContainsKey("Headers")) {
+                        $iwrParams.Remove("Headers")
+                        $iwrParams.Add("Headers", $Headers)
+                    }
                 }
 
                 $httpResponse = Invoke-WebRequest @iwrParams
