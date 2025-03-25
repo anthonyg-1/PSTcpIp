@@ -960,7 +960,7 @@ function Get-TlsInformation {
                 This function returns a TlsInfo object. Example output against "https://www.microsoft.com/en-us" using the Uri parameter:
 
                 HostName                          : www.microsoft.com
-                IPAddress                         : 23.33.242.16
+                IPAddress                         : 23.47.61.220
                 Port                              : 443
                 SerialNumber                      : 33009F7B734DB0480411EB0BBA0000009F7B73
                 Thumbprint                        : C0CF0C1580E20618EA15357FC1028622518DDC4D
@@ -1026,8 +1026,9 @@ function Get-TlsInformation {
                 CertificateIsExpired              : False
                 CertificateSubjectMatchesHostName : True
                 IsWildcardCertificate             : False
+                IsSelfSignedCertificate           : False
                 SignatureAlgorithm                : sha384RSA
-                NegotiatedCipherSuites            : {TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384}
+                NegotiatedCipherSuites            : {TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384, TLS_AES_256_GCM_SHA384}
                 CipherAlgorithm                   : Aes256
                 CipherStrength                    : 256
                 KeyExchangeAlgorithm              : ECDH Ephemeral
@@ -1038,7 +1039,7 @@ function Get-TlsInformation {
                 Tls                               : False
                 Tls11                             : False
                 Tls12                             : True
-                Tls13                             : False
+                Tls13                             : True
 
         .NOTES
             If StrictTransportSecurity returns "Unable to acquire HSTS value" or "No value specified for strict transport security (HSTS)" with the HostName parameter set, try the fully qualified web address with the Uri parameter.
