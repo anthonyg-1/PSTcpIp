@@ -82,8 +82,10 @@ namespace PSTcpIp
 }
 "@
 
+[string]$tlsStatusDefinition = ""
 
-$tlsStatusDefinition = @"
+if ($IsLinux) {
+    $tlsStatusDefinition = @'
 using System;
 using System.Security.Cryptography.X509Certificates;
 namespace PSTcpIp
@@ -122,7 +124,51 @@ namespace PSTcpIp
         public bool? Tls13 { get; set; }
     }
 }
-"@
+'@
+}
+else {
+    $tlsStatusDefinition = @'
+using System;
+using System.Security.Cryptography.X509Certificates;
+namespace PSTcpIp
+{
+    public class TlsInfo
+    {
+        public string HostName { get; set; }
+        public string IPAddress { get; set; }
+        public int Port { get; set; }
+        public string SerialNumber { get; set; }
+        public string Thumbprint { get; set; }
+        public string Subject { get; set; }
+        public string Issuer { get; set; }
+        public System.Security.Cryptography.X509Certificates.X509Certificate2[] CertificateChain { get; set; }
+        public bool? CertificateIsTrusted { get; set; }
+        public DateTime ValidFrom { get; set; }
+        public DateTime ValidTo { get; set; }
+        public int CertificateValidityPeriodInYears { get; set; }
+        public int CertificateValidityPeriodInDays { get; set; }
+        public bool? CertificateIsExpired { get; set; }
+        public bool CertificateSubjectMatchesHostName { get; set; }
+        public bool? IsWildcardCertificate { get; set; }
+        public bool? IsSelfSignedCertificate { get; set; }
+        public string SignatureAlgorithm { get; set; }
+        public string[] NegotiatedCipherSuites { get; set; }
+        public string CipherAlgorithm { get; set; }
+        public string CipherStrength { get; set; }
+        public string KeyExchangeAlgorithm { get; set; }
+        public int KeySize { get; set; }
+        public string StrictTransportSecurity { get; set; }
+        public string[] SubjectAlternativeNames { get; set; }
+        public bool? Ssl2 { get; set; }
+        public bool? Ssl3 { get; set; }
+        public bool? Tls { get; set; }
+        public bool? Tls11 { get; set; }
+        public bool? Tls12 { get; set; }
+        public bool? Tls13 { get; set; }
+    }
+}
+'@
+}
 
 Add-Type -TypeDefinition $tcpConnectionStatusClassDef -ReferencedAssemblies System.Net.Primitives -ErrorAction Stop
 Add-Type -TypeDefinition $tlsStatusDefinition -ErrorAction Stop
@@ -1280,6 +1326,10 @@ function Get-TlsInformation {
                             else {
                                 $tlsInfo.KeyExchangeAlgorithm = $sslStream.KeyExchangeAlgorithm.ToString()
                             }
+                        }
+
+                        if (-not($IsLinux)) {
+                            $tlsInfo.KeySize = $sslCert.PublicKey.Key.KeySize
                         }
                     }
                     catch {
