@@ -156,7 +156,7 @@ namespace PSTcpIp
         public string CipherAlgorithm { get; set; }
         public string CipherStrength { get; set; }
         public string KeyExchangeAlgorithm { get; set; }
-        public int KeySize { get; set; }
+        public int? KeySize { get; set; }
         public string StrictTransportSecurity { get; set; }
         public string[] SubjectAlternativeNames { get; set; }
         public bool? Ssl2 { get; set; }
