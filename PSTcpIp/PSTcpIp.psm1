@@ -218,6 +218,7 @@ function Get-SourceIPAddress([string]$Destination = "8.8.8.8") {
     return $sourceAddress
 }
 
+
 function Get-WebServerCertificate([string]$TargetHost, [int]$Port = 443, [int]$Timeout = 10) {
     $cryptographicExceptionMessage = "Unable to establish TLS session with {0} over port {1}." -f $TargetHost, $Port
     $CryptographicException = [System.Security.Cryptography.CryptographicException]::new($cryptographicExceptionMessage)
@@ -319,6 +320,59 @@ function Get-WebServerCertificate([string]$TargetHost, [int]$Port = 443, [int]$T
     }
 }
 
+
+function Get-PublicKeySize {
+    param (
+        [X509Certificate2]$Certificate
+    )
+
+    [string]$oid = ""
+    try {
+        $oid = $Certificate.PublicKey.Oid.Value
+    }
+    catch {
+        return $null
+    }
+
+    $rsaOID = '1.2.840.113549.1.1.1'
+    $edsaOID = '1.2.840.10045.2.1'
+
+    switch ($oid) {
+        $rsaOID {
+            try {
+                $rsa = [RSACertificateExtensions]::GetRSAPublicKey($Certificate)
+                if ($rsa) {
+                    return $rsa.KeySize
+                }
+                else {
+                    return $null
+                }
+            }
+            catch {
+                return $null
+            }
+        }
+        $edsaOID {
+            try {
+                $ecdsa = [ECDsaCertificateExtensions]::GetECDsaPublicKey($Certificate)
+                if ($ecdsa) {
+                    return $ecdsa.KeySize
+                }
+                else {
+                    return $null
+                }
+            }
+            catch {
+                return $null
+            }
+        }
+        default {
+            return $null
+        }
+    }
+}
+
+
 function Get-X509CertificateChain {
     [CmdletBinding()]
     [OutputType([System.Security.Cryptography.X509Certificates.X509Certificate2])]
@@ -342,6 +396,7 @@ function Get-X509CertificateChain {
     }
 }
 
+
 function Invoke-TimedWait {
     [CmdletBinding()]
     [OutputType([void])]
@@ -360,6 +415,7 @@ function Invoke-TimedWait {
         Write-Host -Object "Sleep cycle complete. Initiating $Activity now..." -ForegroundColor Cyan
     }
 }
+
 
 function Test-IPAddress {
     [CmdletBinding()]
@@ -1329,7 +1385,7 @@ function Get-TlsInformation {
                         }
 
                         if (-not($IsLinux)) {
-                            $tlsInfo.KeySize = $sslCert.PublicKey.Key.KeySize
+                            $tlsInfo.KeySize = Get-PublicKeySize -Certificate $sslCert
                         }
                     }
                     catch {
