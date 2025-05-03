@@ -72,6 +72,7 @@ book
 booking
 bookings
 broadcast-ip
+broker
 brokers
 brokers-dev
 brokers-devlite
@@ -374,6 +375,7 @@ k8s
 kb
 kentico
 kerberos
+kit
 kubernetes
 l
 la
@@ -714,6 +716,7 @@ ra
 radio
 radius
 ras
+ras1
 rdcvpn
 rdp
 redirect
@@ -751,6 +754,7 @@ sandboxlogin
 sc
 search
 secure
+secureapi
 securefed
 securefeddev
 securefedfqa
