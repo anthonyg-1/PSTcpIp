@@ -200,8 +200,7 @@ function Get-SourceIPAddress([string]$Destination = "8.8.8.8") {
                 try {
                     $getCommandResult = Get-Command -Name ip -ErrorAction Ignore
                     if ($null -ne $getCommandResult) {
-                        $output = $(ip route get $targetIP)
-                        $sourceAddress = $output.Split("src")[1].Split(" ")[1]
+                        $sourceAddress = $(ip route get $Destination | head -1 | cut -d' ' -f7).Trim() -replace "`n|`r", ""
                     }
                     else {
                         $warningMessage = "ip command not installed. Unable to determine source IP address."
@@ -649,7 +648,7 @@ function Test-TcpConnection {
                         }
                     }
                     else {
-                        $connectionStatusObject.SourceAddress = Get-SourceIPAddress
+                        $connectionStatusObject.SourceAddress = $sourceIpAddress
                     }
 
                     $connectionStatusObject.HostName = $destination
