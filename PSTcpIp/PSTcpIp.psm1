@@ -188,7 +188,7 @@ function Get-SourceIPAddress([string]$Destination = "8.8.8.8") {
             $targetIP = $targetAddresses | Select-Object -ExpandProperty IPAddressToString -First 1
         }
         catch {
-            $sourceAddress = Find-NetRoute -RemoteIPAddress "8.8.8.8" | Select-Object -ExpandProperty IPAddress -First 1
+            $sourceAddress = Find-NetRoute -RemoteIPAddress $Destination | Select-Object -ExpandProperty IPAddress -First 1
             return $sourceAddress
         }
 
@@ -470,7 +470,7 @@ function Resolve-DNSHostName {
 
 #region Global Variables
 
-$MySourceIPAddress = Get-SourceIPAddress
+New-Variable -Name MySourceIPAddress -Value (Get-SourceIPAddress) -Option Constant -Force
 
 #endregion
 
@@ -709,11 +709,6 @@ function Test-TcpConnection {
             $ipv4Address = $null
             $destination = $null
         }
-    }
-    END {
-        # Force garbage collection to free memory:
-        [GC]::Collect()
-        [GC]::WaitForPendingFinalizers()
     }
 }
 
