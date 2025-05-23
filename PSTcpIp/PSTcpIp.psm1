@@ -572,16 +572,17 @@ function Test-TcpConnection {
         [Parameter(Mandatory = $false, Position = 4)][Alias('sco', 'sc', 'Connected', 'ShowConnected', 'WhereConnected', 'wc')][Switch]$ShowConnectedOnly
     )
     BEGIN {
-        $ipv4Addresses = $null
-        $ipv4Address = $null
-        $tcpClient = $null
-
         $sourceIpAddress = $MySourceIPAddress
     }
     PROCESS {
         $__ComputerNames = $DNSHostName
 
         foreach ($__ComputerName in $__ComputerNames) {
+            # Declare local variables for each iteration:
+            [string[]]$ipv4Addresses = $null
+            [string]$ipv4Address = ""
+            [string]$destination = ""
+
             if ($Quiet) {
                 $amountOfIterations = 1
             }
@@ -624,16 +625,24 @@ function Test-TcpConnection {
 
                 $__PortNumbers | ForEach-Object {
                     $__PortNumber = $_
+                    $tcpClient = $null  # Initialize for each port test:
 
                     $connectionStatusObject = [PSTcpIp.TcpConnectionStatus]::new()
 
                     if ($nameResolved) {
                         $connectionStatusObject.SourceAddress = $sourceIpAddress
-                        $tcpClient = New-Object -TypeName System.Net.Sockets.TcpClient
+
                         try {
-                            ($tcpClient.BeginConnect($ipv4Address, $__PortNumber, $null, $null).AsyncWaitHandle.WaitOne($Timeout)) | Out-Null
-                            if ($tcpClient.Connected -eq $true) {
-                                $connectionSucceeded = $true
+                            $tcpClient = New-Object -TypeName System.Net.Sockets.TcpClient
+                            $connectionResult = $tcpClient.BeginConnect($ipv4Address, $__PortNumber, $null, $null)
+
+                            if ($connectionResult.AsyncWaitHandle.WaitOne($Timeout)) {
+                                if ($tcpClient.Connected -eq $true) {
+                                    $connectionSucceeded = $true
+                                }
+                                else {
+                                    $connectionSucceeded = $false
+                                }
                             }
                             else {
                                 $connectionSucceeded = $false
@@ -643,8 +652,18 @@ function Test-TcpConnection {
                             $connectionSucceeded = $false
                         }
                         finally {
-                            $tcpClient.Close()
-                            $tcpClient.Dispose()
+                            # Proper cleanup of TcpClient:
+                            if ($tcpClient) {
+                                try {
+                                    if ($tcpClient.Connected) {
+                                        $tcpClient.Close()
+                                    }
+                                    $tcpClient.Dispose()
+                                }
+                                finally {
+                                    $tcpClient = $null
+                                }
+                            }
                         }
                     }
                     else {
@@ -653,11 +672,10 @@ function Test-TcpConnection {
 
                     $connectionStatusObject.HostName = $destination
                     $connectionStatusObject.IPAddress = $ipv4Address
-
                     $connectionStatusObject.Port = $__PortNumber
 
-                    if ($null -ne ($tcpPortAndDescriptionData.Item($__PortNumber))) {
-                        $connectionStatusObject.Service = $tcpPortAndDescriptionData.Item($__PortNumber)
+                    if ($tcpPortAndDescriptionData.ContainsKey($__PortNumber)) {
+                        $connectionStatusObject.Service = $tcpPortAndDescriptionData[$__PortNumber]
                     }
                     else {
                         $connectionStatusObject.Service = "Unknown"
@@ -685,12 +703,17 @@ function Test-TcpConnection {
                     }
                 }
             }
+
+            # Clean up variables for each computer iteration:
+            $ipv4Addresses = $null
+            $ipv4Address = $null
+            $destination = $null
         }
     }
     END {
-        Remove-Variable -Name tcpClient
-        Remove-Variable -Name ipv4Address
-        Remove-Variable -Name ipv4Addresses
+        # Force garbage collection to free memory:
+        [GC]::Collect()
+        [GC]::WaitForPendingFinalizers()
     }
 }
 
