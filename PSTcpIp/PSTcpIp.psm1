@@ -181,42 +181,43 @@ Add-Type -TypeDefinition $tlsStatusDefinition -ErrorAction Stop
 function Get-SourceIPAddress([string]$Destination = "8.8.8.8") {
     [string]$sourceAddress = ""
 
-    if ($Destination) {
-        [string]$targetIP = ""
+    if ($IsWindows) {
+        $socket = $null
         try {
-            $targetAddresses = [System.Net.Dns]::GetHostAddresses($Destination)
-            $targetIP = $targetAddresses | Select-Object -ExpandProperty IPAddressToString -First 1
+            $socket = New-Object System.Net.Sockets.UdpClient
+            $socket.Connect($Destination, 53)
+            $localEndpoint = $socket.Client.LocalEndPoint
+            $sourceAddress = $localEndpoint.Address.ToString()
         }
         catch {
-            $sourceAddress = Find-NetRoute -RemoteIPAddress $Destination | Select-Object -ExpandProperty IPAddress -First 1
-            return $sourceAddress
+            $ipconfig = ipconfig | Select-String "IPv4 Address" | ForEach-Object { ($_ -split ":")[1].Trim() }
+            $sourceAddress = ($ipconfig | Where-Object { $_ -ne "127.0.0.1" })[0]
         }
-
-        if ($targetIP) {
-            if ($IsWindows) {
-                $sourceAddress = Find-NetRoute -RemoteIPAddress $targetIP | Select-Object -ExpandProperty IPAddress -First 1
+        finally {
+            if ($null -ne $socket) {
+                $socket.Dispose()
+            }
+        }
+    }
+    else {
+        try {
+            $getCommandResult = Get-Command -Name ip -ErrorAction Ignore
+            if ($null -ne $getCommandResult) {
+                $sourceAddress = $(ip route get $Destination | head -1 | cut -d' ' -f7).Trim() -replace "`n|`r", ""
             }
             else {
-                try {
-                    $getCommandResult = Get-Command -Name ip -ErrorAction Ignore
-                    if ($null -ne $getCommandResult) {
-                        $sourceAddress = $(ip route get $Destination | head -1 | cut -d' ' -f7).Trim() -replace "`n|`r", ""
-                    }
-                    else {
-                        $warningMessage = "ip command not installed. Unable to determine source IP address."
-                        Write-Warning -Message $warningMessage -WarningAction $WarningPreference
-                    }
-                }
-                catch {
-                    return $sourceAddress
-                }
+                $warningMessage = "ip command not installed. Unable to determine source IP address."
+                $sourceAddress = $warningMessage
+                Write-Warning -Message $warningMessage -WarningAction $WarningPreference
             }
+        }
+        catch {
+            return $sourceAddress
         }
     }
 
     return $sourceAddress
 }
-
 
 function Get-WebServerCertificate([string]$TargetHost, [int]$Port = 443, [int]$Timeout = 10) {
     $cryptographicExceptionMessage = "Unable to establish TLS session with {0} over port {1}." -f $TargetHost, $Port
