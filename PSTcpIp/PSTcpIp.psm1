@@ -477,29 +477,6 @@ function Invoke-TimedWait {
     }
 }
 
-
-function Test-IPAddress {
-    [CmdletBinding()]
-    [OutputType([bool])]
-    Param
-    (
-        [Parameter(Mandatory = $true, Position = 0)][String]$InputString
-    )
-    PROCESS {
-        [bool]$isIpAddress = $false
-
-        try {
-            [IPAddress]::Parse($InputString) | Out-Null
-            $isIpAddress = $true
-        }
-        catch {
-            $isIpAddress = $false
-        }
-
-        return $isIpAddress
-    }
-}
-
 function Resolve-DNSHostName {
     [CmdletBinding()]
     [OutputType([string])]
@@ -538,6 +515,62 @@ New-Variable -Name MySourceIPAddress -Value (Get-SourceIPAddress) -Option Consta
 
 
 #region Exported Functions
+
+function Test-IPAddress {
+    <#
+.SYNOPSIS
+    Determines whether a given string is a valid IP address.
+
+.DESCRIPTION
+    The Test-IPAddress function checks if the provided input string can be parsed as a valid IP address.
+    It supports both IPv4 and IPv6 formats using the .NET [System.Net.IPAddress]::Parse() method.
+    If the input is a valid IP address, the function returns $true; otherwise, it returns $false.
+
+.PARAMETER InputString
+    [String] The string to validate as an IP address.
+    This parameter is mandatory and must be provided when calling the function.
+
+.INPUTS
+    System.String
+    You can pipe a string to this function to test if it is a valid IP address.
+
+.OUTPUTS
+    System.Boolean
+    Returns $true if the input string is a valid IP address; otherwise, returns $false.
+
+.EXAMPLE
+    Test-IPAddress -InputString "192.168.0.1"
+    Returns: True
+
+.EXAMPLE
+    Test-IPAddress -InputString "example.com"
+    Returns: False
+
+.EXAMPLE
+    "10.0.0.1" | Test-IPAddress
+    Returns: True
+#>
+    [CmdletBinding()]
+    [OutputType([bool])]
+    [Alias('tip')]
+    param
+    (
+        [Parameter(Mandatory = $true, Position = 0)][String]$InputString
+    )
+    PROCESS {
+        [bool]$isIpAddress = $false
+
+        try {
+            [IPAddress]::Parse($InputString) | Out-Null
+            $isIpAddress = $true
+        }
+        catch {
+            $isIpAddress = $false
+        }
+
+        return $isIpAddress
+    }
+}
 
 function Test-TcpConnection {
     <#
@@ -2321,6 +2354,7 @@ function Test-PrivateIPAddress {
 
 #region Export Statements
 
+Export-ModuleMember -Function Test-IPAddress
 Export-ModuleMember -Function Test-TcpConnection
 Export-ModuleMember -Function Get-TlsCertificate
 Export-ModuleMember -Function Get-HttpResponseHeader
@@ -2334,6 +2368,7 @@ if ($IsLinux) {
 Export-ModuleMember -Function New-IPAddressList
 Export-ModuleMember -Function Test-PrivateIPAddress
 
+Export-ModuleMember -Alias tip
 Export-ModuleMember -Alias ttc
 Export-ModuleMember -Alias gtls
 Export-ModuleMember -Alias gtlsc
