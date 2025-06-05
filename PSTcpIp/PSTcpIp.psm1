@@ -97,6 +97,7 @@ namespace PSTcpIp
         public int Port { get; set; }
         public string SerialNumber { get; set; }
         public string Thumbprint { get; set; }
+        public string SubjectKeyIdentifier { get; set; }
         public string Subject { get; set; }
         public string Issuer { get; set; }
         public System.Security.Cryptography.X509Certificates.X509Certificate2[] CertificateChain { get; set; }
@@ -140,6 +141,7 @@ namespace PSTcpIp
         public string SerialNumber { get; set; }
         public string Thumbprint { get; set; }
         public string Subject { get; set; }
+        public string SubjectKeyIdentifier { get; set; }
         public string Issuer { get; set; }
         public System.Security.Cryptography.X509Certificates.X509Certificate2[] CertificateChain { get; set; }
         public bool? CertificateIsTrusted { get; set; }
@@ -1347,6 +1349,12 @@ function Get-TlsInformation {
                     throw $WebException
                 }
 
+                [string]$subjectKeyIdentifier = ""
+                $subjectKeyIdentifier = $sslCert.Extensions | Where-Object { $_.Oid.Value -eq "2.5.29.14" } | Select-Object -ExpandProperty SubjectKeyIdentifier
+                if ($null -eq $subjectKeyIdentifier ) {
+                    $subjectKeyIdentifier = "Unable to determine Subject Key Identifier."
+                }
+
                 $tlsInfo.CertificateIsTrusted = $sslCert.Verify()
                 $tlsInfo.ValidFrom = $sslCert.NotBefore
                 $tlsInfo.ValidTo = $sslCert.NotAfter
@@ -1356,6 +1364,7 @@ function Get-TlsInformation {
                 $tlsInfo.SerialNumber = $sslCert.GetSerialNumberString()
                 $tlsInfo.Thumbprint = $sslCert.Thumbprint
                 $tlsInfo.Subject = $sslCert.Subject
+                $tlsInfo.SubjectKeyIdentifier = $subjectKeyIdentifier
                 $tlsInfo.Issuer = $sslCert.Issuer
                 $tlsInfo.CertificateChain = $fullCertChain
                 $handshakeSucceeded = $true
