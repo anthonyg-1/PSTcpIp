@@ -1179,11 +1179,12 @@ function Get-TlsInformation {
                 This function returns a TlsInfo object. Example output against "https://www.microsoft.com/en-us" using the Uri parameter:
 
                 HostName                          : www.microsoft.com
-                IPAddress                         : 23.47.61.220
+                IPAddress                         : 23.56.210.93
                 Port                              : 443
                 SerialNumber                      : 33009F7B734DB0480411EB0BBA0000009F7B73
                 Thumbprint                        : C0CF0C1580E20618EA15357FC1028622518DDC4D
                 Subject                           : CN=www.microsoft.com, O=Microsoft Corporation, L=Redmond, S=WA, C=US
+                SubjectKeyIdentifier              : 0A27CADD90615213B8B28160508ECC41BD2F4D7E
                 Issuer                            : CN=Microsoft Azure RSA TLS Issuing CA 04, O=Microsoft Corporation, C=US
                 CertificateChain                  : {[Subject]
                                                     CN=www.microsoft.com, O=Microsoft Corporation, L=Redmond, S=WA, C=US
@@ -1251,6 +1252,7 @@ function Get-TlsInformation {
                 CipherAlgorithm                   : Aes256
                 CipherStrength                    : 256
                 KeyExchangeAlgorithm              : ECDH Ephemeral
+                KeySize                           : 2048
                 StrictTransportSecurity           : Strict-Transport-Security not found in header
                 SubjectAlternativeNames           : {wwwqa.microsoft.com, www.microsoft.com, staticview.microsoft.com, i.s-microsoft.comΓÇª}
                 Ssl2                              : False
