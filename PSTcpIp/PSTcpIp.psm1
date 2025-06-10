@@ -1619,10 +1619,12 @@ function Get-TlsInformation {
 
                 #!SECTION
 
+                # SECTION Obtain TLS version and strength information
+
                 $tlsInfo.SignatureAlgorithm = $sslCert.SignatureAlgorithm.FriendlyName
 
-                # Determine public key size from private function if running in Windows only:
-                if ($IsWindows) {
+                # Determine public key size from private function if running in Windows and MacOS only:
+                if (-not($IsLinux)) {
                     $tlsInfo.KeySize = Get-PublicKeySize -Certificate $sslCert
                 }
 
@@ -1645,6 +1647,8 @@ function Get-TlsInformation {
                 $tlsInfo.Tls11 = $tlsVersionResults.Tls11
                 $tlsInfo.Tls12 = $tlsVersionResults.Tls12
                 $tlsInfo.Tls13 = $tlsVersionResults.Tls13
+
+                #!SECTION
 
                 return $tlsInfo
             }
