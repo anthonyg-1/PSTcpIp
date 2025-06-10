@@ -22,17 +22,11 @@ if (Test-Path -Path $PSScriptRoot) { Update-FormatData -PrependPath $formatFileP
 #region Load config data
 
 $tcpPortsJsonFilePath = Join-Path -Path $PSScriptRoot -ChildPath 'ConfigData\TcpPorts.json'
-$protocolsJsonFilePath = Join-Path -Path $PSScriptRoot -ChildPath 'ConfigData\Protocols.json'
 $commonPortsFilePath = Join-Path -Path $PSScriptRoot -ChildPath 'ConfigData\CommonPorts.txt'
 $dnsDefaultPrefixesFilePath = Join-Path $PSScriptRoot -ChildPath '.\ConfigData\DnsDefaultPrefixes.txt'
 
 if (-not(Test-Path -Path $tcpPortsJsonFilePath )) {
     $FileNotFoundException = New-Object -TypeName System.IO.FileNotFoundException -ArgumentList ("JSON configuration file not found in the following path: {0}" -f $tcpPortsJsonFilePath )
-    throw $FileNotFoundException
-}
-
-if (-not(Test-Path -Path $protocolsJsonFilePath )) {
-    $FileNotFoundException = New-Object -TypeName System.IO.FileNotFoundException -ArgumentList ("JSON configuration file not found in the following path: {0}" -f $protocolsJsonFilePath)
     throw $FileNotFoundException
 }
 
@@ -47,7 +41,6 @@ if (-not(Test-Path -Path $dnsDefaultPrefixesFilePath )) {
 }
 
 $tcpPortData = Get-Content -Path $tcpPortsJsonFilePath -Raw | ConvertFrom-Json
-$protocolData = Get-Content -Path $protocolsJsonFilePath -Raw | ConvertFrom-Json
 [int[]]$tcpCommonPorts = Get-Content -Path $commonPortsFilePath | ForEach-Object { if ([Int]::TryParse($_.Trim(), [ref]$null)) { [int]$_.Trim() } }
 $defaultDnsPrefixes = Get-Content -Path $dnsDefaultPrefixesFilePath
 
@@ -57,8 +50,6 @@ foreach ($entry in $tcpPortData) {
         $tcpPortAndDescriptionData.Add([int]$entry.port, $entry.description)
     }
 }
-
-$protocolList = $protocolData | Select-Object -ExpandProperty protocols
 
 #endregion
 
@@ -432,6 +423,159 @@ function Get-PublicKeySize {
         default {
             return $null
         }
+    }
+}
+
+
+function Test-TlsVersion {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$HostName,
+        [Parameter(Mandatory = $false)]
+        [int]$Port = 443,
+        [Parameter(Mandatory = $false)]
+        [int]$ConnectionTimeout = 10,
+        [Parameter(Mandatory = $false)]
+        [int]$ReadTimeout = 30000
+    )
+    BEGIN {
+        # Helper function to test a specific protocol:
+        function Test-Protocol {
+            param($Protocol, $ProtocolName)
+            $tcpClient = $null
+            $sslStream = $null
+            $protocolInfo = @{
+                Supported             = $false
+                NegotiatedCipherSuite = $null
+                CipherAlgorithm       = $null
+                CipherStrength        = $null
+                KeyExchangeAlgorithm  = $null
+            }
+
+            try {
+                $tcpClient = [System.Net.Sockets.TcpClient]::new()
+                $tcpClient.ReceiveTimeout = $ReadTimeout
+                $tcpClient.SendTimeout = $ReadTimeout
+
+                # Connect to host:
+                $connectTask = $tcpClient.ConnectAsync($HostName, $Port)
+                if (-not $connectTask.Wait($ConnectionTimeout * 1000)) {
+                    return $protocolInfo
+                }
+
+                $networkStream = $tcpClient.GetStream()
+
+                # Create SSL stream with certificate validation callback that accepts all certificates:
+                $certCallback = {
+                    param($mySender, $certificate, $chain, $sslPolicyErrors)
+                    return $true
+                }
+                $sslStream = [System.Net.Security.SslStream]::new($networkStream, $false, $certCallback)
+
+                # Try to authenticate with the specific protocol:
+                $sslStream.AuthenticateAsClient($HostName, $null, $Protocol, $false)
+
+                # If we get here, the protocol is supported:
+                $protocolInfo.Supported = $true
+
+                # Extract cipher information
+                if ($sslStream.NegotiatedCipherSuite) {
+                    $protocolInfo.NegotiatedCipherSuite = $sslStream.NegotiatedCipherSuite
+                }
+                if ($sslStream.CipherAlgorithm) {
+                    $protocolInfo.CipherAlgorithm = $sslStream.CipherAlgorithm
+                }
+                if ($sslStream.CipherStrength) {
+                    $protocolInfo.CipherStrength = $sslStream.CipherStrength
+                }
+
+                # Handle KeyExchangeAlgorithm with special case for ECDH Ephemeral
+                if ($sslStream.KeyExchangeAlgorithm) {
+                    $protocolInfo.KeyExchangeAlgorithm = $sslStream.KeyExchangeAlgorithm
+                }
+                else {
+                    $protocolInfo.KeyExchangeAlgorithm = $sslStream.KeyExchangeAlgorithm.ToString()
+                }
+
+                return $protocolInfo
+            }
+            catch {
+                return $protocolInfo
+            }
+            finally {
+                if ($sslStream) {
+                    try { $sslStream.Close() } catch { }
+                    try { $sslStream.Dispose() } catch { }
+                }
+                if ($tcpClient) {
+                    try { $tcpClient.Close() } catch { }
+                    try { $tcpClient.Dispose() } catch { }
+                }
+            }
+        }
+    }
+    PROCESS {
+        # Test each protocol individually:
+        $ssl2Info = Test-Protocol -Protocol ([System.Security.Authentication.SslProtocols]::Ssl2) -ProtocolName "Ssl2"
+        $ssl3Info = Test-Protocol -Protocol ([System.Security.Authentication.SslProtocols]::Ssl3) -ProtocolName "Ssl3"
+        $tlsInfo = Test-Protocol -Protocol ([System.Security.Authentication.SslProtocols]::Tls) -ProtocolName "Tls"
+        $tls11Info = Test-Protocol -Protocol ([System.Security.Authentication.SslProtocols]::Tls11) -ProtocolName "Tls11"
+        $tls12Info = Test-Protocol -Protocol ([System.Security.Authentication.SslProtocols]::Tls12) -ProtocolName "Tls12"
+        $tls13Info = Test-Protocol -Protocol ([System.Security.Authentication.SslProtocols]::Tls13) -ProtocolName "Tls13"
+
+        # Collect all negotiated cipher suites into an array
+        $negotiatedCipherSuites = @()
+        foreach ($info in @($ssl2Info, $ssl3Info, $tlsInfo, $tls11Info, $tls12Info, $tls13Info)) {
+            if ($info.Supported -and $info.NegotiatedCipherSuite) {
+                $negotiatedCipherSuites += $info.NegotiatedCipherSuite
+            }
+        }
+
+        # Get cipher information from the highest supported protocol
+        $cipherAlgorithm = ""
+        $cipherStrength = ""
+        $keyExchangeAlgorithm = ""
+
+        # Check protocols in descending order of preference (TLS 1.3 -> TLS 1.2 -> etc.):
+        $allTlsInformation = @($tls13Info, $tls12Info, $tls11Info, $tlsInfo, $ssl3Info, $ssl2Info)
+
+        # Obtain KeyExchangeAlgorithm seperately:
+        foreach ($keyExAlg in $allTlsInformation.KeyExchangeAlgorithm) {
+            if ($null -ne $keyExAlg) {
+                if ($keyExAlg.ToString() -eq "44550") {
+                    $keyExchangeAlgorithm = "ECDH Ephemeral"
+                    break
+                }
+            }
+        }
+
+        # Now obtain CipherAlgorithm and CipherStrength:
+        foreach ($info in $allTlsInformation) {
+            if ($info.Supported) {
+                $cipherAlgorithm = $info.CipherAlgorithm
+                $cipherStrength = $info.CipherStrength
+                break
+            }
+        }
+
+        # Initialize result object with original boolean properties plus new cipher information:
+        $result = [PSCustomObject]@{
+            HostName               = $HostName
+            Port                   = $Port
+            Ssl2                   = $ssl2Info.Supported
+            Ssl3                   = $ssl3Info.Supported
+            Tls                    = $tlsInfo.Supported
+            Tls11                  = $tls11Info.Supported
+            Tls12                  = $tls12Info.Supported
+            Tls13                  = $tls13Info.Supported
+            NegotiatedCipherSuites = $negotiatedCipherSuites
+            CipherAlgorithm        = $cipherAlgorithm
+            CipherStrength         = $cipherStrength
+            KeyExchangeAlgorithm   = $keyExchangeAlgorithm
+        }
+
+        return $result
     }
 }
 
@@ -1472,66 +1616,30 @@ function Get-TlsInformation {
 
                 #!SECTION
 
-                $negotiatedCipherSuites = @()
-                foreach ($protocol in $protocolList) {
-                    $socket = [Socket]::new([SocketType]::Stream, [ProtocolType]::Tcp)
-                    $socket.Connect($targetHost, $targetPort)
+                $tlsInfo.SignatureAlgorithm = $sslCert.SignatureAlgorithm.FriendlyName
 
-                    try {
-                        $netStream = [NetworkStream]::new($socket, $true)
-                        $callback = { param($certSender, $cert, $chain, $errors) return $true }
-                        $sslStream = [SslStream]::new($netStream, $false, $callback)
+                # Determine public key size from private function:
+                $tlsInfo.KeySize = Get-PublicKeySize -Certificate $sslCert
 
-                        $sslStream.AuthenticateAsClient($targetHost, $null, $protocol, $false)
+                # Test TLS versions and obtain relevant info to return:
+                $tlsVersionResults = Test-TlsVersion -HostName $targetHost -Port $targetPort
+                $tlsInfo.NegotiatedCipherSuites = $tlsVersionResults.NegotiatedCipherSuites
+                $tlsInfo.CipherAlgorithm = $tlsVersionResults.CipherAlgorithm
+                $tlsInfo.CipherStrength = $tlsVersionResults.CipherStrength
 
-                        $tlsInfo.SignatureAlgorithm = $sslCert.SignatureAlgorithm.FriendlyName
-                        $tlsInfo.$protocol = $true
-
-                        if ($negotiatedCipherSuites -notcontains $sslStream.NegotiatedCipherSuite) {
-                            $negotiatedCipherSuites += $sslStream.NegotiatedCipherSuite
-                        }
-
-                        if (-not($tlsInfo.CipherAlgorithm)) {
-                            $tlsInfo.CipherAlgorithm = $sslStream.CipherAlgorithm
-                        }
-
-                        if (-not($tlsInfo.CipherStrength)) {
-                            $tlsInfo.CipherStrength = $sslStream.CipherStrength
-                        }
-                        if (-not($tlsInfo.KeyExchangeAlgorithm)) {
-                            if ($sslStream.KeyExchangeAlgorithm.ToString() -eq "44550") {
-                                $tlsInfo.KeyExchangeAlgorithm = "ECDH Ephemeral"
-                            }
-                            else {
-                                $tlsInfo.KeyExchangeAlgorithm = $sslStream.KeyExchangeAlgorithm.ToString()
-                            }
-                        }
-
-                        if (-not($IsLinux)) {
-                            $tlsInfo.KeySize = Get-PublicKeySize -Certificate $sslCert
-                        }
-                    }
-                    catch {
-                        if ($null -eq $sslCert.SignatureAlgorithm) {
-                            $tlsInfo.$protocol = $null
-                        }
-                        else {
-                            $tlsInfo.$protocol = $false
-                        }
-                    }
-                    finally {
-                        if ($sslStream) {
-                            $sslStream.Close()
-                            $sslStream.Dispose()
-                        }
-
-                        if ($socket) {
-                            $socket.Close()
-                            $socket.Dispose()
-                        }
-                    }
+                if ($tlsVersionResults.KeyExchangeAlgorithm) {
+                    $tlsInfo.KeyExchangeAlgorithm = $tlsVersionResults.KeyExchangeAlgorithm
                 }
-                $tlsInfo.NegotiatedCipherSuites = $negotiatedCipherSuites
+                else {
+                    $tlsInfo.KeyExchangeAlgorithm = "Unable to determine key exchange algorithm."
+                }
+
+                $tlsInfo.Ssl2 = $tlsVersionResults.Ssl2
+                $tlsInfo.Ssl3 = $tlsVersionResults.Ssl3
+                $tlsInfo.Tls = $tlsVersionResults.Tls
+                $tlsInfo.Tls11 = $tlsVersionResults.Tls11
+                $tlsInfo.Tls12 = $tlsVersionResults.Tls12
+                $tlsInfo.Tls13 = $tlsVersionResults.Tls13
 
                 return $tlsInfo
             }
