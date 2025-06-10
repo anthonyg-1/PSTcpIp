@@ -468,7 +468,7 @@ function Test-TlsVersion {
 
                 # Create SSL stream with certificate validation callback that accepts all certificates:
                 $certCallback = {
-                    param($mySender, $certificate, $chain, $sslPolicyErrors)
+                    param($sslSender, $certificate, $chain, $sslPolicyErrors)
                     return $true
                 }
                 $sslStream = [System.Net.Security.SslStream]::new($networkStream, $false, $certCallback)
@@ -542,10 +542,13 @@ function Test-TlsVersion {
 
         # Obtain KeyExchangeAlgorithm seperately:
         foreach ($keyExAlg in $allTlsInformation.KeyExchangeAlgorithm) {
-            if ($null -ne $keyExAlg) {
+            if (($null -ne $keyExAlg) -and ($keyExAlg -ne "None")) {
                 if ($keyExAlg.ToString() -eq "44550") {
                     $keyExchangeAlgorithm = "ECDH Ephemeral"
                     break
+                }
+                else {
+                    $keyExchangeAlgorithm = $keyExAlg.ToString()
                 }
             }
         }
@@ -1618,8 +1621,10 @@ function Get-TlsInformation {
 
                 $tlsInfo.SignatureAlgorithm = $sslCert.SignatureAlgorithm.FriendlyName
 
-                # Determine public key size from private function:
-                $tlsInfo.KeySize = Get-PublicKeySize -Certificate $sslCert
+                # Determine public key size from private function if running in Windows only:
+                if ($IsWindows) {
+                    $tlsInfo.KeySize = Get-PublicKeySize -Certificate $sslCert
+                }
 
                 # Test TLS versions and obtain relevant info to return:
                 $tlsVersionResults = Test-TlsVersion -HostName $targetHost -Port $targetPort
