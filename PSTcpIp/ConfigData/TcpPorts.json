@@ -812,6 +812,10 @@
         "description": "HTTP"
     },
     {
+        "port": "8088",
+        "description": "Apache httpd"
+    },
+    {
         "port": "8090",
         "description": "opsmessaging"
     },
