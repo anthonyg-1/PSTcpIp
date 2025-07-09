@@ -276,6 +276,10 @@
         "description": "MS"
     },
     {
+        "port": "853",
+        "description": "DNS over TLS"
+    },
+    {
         "port": "860",
         "description": "iSCSI"
     },
