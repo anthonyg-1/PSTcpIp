@@ -171,6 +171,21 @@ Add-Type -TypeDefinition $tlsStatusDefinition -ErrorAction Stop
 
 #region Private Functions
 
+function Test-Uri {
+    param (
+        [Parameter(Mandatory)]
+        [String]$InputString
+    )
+
+    try {
+        [void][System.Uri]::new($InputString)
+        return $true
+    }
+    catch {
+        return $false
+    }
+}
+
 function Get-SourceIPAddress([string]$Destination = "8.8.8.8") {
     [string]$sourceAddress = ""
 
@@ -1022,12 +1037,12 @@ function Get-TlsCertificate {
         [string]$targetPort = ""
 
         if ($PSBoundParameters.ContainsKey("Uri")) {
-            if ($Uri -like "https://*") {
+            if ((Test-Uri -InputString $Uri) -and ($Uri.Scheme -eq "https")) {
                 $targetHost = $Uri.DnsSafeHost
                 $targetPort = $Uri.Port
             }
             else {
-                $argumentExceptionMessage = "Provided URI is not does not contain the necessary https:// prefix."
+                $argumentExceptionMessage = "Provided value is not a valid URI or does not contain the necessary https:// prefix."
                 $ArgumentException = New-Object ArgumentException -ArgumentList $argumentExceptionMessage
                 Write-Error -Exception $ArgumentException -Category InvalidArgument -ErrorAction Stop
             }
@@ -1432,13 +1447,13 @@ function Get-TlsInformation {
         [string]$targetUri = ""
 
         if ($PSBoundParameters.ContainsKey("Uri")) {
-            if ($Uri -like "https://*") {
+            if ((Test-Uri -InputString $Uri) -and ($Uri.Scheme -eq "https")) {
                 $targetHost = $Uri.DnsSafeHost
                 $targetPort = $Uri.Port
                 $targetUri = $Uri
             }
             else {
-                $argumentExceptionMessage = "Provided URI is not does not contain the necessary https:// prefix."
+                $argumentExceptionMessage = "Provided value is not a valid URI or does not contain the necessary https:// prefix."
                 $ArgumentException = New-Object ArgumentException -ArgumentList $argumentExceptionMessage
                 Write-Error -Exception $ArgumentException -Category InvalidArgument -ErrorAction Stop
             }
