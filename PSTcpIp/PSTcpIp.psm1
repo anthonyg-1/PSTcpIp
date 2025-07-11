@@ -794,9 +794,9 @@ function Test-TcpConnection {
 
         Get an expiration report of LDAPS certificates from Active Directory domain controllers.
     .EXAMPLE
-      "192.168.0.0" | New-IPAddressList | Test-TcpConnection -Port 80 -WhereConnected
+      "192.168.0.0" | Get-IPAddressList | Test-TcpConnection -Port 80 -WhereConnected
 
-       The base IPv4 subnet "192.168.0.0" is passed through the pipeline, and the New-IPAddressList function will output all possible IP addresses in that subnet, which are then passed to Test-TcpConnection to determine what IP addresses are listening on TCP port 80.
+       The base IPv4 subnet "192.168.0.0" is passed through the pipeline, and the Get-IPAddressList function will output all possible IP addresses in that subnet, which are then passed to Test-TcpConnection to determine what IP addresses are listening on TCP port 80.
     .INPUTS
         System.String
 
@@ -815,13 +815,13 @@ function Test-TcpConnection {
         Get-ADDomainController
         Get-ADComputer
         Get-TlsCertificate
-        New-IPAddressList
+        Get-IPAddressList
         https://github.com/anthonyg-1/PSTcpIp
 	#>
     [CmdletBinding(DefaultParameterSetName = 'Default')]
     [OutputType([PSTcpIp.TcpConnectionStatus], ParameterSetName = 'Default')]
     [OutputType([System.Boolean], ParameterSetName = 'Quiet')]
-    [Alias('ttc')]
+    [Alias('ttc', 'tmap')]
     param(
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, Position = 0)][ValidateLength(1, 250)][Alias('ComputerName', 'HostName', 'IPAddress', 'Name', 'h', 'i')][String[]]$DNSHostName,
         [Parameter(Mandatory = $false, ValueFromPipeline = $false, Position = 1)][ValidateRange(1, 65535)][Alias('PortNumber', 'p')][Int[]]$Port,
@@ -2295,12 +2295,12 @@ function Get-Whois {
 }
 
 
-function New-IPAddressList {
+function Get-IPAddressList {
     <#
 .SYNOPSIS
     Generates a list of IPv4 addresses from a given network address (Class A, B, or C).
 .DESCRIPTION
-    The New-IPAddressList function takes an IPv4 network address as input and generates a list of all possible IP addresses within that subnet.
+    The Get-IPAddressList function takes an IPv4 network address as input and generates a list of all possible IP addresses within that subnet.
     The function expects a valid network address, meaning the last one or more octets of the address should be set to `0` to represent the network portion (e.g., `192.168.1.0` for a /24 subnet, or `10.0.0.0` for a /8 subnet).
     It works with Class A, B, and C network addresses but does not support Variable Length Subnet Masking (VLSM) or CIDR notation directly.
 
@@ -2322,17 +2322,17 @@ function New-IPAddressList {
 System.String
     The function outputs the generated IPv4 addresses as strings to the pipeline.
 .EXAMPLE
-    New-IPAddressList -IPV4Subnet "192.168.1.0"
+    Get-IPAddressList -IPV4Subnet "192.168.1.0"
 
     This command will generate a list of all possible IP addresses in the `192.168.1.x` subnet.
 .EXAMPLE
-    "10.0.0.0" | New-IPAddressList
+    "10.0.0.0" | Get-IPAddressList
 
     This example demonstrates how the function can accept input from the pipeline. The base IPv4 network address "10.0.0.0" is passed through the pipeline, and the function will output all possible IP addresses in the `10.x.x.x` range.
 .EXAMPLE
-    "192.168.0.0" | New-IPAddressList | Test-TcpConnection -Port 80 -WhereConnected
+    "192.168.0.0" | Get-IPAddressList | Test-TcpConnection -Port 80 -WhereConnected
 
-    The base IPv4 subnet "192.168.0.0" is passed through the pipeline, and the New-IPAddressList function will output all possible IP addresses in that subnet, which are then passed to Test-TcpConnection to determine what IP addresses are listening on TCP port 80.
+    The base IPv4 subnet "192.168.0.0" is passed through the pipeline, and the Get-IPAddressList function will output all possible IP addresses in that subnet, which are then passed to Test-TcpConnection to determine what IP addresses are listening on TCP port 80.
 .NOTES
     - This function works with network addresses and does not support VLSM subnets or CIDR notation directly.
     - Use a network address with one or more trailing octets set to zero (e.g., `192.168.1.0`).
@@ -2340,7 +2340,7 @@ System.String
     Test-TcpConnection
 #>
     [CmdletBinding()]
-    [Alias('Get-IPAddressList', 'Get-IPList', 'gipl', 'New-IPList')]
+    [Alias('Get-IPList', 'gipl', 'Convert-SubnetToIPList', 'Expand-IPSubnet', 'New-IPAddressList')]
     [OutputType([String])]
     param (
         [Parameter(Mandatory = $true,
@@ -2508,7 +2508,7 @@ Export-ModuleMember -Function Invoke-WebCrawl
 if ($IsLinux) {
     Export-ModuleMember -Function Get-Whois
 }
-Export-ModuleMember -Function New-IPAddressList
+Export-ModuleMember -Function Get-IPAddressList
 Export-ModuleMember -Function Test-PrivateIPAddress
 
 Export-ModuleMember -Alias tip
@@ -2531,9 +2531,11 @@ if ($IsLinux) {
     Export-ModuleMember -Alias pswhois
     Export-ModuleMember -Alias Get-DnsWhois
 }
+Export-ModuleMember -Alias Get-IPList
 Export-ModuleMember -Alias gipl
-Export-ModuleMember -Alias New-IPList
-Export-ModuleMember -Alias Get-IPAddressList
+Export-ModuleMember -Alias Convert-SubnetToIPList
+Export-ModuleMember -Alias Expand-IPSubnet
+Export-ModuleMember -Alias New-IPAddressList
 Export-ModuleMember -Alias tpip
 Export-ModuleMember -Alias Test-PrivateIP
 
