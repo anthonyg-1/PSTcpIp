@@ -1,6 +1,7 @@
-#requires -Module Pester
-#requires -Module PSScriptAnalyzer
-#requires -Module InjectionHunter
+#requires -Version 7.4.2
+#requires -Modules @{ModuleName = "Pester"; ModuleVersion = "4.10.1"}
+#requires -Modules @{ModuleName = "PSScriptAnalyzer"; ModuleVersion = "1.23.0"}
+#requires -Modules @{ModuleName = "InjectionHunter"; ModuleVersion = "1.0.0"}
 
 $myDefaultDirectory = Get-Location
 
@@ -60,10 +61,11 @@ Describe "Testing module and cmdlets" -Tag Unit -WarningAction SilentlyContinue 
         1. PSReviewUnusedParameter is excluded due to false positives for private method Get-WebServerCertificate and Get-TlsInformation for the $callback variable (which is used literally the next line).
         2. PSAvoidUsingEmptyCatchBlock is excluded due to the necessary use of an empty catch block for Invoke-DnsEnumeration to not stop when an exception occurs when calling [System.Net.Dns]::GetHostAddresses()
         3. PSAvoidUsingWriteHost is very intentionally excluded in for the private function Invoke-TimedWait as I do not want the status messages to ever reach the pipeline.
+        4. PSAvoidUsingCmdletAliases is incorrectly reporting alias usage when calling the Linux "whois" command within the Get-Whois function.
     #>
 
     Context "$module test against PSSA rules" {
-        $analysis = Invoke-ScriptAnalyzer -Path $modulePath -ExcludeRule PSReviewUnusedParameter, PSAvoidUsingEmptyCatchBlock, PSAvoidUsingWriteHost
+        $analysis = Invoke-ScriptAnalyzer -Path $modulePath -ExcludeRule PSReviewUnusedParameter, PSAvoidUsingEmptyCatchBlock, PSAvoidUsingWriteHost, PSAvoidUsingCmdletAliases
 
         foreach ($rule in $scriptAnalyzerRules) {
             It "should pass $rule" {
