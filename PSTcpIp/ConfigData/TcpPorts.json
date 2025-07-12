@@ -136,6 +136,10 @@
         "description": "BGMP"
     },
     {
+        "port": "280",
+        "description": "Apache Tomcat/Coyote JSP Engine"
+    },
+    {
         "port": "318",
         "description": "TSP"
     },
@@ -456,6 +460,10 @@
         "description": "Oracle"
     },
     {
+        "port": "2121",
+        "description": "ccproxy-ftp"
+    },
+    {
         "port": "2144",
         "description": "Oracle Containers for J2EE"
     },
@@ -478,6 +486,10 @@
     {
         "port": "2380",
         "description": "Kubernetes etcd"
+    },
+    {
+        "port": "2381",
+        "description": "Apache httpd"
     },
     {
         "port": "2483",
@@ -576,6 +588,10 @@
         "description": "Ventrilo"
     },
     {
+        "port": "4045",
+        "description": "nlockmgr"
+    },
+    {
         "port": "4333",
         "description": "mSQL"
     },
@@ -670,6 +686,10 @@
     {
         "port": "5986",
         "description": "WinRM/SSL"
+    },
+    {
+        "port": "5989",
+        "description": "HTTPS"
     },
     {
         "port": "6000",
@@ -1042,5 +1062,17 @@
     {
         "port": "49000",
         "description": "Fraggle Rock"
+    },
+    {
+        "port": "50000",
+        "description": "IBM Db2"
+    },
+    {
+        "port": "50001",
+        "description": "Apache Tomcat/Coyote JSP Engine"
+    },
+    {
+        "port": "50002",
+        "description": "iiimsf"
     }
 ]
