@@ -664,6 +664,14 @@
         "description": "Oracle WebLogic Server Node Manager Port"
     },
     {
+        "port": "5671",
+        "description": "RabbitMQ TLS/SSL"
+    },
+    {
+        "port": "5684",
+        "description": "CoAP over DTLS"
+    },
+    {
         "port": "5723",
         "description": "Microsoft SCOM"
     },
@@ -714,6 +722,14 @@
     {
         "port": "6257",
         "description": "WinMX"
+    },
+    {
+        "port": "6379",
+        "description": "Redis"
+    },
+    {
+        "port": "6380",
+        "description": "Azure Redis"
     },
     {
         "port": "6443",
@@ -882,6 +898,10 @@
     {
         "port": "8866",
         "description": "Bagle.B"
+    },
+    {
+        "port": "8883",
+        "description": "MQTT over TLS"
     },
     {
         "port": "8888",
