@@ -512,6 +512,10 @@
         "description": "Symantec"
     },
     {
+        "port": "3000",
+        "description": "Grafana"
+    },
+    {
         "port": "3050",
         "description": "Interbase"
     },
@@ -777,11 +781,11 @@
     },
     {
         "port": "7005",
-        "description": "Oracle Directory Services Manager"
+        "description": "Oracle Directory Integration Platform"
     },
     {
-        "port": "7005",
-        "description": "Oracle Directory Integration Platform"
+        "port": "7183",
+        "description": "Cloudera"
     },
     {
         "port": "7212",
@@ -912,24 +916,12 @@
         "description": "Oracle WebCenter Portal's Portlet Producer"
     },
     {
-        "port": "8889",
-        "description": "Oracle WebCenter Portal's Pagelet Producer"
-    },
-    {
         "port": "8890",
         "description": "Oracle WebCenter Portal's Discussion Server"
     },
     {
         "port": "8891",
-        "description": "Oracle WebCenter Portal Activity Graph Engines"
-    },
-    {
-        "port": "8891",
-        "description": "Oracle WebCenter Personalization"
-    },
-    {
-        "port": "8891",
-        "description": "Oracle WebCenter Analytics Collector"
+        "description": "Oracle WebCenter"
     },
     {
         "port": "8892",
@@ -938,6 +930,10 @@
     {
         "port": "9001",
         "description": "Oracle Business Activity Monitoring Managed Server"
+    },
+    {
+        "port": "9090",
+        "description": "Prometheus"
     },
     {
         "port": "9092",
@@ -954,6 +950,14 @@
     {
         "port": "9119",
         "description": "MXit"
+    },
+    {
+        "port": "9200",
+        "description": "Elasticsearch"
+    },
+    {
+        "port": "9300",
+        "description": "Elasticsearch"
     },
     {
         "port": "9389",
