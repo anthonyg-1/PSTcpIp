@@ -832,6 +832,10 @@
         "description": "Internet"
     },
     {
+        "port": "8002",
+        "description": "Oracle E-Business Suite"
+    },
+    {
         "port": "8001",
         "description": "Oracle WebLogic Server Listen Port for Managed Server"
     },
