@@ -920,6 +920,14 @@
         "description": "Oracle Business Activity Monitoring Managed Server"
     },
     {
+        "port": "9092",
+        "description": "Kafka"
+    },
+    {
+        "port": "9093",
+        "description": "Kafka TLS"
+    },
+    {
         "port": "9100",
         "description": "HP"
     },
