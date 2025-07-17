@@ -1116,6 +1116,8 @@ function Get-HttpResponseHeader {
         Instructs the function to return the results as an ordered Hashtable as opposed to the default of PSCustomObject.
     .PARAMETER IncludeTargetInformation
          Instructs the function to also return the target computer's host name, IPv4 address, and target URI.
+    .PARAMETER IncludeHttpStatusCode
+         Instructs the function to also return the HTTP status code.
     .PARAMETER Headers
         Specifies the HTTP request headers as a hash table.
     .EXAMPLE
@@ -1134,6 +1136,10 @@ function Get-HttpResponseHeader {
         Get-HttpResponseHeader -HostName "example.com" -IncludeTargetInformation
 
         Retrieves the HTTP response headers from the specified web endpoint with a hostname of example.com including the host name (as HostName), the resolved IPv4 address (as IPAddress), and the target Uri (as Uri).
+    .EXAMPLE
+        Get-HttpResponseHeader -HostName "example.com" -IncludeTargetInformation -IncludeHttpStatusCode
+
+        Retrieves the HTTP response headers from the specified web endpoint with a hostname of example.com including the host name (as HostName), the resolved IPv4 address (as IPAddress), and the target Uri (as Uri) as well as the HTTP status code.
     .EXAMPLE
         gwrh -u "https://example.com"
 
@@ -1177,7 +1183,9 @@ function Get-HttpResponseHeader {
 
         [Parameter(Mandatory = $false, Position = 4)][Alias('IncludeTargetInfo', 'iti')][Switch]$IncludeTargetInformation,
 
-        [Parameter(Mandatory = $false, Position = 5)][Alias('RequestHeaders', 'rh')][System.Collections.Hashtable]$Headers
+        [Parameter(Mandatory = $false, Position = 5)][Alias('RequestHeaders', 'rh')][System.Collections.Hashtable]$Headers,
+
+        [Parameter(Mandatory = $false, Position = 6)][Alias('isc')][Switch]$IncludeHttpStatusCode
     )
     PROCESS {
         [Uri]$targetUri = $Uri
@@ -1206,97 +1214,103 @@ function Get-HttpResponseHeader {
             $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
         }
 
-        [bool]$isValidUri = [System.Uri]::IsWellFormedUriString($targetUri, 1)
+        [bool]$isValidUri = Test-Uri -InputString $targetUri
 
         if (-not($isValidUri)) {
             $ArgumentException = [ArgumentException]::new("Invalid data passed to Uri parameter.")
             Write-Error -Exception $ArgumentException -Category InvalidArgument -ErrorAction $ErrorActionPreference
         }
+        else {
+            $tcpConnectionTestResults = Test-TcpConnection -DNSHostName $targetUri.DnsSafeHost -Port $targetUri.Port
 
-        $tcpConnectionTestResults = Test-TcpConnection -DNSHostName $targetUri.DnsSafeHost -Port $targetUri.Port
+            [bool]$canConnect = $tcpConnectionTestResults.Connected
+            if ($canConnect) {
+                try {
+                    # Get response headers:
+                    $iwrParams = @{
+                        Uri                      = $targetUri.AbsoluteUri
+                        AllowInsecureRedirect    = $true
+                        ConnectionTimeoutSeconds = 60
+                        ErrorAction              = "SilentlyContinue"
+                        MaximumRedirection       = 0
+                        SkipCertificateCheck     = $true
+                        SkipHttpErrorCheck       = $true
+                    }
 
-        [bool]$canConnect = $tcpConnectionTestResults.Connected
-        if ($canConnect) {
-            try {
-                # Get response headers:
+                    if ($PSBoundParameters.ContainsKey("Headers")) {
+                        if ($iwrParams.ContainsKey("Headers")) {
+                            $iwrParams.Remove("Headers")
+                            $iwrParams.Add("Headers", $Headers)
+                        }
+                    }
 
-                $iwrParams = @{
-                    Uri                      = $targetUri.AbsoluteUri
-                    AllowInsecureRedirect    = $true
-                    ConnectionTimeoutSeconds = 60
-                    ErrorAction              = "SilentlyContinue"
-                    MaximumRedirection       = 0
-                    SkipCertificateCheck     = $true
-                    SkipHttpErrorCheck       = $true
-                }
+                    $httpResponse = Invoke-WebRequest @iwrParams
 
-                if ($PSBoundParameters.ContainsKey("Headers")) {
-                    if ($iwrParams.ContainsKey("Headers")) {
-                        $iwrParams.Remove("Headers")
-                        $iwrParams.Add("Headers", $Headers)
+                    $responseHeaders = $null
+                    [int]$httpStatusCode = 0
+                    if ($null -eq $httpResponse) {
+                        Write-Error -Exception $WebException -Category ResourceUnavailable -ErrorAction $ErrorActionPreference
+                    }
+                    else {
+                        $responseHeaders = $httpResponse | Select-Object -ExpandProperty Headers -ErrorAction $ErrorActionPreference
+                    }
+
+                    [System.Collections.Hashtable]$responseHeaderTable = $responseHeaders
+
+                    [string]$ipAddress = ""
+                    if ($PSBoundParameters.ContainsKey("IncludeTargetInformation")) {
+                        $ipAddress = $tcpConnectionTestResults | Select-Object -ExpandProperty IPAddress
+
+                        $hostName = $targetUri.DnsSafeHost
+                        $absoluteUri = $targetUri.AbsoluteUri
+                        $port = $targetUri.Port
+
+                        if (-not($responseHeaderTable.ContainsKey("HostName"))) {
+                            $responseHeaderTable.Add("HostName", $hostName)
+                        }
+
+                        if (-not($responseHeaderTable.ContainsKey("IPAddress"))) {
+                            $responseHeaderTable.Add("IPAddress", $ipAddress)
+                        }
+
+                        if (-not($responseHeaderTable.ContainsKey("Port"))) {
+                            $responseHeaderTable.Add("Port", $port)
+                        }
+
+                        if (-not($responseHeaderTable.ContainsKey("Uri"))) {
+                            $responseHeaderTable.Add("Uri", $absoluteUri)
+                        }
+                    }
+
+                    if ($PSBoundParameters.ContainsKey("IncludeHttpStatusCode")) {
+                        $httpStatusCode = $httpResponse.StatusCode
+                        $responseHeaderTable.Add("StatusCode", $httpStatusCode)
+                    }
+
+                    # Create sorted table:
+                    $sortedHeaders = $responseHeaderTable.GetEnumerator() | Sort-Object -Property Key
+
+                    # Create empty sorted hash table and populate (can't send PSCustomObject a table that's has GetEnumerator() called on it:
+                    $headersToReturn = [ordered]@{}
+                    $sortedHeaders | ForEach-Object { $headersToReturn.Add($_.Key, $_.Value) }
+
+                    # Return collection of headers with header name as key:
+                    if ($PSBoundParameters.ContainsKey("AsHashtable")) {
+                        [System.Collections.Hashtable]$headerCollection = $headersToReturn
+                        return $headerCollection
+                    }
+                    else {
+                        [PSCustomObject]$headerCollection = New-Object -TypeName PSCustomObject -Property $headersToReturn
+                        return $headerCollection
                     }
                 }
-
-                $httpResponse = Invoke-WebRequest @iwrParams
-
-                $responseHeaders = $null
-                if ($null -eq $httpResponse) {
+                catch {
                     Write-Error -Exception $WebException -Category ResourceUnavailable -ErrorAction $ErrorActionPreference
                 }
-                else {
-                    $responseHeaders = $httpResponse | Select-Object -ExpandProperty Headers -ErrorAction $ErrorActionPreference
-                }
-
-                [System.Collections.Hashtable]$responseHeaderTable = $responseHeaders
-
-                [string]$ipAddress = ""
-                if ($PSBoundParameters.ContainsKey("IncludeTargetInformation")) {
-                    $ipAddress = $tcpConnectionTestResults | Select-Object -ExpandProperty IPAddress
-
-                    $hostName = $targetUri.DnsSafeHost
-                    $absoluteUri = $targetUri.AbsoluteUri
-                    $port = $targetUri.Port
-
-                    if (-not($responseHeaderTable.ContainsKey("HostName"))) {
-                        $responseHeaderTable.Add("HostName", $hostName)
-                    }
-
-                    if (-not($responseHeaderTable.ContainsKey("IPAddress"))) {
-                        $responseHeaderTable.Add("IPAddress", $ipAddress)
-                    }
-
-                    if (-not($responseHeaderTable.ContainsKey("Port"))) {
-                        $responseHeaderTable.Add("Port", $port)
-                    }
-
-                    if (-not($responseHeaderTable.ContainsKey("Uri"))) {
-                        $responseHeaderTable.Add("Uri", $absoluteUri)
-                    }
-                }
-
-                # Create sorted table:
-                $sortedHeaders = $responseHeaderTable.GetEnumerator() | Sort-Object -Property Key
-
-                # Create empty sorted hash table and populate (can't send PSCustomObject a table that's has GetEnumerator() called on it:
-                $headersToReturn = [ordered]@{}
-                $sortedHeaders | ForEach-Object { $headersToReturn.Add($_.Key, $_.Value) }
-
-                # Return collection of headers with header name as key:
-                if ($PSBoundParameters.ContainsKey("AsHashtable")) {
-                    [System.Collections.Hashtable]$headerCollection = $headersToReturn
-                    return $headerCollection
-                }
-                else {
-                    [PSCustomObject]$headerCollection = New-Object -TypeName PSCustomObject -Property $headersToReturn
-                    return $headerCollection
-                }
             }
-            catch {
-                Write-Error -Exception $WebException -Category ResourceUnavailable -ErrorAction $ErrorActionPreference
+            else {
+                Write-Error -Exception $WebException -Category ConnectionError -ErrorAction $ErrorActionPreference
             }
-        }
-        else {
-            Write-Error -Exception $WebException -Category ConnectionError -ErrorAction $ErrorActionPreference
         }
     }
 }
