@@ -1,4 +1,4 @@
-using namespace System
+﻿using namespace System
 using namespace System.Collections.Generic
 using namespace System.Net
 using namespace System.Net.Sockets
@@ -2325,7 +2325,7 @@ function Get-IPAddressList {
 
     The function does not support generating IP addresses for subnets defined with more specific subnet masks (e.g., `192.168.1.128/25`) or with VLSM configurations.
 
-    If a fully defined IP address is provided (e.g., `192.168.1.1`), the function will issue a warning.
+    If a fully defined IP address is provided (e.g., `192.168.1.1`) where no octets are zero, the function will return that single IP address.
 .PARAMETER IPV4Subnet
     Specifies the base network address (IPv4 network) from which to generate the list of IP addresses. The parameter is mandatory and supports pipeline input by both value and property name.
     The value must be a valid IPv4 address in the format of four octets, where the network portion is represented with zeroed-out host bits (e.g., `192.168.1.0` for a /24 subnet).
@@ -2333,12 +2333,12 @@ function Get-IPAddressList {
     System.String
         The function accepts pipeline input in the form of a string representing the base IPv4 network address.
 .OUTPUTS
-System.String
-    The function outputs the generated IPv4 addresses as strings to the pipeline.
+    System.String
+        The function outputs the generated IPv4 addresses as strings to the pipeline.
 .EXAMPLE
     Get-IPAddressList -IPV4Subnet "192.168.1.0"
 
-    This command will generate a list of all possible IP addresses in the `192.168.1.x` subnet.
+    This command will generate a list of all possible IP addresses in the `192.168.1.x` subnet (192.168.1.1 through 192.168.1.254).
 .EXAMPLE
     "10.0.0.0" | Get-IPAddressList
 
@@ -2350,6 +2350,11 @@ System.String
 .NOTES
     - This function works with network addresses and does not support VLSM subnets or CIDR notation directly.
     - Use a network address with one or more trailing octets set to zero (e.g., `192.168.1.0`).
+    - Only the final (host) octet excludes .0 and .255 (uses range 1-254).
+    - Non-host variable octets include .0 but exclude .255 (use range 0-254).
+    - For Class A networks, this generates approximately 16.6 million addresses (255 × 255 × 254).
+    - For Class B networks, this generates approximately 64,770 addresses (255 × 254).
+    - For Class C networks, this generates 254 addresses.
 .LINK
     Test-TcpConnection
 #>
@@ -2361,67 +2366,65 @@ System.String
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true,
             Position = 0)]
-        [ValidateLength(5, 15)]
+        [ValidateScript({
+                try {
+                    [IPAddress]::Parse($_) | Out-Null
+                    $true
+                }
+                catch {
+                    throw "The value '$_' is not a valid IPv4 address."
+                }
+            })]
         [Alias('BaseNetwork', 'NetworkAddress', 'SubnetAddress', 'bn', 'na', 'sa')]
         [string]$IPV4Subnet
     )
-    PROCESS {
-        # Ensure the input is a valid IP subnet format
-        $isIp = $false
-        try {
-            [IPAddress]::Parse($IPV4Subnet) | Out-Null
-            $isIp = $true
-        }
-        catch {
-            $isIp = $false
-        }
 
-        if (-not($isIp)) {
-            $ArgumentException = [ArgumentException]::new("The value passed to the IPV4Subnet parameter is not a valid IPv4 subnet: $IPV4Subnet")
+    PROCESS {
+        # Split the subnet into octets and convert to integers for easier comparison
+        $octets = $IPV4Subnet.Split('.') | ForEach-Object { [int]$_ }
+
+        # Validate that we have exactly 4 octets
+        if ($octets.Count -ne 4) {
+            $ArgumentException = [ArgumentException]::new("Invalid IPv4 address format: $IPV4Subnet")
             Write-Error -Exception $ArgumentException -Category InvalidArgument -ErrorAction Stop
         }
 
-        # Split the subnet into octets
-        $octets = $IPV4Subnet.Split('.')
-
-        # Ensure we're working with a valid 4-octet base (e.g., 192.168.0.0):
-        while ($octets.Count -lt 4) {
-            $octets += '0'
-        }
-
-        # Class A (e.g., 10.0.0.0/8): Iterate over the last three octets:
-        if ($octets[1] -eq '0' -and $octets[2] -eq '0' -and $octets[3] -eq '0') {
-            for ($i = 1; $i -le 254; $i++) {
+        # Determine the network class and generate IP addresses accordingly
+        # Class A (e.g., 10.0.0.0/8): Last three octets are 0
+        if ($octets[1] -eq 0 -and $octets[2] -eq 0 -and $octets[3] -eq 0) {
+            Write-Verbose "Generating Class A network addresses for $IPV4Subnet"
+            for ($i = 0; $i -le 254; $i++) {
                 for ($j = 0; $j -le 254; $j++) {
                     for ($k = 1; $k -le 254; $k++) {
-                        $ip = "$($octets[0]).$i.$j.$k"
-                        Write-Output -InputObject $ip
+                        Write-Output "$($octets[0]).$i.$j.$k"
                     }
                 }
             }
         }
-        # Class B (e.g., 172.16.0.0/16): Iterate over the last two octets:
-        elseif ($octets[2] -eq '0' -and $octets[3] -eq '0') {
-            for ($i = 1; $i -le 254; $i++) {
+        # Class B (e.g., 172.16.0.0/16): Last two octets are 0
+        elseif ($octets[2] -eq 0 -and $octets[3] -eq 0) {
+            Write-Verbose "Generating Class B network addresses for $IPV4Subnet"
+            for ($i = 0; $i -le 254; $i++) {
                 for ($j = 1; $j -le 254; $j++) {
-                    $ip = "$($octets[0]).$($octets[1]).$i.$j"
-                    Write-Output -InputObject $ip
+                    Write-Output "$($octets[0]).$($octets[1]).$i.$j"
                 }
             }
         }
-        # Class C (e.g., 192.168.1.0/24): Iterate over the last octet:
-        elseif ($octets[3] -eq '0') {
+        # Class C (e.g., 192.168.1.0/24): Last octet is 0
+        elseif ($octets[3] -eq 0) {
+            Write-Verbose "Generating Class C network addresses for $IPV4Subnet"
             for ($i = 1; $i -le 254; $i++) {
-                $ip = "$($octets[0]).$($octets[1]).$($octets[2]).$i"
-                Write-Output -InputObject $ip
+                Write-Output "$($octets[0]).$($octets[1]).$($octets[2]).$i"
             }
         }
-        # Case when the subnet is fully defined (e.g., 192.168.1.1):
+        # Case when no octets are zero (fully specified IP address)
         else {
-            Write-Output -InputObject $IPV4Subnet
+            Write-Warning "No zero octets found in '$IPV4Subnet'. Returning the address as-is."
+            Write-Output $IPV4Subnet
         }
     }
 }
+
 
 
 function Test-PrivateIPAddress {
