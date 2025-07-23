@@ -2509,48 +2509,15 @@ function Test-PrivateIPAddress {
 #endregion
 
 
-#region Export Statements
+#region Export Statements that require conditional logic
 
-Export-ModuleMember -Function Test-IPAddress
-Export-ModuleMember -Function Test-TcpConnection
-Export-ModuleMember -Function Get-TlsCertificate
-Export-ModuleMember -Function Get-HttpResponseHeader
-Export-ModuleMember -Function Get-TlsInformation
-Export-ModuleMember -Function Invoke-DnsEnumeration
-Export-ModuleMember -Function Get-IPInformation
-Export-ModuleMember -Function Invoke-WebCrawl
 if ($IsLinux) {
     Export-ModuleMember -Function Get-Whois
 }
-Export-ModuleMember -Function Get-IPAddressList
-Export-ModuleMember -Function Test-PrivateIPAddress
 
-Export-ModuleMember -Alias tip
-Export-ModuleMember -Alias ttc
-Export-ModuleMember -Alias gtls
-Export-ModuleMember -Alias gtlsc
-Export-ModuleMember -Alias gssl
-Export-ModuleMember -Alias Get-SslCertificate
-Export-ModuleMember -Alias Get-TlsStatus
-Export-ModuleMember -Alias gwrh
-Export-ModuleMember -Alias gtlsi
-Export-ModuleMember -Alias gtlss
-Export-ModuleMember -Alias idnse
-Export-ModuleMember -Alias dnse
-Export-ModuleMember -Alias gipi
-Export-ModuleMember -Alias Get-IPAddressInformation
-Export-ModuleMember -Alias iwc
-Export-ModuleMember -Alias webcrawl
 if ($IsLinux) {
     Export-ModuleMember -Alias pswhois
     Export-ModuleMember -Alias Get-DnsWhois
 }
-Export-ModuleMember -Alias Get-IPList
-Export-ModuleMember -Alias gipl
-Export-ModuleMember -Alias Convert-SubnetToIPList
-Export-ModuleMember -Alias Expand-IPSubnet
-Export-ModuleMember -Alias New-IPAddressList
-Export-ModuleMember -Alias tpip
-Export-ModuleMember -Alias Test-PrivateIP
 
 #endregion
