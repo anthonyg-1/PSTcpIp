@@ -2510,17 +2510,3 @@ function Test-PrivateIPAddress {
 }
 
 #endregion
-
-
-#region Export Statements that require conditional logic
-
-if ($IsLinux) {
-    Export-ModuleMember -Function Get-Whois
-}
-
-if ($IsLinux) {
-    Export-ModuleMember -Alias pswhois
-    Export-ModuleMember -Alias Get-DnsWhois
-}
-
-#endregion
