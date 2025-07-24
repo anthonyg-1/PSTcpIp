@@ -7,7 +7,7 @@
     RootModule        = 'PSTcpIp.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '6.35.0'
+    ModuleVersion     = '6.36.0'
 
     # ID used to uniquely identify this module
     GUID              = '99675863-c68e-46fd-b669-0d4942004b28'
@@ -21,9 +21,9 @@
     # Description of the functionality provided by this module
     Description       = 'Provides cmdlets to perform various TCPIP and TLS/SSL related tasks.'
 
-    FunctionsToExport = 'Test-IPAddress', 'Test-TcpConnection', 'Get-TlsCertificate', 'Get-HttpResponseHeader', 'Get-TlsInformation', 'Invoke-DnsEnumeration', 'Get-IPInformation', 'Invoke-WebCrawl', 'Get-IPAddressList', 'Test-PrivateIPAddress', 'Get-Whois'
+    FunctionsToExport = 'Test-IPAddress', 'Test-TcpConnection', 'Get-TlsCertificate', 'Get-HttpResponseHeader', 'Get-TlsInformation', 'Invoke-DnsEnumeration', 'Get-IPAddressInformation', 'Invoke-WebCrawl', 'Get-IPAddressList', 'Test-PrivateIPAddress', 'Get-Whois'
 
-    AliasesToExport   = 'tip', 'ttc', 'tmap', 'gtls', 'gtlsc', 'gssl', 'Get-SslCertificate', 'Get-TlsStatus', 'gwrh', 'gtlsi', 'gtlss', 'idnse', 'dnse', 'gipi', 'Get-IPAddressInformation', 'iwc', 'webcrawl', 'Get-IPList', 'gipl', 'Convert-SubnetToIPList', 'Expand-IPSubnet', 'New-IPAddressList', 'tpip', 'Test-PrivateIP', 'pswhois', 'Get-DnsWhois'
+    AliasesToExport   = 'tip', 'ttc', 'tmap', 'gtls', 'gtlsc', 'gssl', 'Get-SslCertificate', 'Get-TlsStatus', 'gwrh', 'gtlsi', 'gtlss', 'idnse', 'dnse', 'gipi', 'Get-IPInformation', 'iwc', 'webcrawl', 'Get-IPList', 'gipl', 'Convert-SubnetToIPList', 'Expand-IPSubnet', 'New-IPAddressList', 'tpip', 'Test-PrivateIP', 'pswhois', 'Get-DnsWhois'
 
     PrivateData       = @{
         PSData = @{
