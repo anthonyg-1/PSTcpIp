@@ -724,8 +724,10 @@ function Test-IPAddress {
     PROCESS {
         [bool]$isIpAddress = $false
 
+        $stringToTest = $InputString.Trim()
+
         try {
-            [IPAddress]::Parse($InputString) | Out-Null
+            [IPAddress]::Parse($stringToTest) | Out-Null
             $isIpAddress = $true
         }
         catch {
@@ -1774,43 +1776,43 @@ function Invoke-DnsEnumeration {
 }
 
 
-function Get-IPInformation {
+function Get-IPAddressInformation {
     <#
     .SYNOPSIS
         Returns information for a specified IP address.
     .DESCRIPTION
-        Returns geolocation and hosting information for a specified IP address by calling the whatismyip.com REST API. This function requires an API key from whatismyip.com. For more on this, see the .NOTES section.
+        Returns geolocation and hosting information for a specified IP address by calling the ipinfo.io REST API. This function can take an optional API key from ipinfo.io. For more on this, see the .NOTES section.
     .EXAMPLE
         #requires -Module Microsoft.PowerShell.SecretManagement
-        $secretName = 'whatismyip_api_key'
+        $secretName = 'ipinfo_api_key'
         $key = Get-Secret -Name $secretName -AsPlainText
         $targetIPAddress = "13.107.213.36"
-        Get-IPInformation -IPAddress $targetIPAddress -ApiKey $key
+        Get-IPAddressInformation -IPAddress $targetIPAddress -ApiKey $key
 
         Obtains IP address geolocation data for 13.107.213.36
     .EXAMPLE
         #requires -Module Microsoft.PowerShell.SecretManagement
         $PSDefaultParameterValues = @{
-            "Get-IPInformation:ApiKey"=(Get-Secret -Name 'whatismyip_api_key'-AsPlainText)
+            "Get-IPAddressInformation:ApiKey"=(Get-Secret -Name 'ipinfo_api_key'-AsPlainText)
         }
         $targetIPAddress = "13.107.213.36"
-        Get-IPInformation -IPAddress $targetIPAddress
+        Get-IPAddressInformation -IPAddress $targetIPAddress
 
         Define default value for ApiKey param to be stored in the users profile defined in $PROFILE and obtains IP address geolocation data for 13.107.213.36.
     .PARAMETER IPAddress
         The IP address to obtain for.
     .PARAMETER ApiKey
-        The whatismyip.com REST API key.
+        The ipinfo.io REST API key.
     .NOTES
-        In order to obtain an API key for this function, please see the following: https://members.whatismyip.com/api/
+        In order to obtain an API key for this function, please see the following: https://ipinfo.io/developers
     .LINK
         Get-Secret
-        https://members.whatismyip.com/api
+        https://ipinfo.io/developers
         https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.secretmanagement
         https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_parameters_default_values
     #>
     [CmdletBinding()]
-    [Alias('gipi', 'Get-IPAddressInformation')]
+    [Alias('gipi', 'Get-IPInformation', 'Get-IPInfo')]
     [OutputType([PSCustomObject])]
     Param
     (
@@ -1819,62 +1821,54 @@ function Get-IPInformation {
             ValueFromPipelineByPropertyName = $true,
             Position = 0)][Alias('ip', 'i')][String]$IPAddress,
 
-        [Parameter(Mandatory = $true,
+        [Parameter(Mandatory = $false,
             ValueFromPipeline = $false,
             ValueFromPipelineByPropertyName = $false,
             Position = 1)][Alias('Secret', 'k', 'ak', 's')][String]$ApiKey
 
     )
-
     BEGIN {
-        $activity = "whatismyip.com REST API call"
-        $timeToWaitInSeconds = 60
+        [Uri]$baseUri = "https://ipinfo.io"
 
-        [Uri]$baseUri = "https://api.whatismyip.com/ip-address-lookup.php"
-
+        $headers = @{}
+        if ($PSBoundParameters.ContainsKey("ApiKey")) {
+            $headers.Add("Authorization", "Bearer $ApiKey")
+        }
     }
     PROCESS {
-        [string]$stringIPAddress = ""
-        try {
-            $stringIPAddress = [System.Net.IPAddress]::Parse($IPAddress).IPAddressToString
-        }
-        catch {
+        if (-not(Test-IPAddress -InputString $IPAddress)) {
             $argExcepMessage = "Invalid data was passed to the IPAddress parameter."
             $ArgumentException = New-Object -TypeName ArgumentException -ArgumentList $argExcepMessage
-            Write-Error -Exception $ArgumentException -ErrorAction Stop
+            Write-Error -Exception $ArgumentException -ErrorAction $ErrorActionPreference
         }
+        else {
+            $targetUrl = "{0}/{1}" -f $baseUri, $IPAddress
 
-        $url = "{0}?key={1}&input={2}" -f $baseUri.AbsoluteUri, $ApiKey, $stringIPAddress
+            try {
+                $response = $null
 
-        try {
-            Invoke-TimedWait -Activity $activity -Seconds $timeToWaitInSeconds
-
-            $responses = Invoke-RestMethod -Method Get -Uri $url -SkipCertificateCheck -ErrorAction Stop
-
-            $responses | ForEach-Object {
-                $ht = @{}
-                $rows = $_.Split("`r`n")
-
-                $rows | ForEach-Object {
-                    $columns = $_.Split(":")
-
-                    $prop = $columns[0]
-                    $value = $columns[1]
-
-                    if ($prop.Length -ge 1) {
-                        $ht.Add($prop, $value)
-                    }
+                $irmParams = @{
+                    Method      = "Get"
+                    Uri         = $targetUrl
+                    ErrorAction = "Stop"
                 }
-                $individualRecord = [PSCustomObject]$ht
-                return $individualRecord
+
+                if ($PSBoundParameters.ContainsKey("ApiKey")) {
+                    $irmParams.Add("Headers", $headers)
+                }
+
+                $response = Invoke-RestMethod @irmParams
+
+                Write-Output -InputObject $response
+
             }
-        }
-        catch {
-            if ($null -ne $_.Exception.InnerException) {
-                Write-Error -Exception $_.Exception.InnerException -Category InvalidOperation -ErrorAction Continue
-            }
-            else {
-                Write-Error -Exception $_.Exception -Category InvalidOperation -ErrorAction Continue
+            catch {
+                if ($null -ne $_.Exception.InnerException) {
+                    Write-Error -Exception $_.Exception.InnerException -Category InvalidOperation -ErrorAction Continue
+                }
+                else {
+                    Write-Error -Exception $_.Exception -Category InvalidOperation -ErrorAction Continue
+                }
             }
         }
     }
