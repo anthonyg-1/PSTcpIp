@@ -171,18 +171,18 @@ Get-HttpResponseHeader -HostName "example.com"
 ```powershell
 # Obtains IP address geolocation data for 13.107.213.36
 #requires -Module Microsoft.PowerShell.SecretManagement
-$secretName = 'whatismyip_api_key'
+$secretName = 'ipinfo_api_key'
 $key = Get-Secret -Name $secretName -AsPlainText
 $targetIPAddress = "13.107.213.36"
-Get-IPInformation -IPAddress $targetIPAddress -ApiKey $key
+Get-IPAddressInformation -IPAddress $targetIPAddress -ApiKey $key
 
 # Define default value for ApiKey param to be stored in the users profile defined in $PROFILE and obtains IP address geolocation data for 13.107.213.36
 #requires -Module Microsoft.PowerShell.SecretManagement
 $PSDefaultParameterValues = @{
-    "Get-IPInformation:ApiKey"=(Get-Secret -Name 'whatismyip_api_key'-AsPlainText)
+    "Get-IPAddressInformatio:ApiKey"=(Get-Secret -Name 'ipinfo_api_key'-AsPlainText)
 }
 $targetIPAddress = "13.107.213.36"
-Get-IPInformation -IPAddress $targetIPAddress
+Get-IPAddressInformation -IPAddress $targetIPAddress
 ```
 
 ### Web Crawling
