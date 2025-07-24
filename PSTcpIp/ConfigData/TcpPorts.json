@@ -144,6 +144,10 @@
         "description": "TSP"
     },
     {
+        "port": "322",
+        "description": "Camera"
+    },
+    {
         "port": "381",
         "description": "HP"
     },
@@ -186,6 +190,10 @@
     {
         "port": "500",
         "description": "ISAKMP"
+    },
+    {
+        "port": "502",
+        "description": "Modbus"
     },
     {
         "port": "512",
@@ -426,6 +434,10 @@
     {
         "port": "1863",
         "description": "MSN"
+    },
+    {
+        "port": "1900",
+        "description": "SSDP"
     },
     {
         "port": "1917",
@@ -896,6 +908,10 @@
         "description": "Adobe"
     },
     {
+        "port": "8554",
+        "description": "Cameras / Surveillance"
+    },
+    {
         "port": "8767",
         "description": "TeamSpeak"
     },
@@ -994,6 +1010,10 @@
     {
         "port": "10000",
         "description": "BackupExec"
+    },
+    {
+        "port": "10443",
+        "description": "HTTPS"
     },
     {
         "port": "10250",
