@@ -179,7 +179,7 @@ Get-IPAddressInformation -IPAddress $targetIPAddress -ApiKey $key
 # Define default value for ApiKey param to be stored in the users profile defined in $PROFILE and obtains IP address geolocation data for 13.107.213.36
 #requires -Module Microsoft.PowerShell.SecretManagement
 $PSDefaultParameterValues = @{
-    "Get-IPAddressInformatio:ApiKey"=(Get-Secret -Name 'ipinfo_api_key'-AsPlainText)
+    "Get-IPAddressInformation:ApiKey"=(Get-Secret -Name 'ipinfo_api_key'-AsPlainText)
 }
 $targetIPAddress = "13.107.213.36"
 Get-IPAddressInformation -IPAddress $targetIPAddress
