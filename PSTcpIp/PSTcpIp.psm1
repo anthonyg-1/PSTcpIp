@@ -621,26 +621,6 @@ function Get-X509CertificateChain {
     }
 }
 
-
-function Invoke-TimedWait {
-    [CmdletBinding()]
-    [OutputType([void])]
-    Param
-    (
-        [Parameter(Mandatory = $true, Position = 0)][Int]$Seconds,
-        [Parameter(Mandatory = $true, Position = 1)][String]$Activity
-    )
-    PROCESS {
-        for ($i = $Seconds; $i -ge 0; $i--) {
-            $percentComplete = (($Seconds - $i) / $Seconds) * 100
-            Write-Progress -Activity "Waiting $Seconds seconds prior to $Activity.." -Status "$i seconds remaining" -PercentComplete $percentComplete
-            Start-Sleep -Seconds 1
-        }
-
-        Write-Host -Object "Sleep cycle complete. Initiating $Activity now..." -ForegroundColor Cyan
-    }
-}
-
 function Resolve-DNSHostName {
     [CmdletBinding()]
     [OutputType([string])]
