@@ -648,6 +648,10 @@
         "description": "Yahoo!"
     },
     {
+        "port": "5052",
+        "description": "ITA Manager"
+    },
+    {
         "port": "5060",
         "description": "SIP"
     },
