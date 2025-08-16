@@ -844,6 +844,10 @@
         "description": "Oracle Web Cache (SSL)"
     },
     {
+        "port": "7900",
+        "description": "FortiSIEM phMonitor"
+    },
+    {
         "port": "8000",
         "description": "Internet"
     },
