@@ -1425,7 +1425,6 @@ function Get-TlsInformation {
         .LINK
             Test-TcpConnection
             Select-Object
-            Format-List
             https://github.com/anthonyg-1/PSTcpIp
     #>
     [CmdletBinding(DefaultParameterSetName = 'Uri')]
@@ -1708,6 +1707,8 @@ function Invoke-DnsEnumeration {
     .LINK
         Test-TcpConnection
         Get-TlsInformation
+        Select-Object
+        Export-Csv
         https://github.com/anthonyg-1/PSTcpIp
 #>
     [CmdletBinding()]
