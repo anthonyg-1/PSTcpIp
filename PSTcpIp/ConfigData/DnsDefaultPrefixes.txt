@@ -964,6 +964,8 @@ smtp
 smtp1
 smtp2
 smtp3
+smtprelay
+smtprelaytest
 snmp
 social
 software
