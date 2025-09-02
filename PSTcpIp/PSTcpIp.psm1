@@ -1144,30 +1144,30 @@ function Get-HttpResponseHeader {
     Param
     (
         [Parameter(Mandatory = $true,
-            ValueFromPipeline = $false,
-            ValueFromPipelineByPropertyName = $true,
-            Position = 0, ParameterSetName = "HostName")][ValidateLength(1, 250)][Alias('ComputerName', 'Name', 'h', 'IPAddress', 'i')][String]$HostName,
-
-        [Parameter(Mandatory = $false,
-            ValueFromPipelineByPropertyName = $true,
-            Position = 1, ParameterSetName = "HostName")][ValidateRange(1, 65535)][Alias('PortNumber', 'p')][Int]$Port = 443,
-
-        [Parameter(Mandatory = $false,
-            ValueFromPipelineByPropertyName = $true,
-            Position = 2, ParameterSetName = "HostName")][ValidateSet("HTTP", "HTTPS")][Alias('Scheme', 'ps', 's')][String]$ProtocolScheme = "HTTPS",
-
-        [Parameter(Mandatory = $true,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true,
             Position = 0, ParameterSetName = "Uri")][Alias('u')][System.Uri]$Uri,
 
-        [Parameter(Mandatory = $false, Position = 3)][Alias('ht')][Switch]$AsHashtable,
+        [Parameter(Mandatory = $true,
+            ValueFromPipeline = $false,
+            ValueFromPipelineByPropertyName = $true,
+            Position = 1, ParameterSetName = "HostName")][ValidateLength(1, 250)][Alias('ComputerName', 'Name', 'h', 'IPAddress', 'i')][String]$HostName,
 
-        [Parameter(Mandatory = $false, Position = 4)][Alias('IncludeTargetInfo', 'iti')][Switch]$IncludeTargetInformation,
+        [Parameter(Mandatory = $false,
+            ValueFromPipelineByPropertyName = $true,
+            Position = 2, ParameterSetName = "HostName")][ValidateRange(1, 65535)][Alias('PortNumber', 'p')][Int]$Port = 443,
 
-        [Parameter(Mandatory = $false, Position = 5)][Alias('RequestHeaders', 'rh')][System.Collections.Hashtable]$Headers,
+        [Parameter(Mandatory = $false,
+            ValueFromPipelineByPropertyName = $true,
+            Position = 3, ParameterSetName = "HostName")][ValidateSet("HTTP", "HTTPS")][Alias('Scheme', 'ps', 's')][String]$ProtocolScheme = "HTTPS",
 
-        [Parameter(Mandatory = $false, Position = 6)][Alias('isc')][Switch]$IncludeHttpStatusCode
+        [Parameter(Mandatory = $false, Position = 4)][Alias('ht')][Switch]$AsHashtable,
+
+        [Parameter(Mandatory = $false, Position = 5)][Alias('IncludeTargetInfo', 'iti')][Switch]$IncludeTargetInformation,
+
+        [Parameter(Mandatory = $false, Position = 6)][Alias('RequestHeaders', 'rh')][System.Collections.Hashtable]$Headers,
+
+        [Parameter(Mandatory = $false, Position = 7)][Alias('isc')][Switch]$IncludeHttpStatusCode
     )
     PROCESS {
         [Uri]$targetUri = $Uri
@@ -1181,6 +1181,7 @@ function Get-HttpResponseHeader {
                 $argumentExceptionMessage = "Value passed to HostName is a URI. Use the Uri parameter instead."
                 $ArgumentException = [ArgumentException]::new($argumentExceptionMessage)
                 Write-Error -Exception $ArgumentException -Category InvalidArgument -ErrorAction $ErrorActionPreference
+                return
             }
 
             $targetPort = $Port
