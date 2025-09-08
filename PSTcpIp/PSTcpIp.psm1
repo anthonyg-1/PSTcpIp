@@ -1515,7 +1515,6 @@ function Get-TlsInformation {
                     $subjectKeyIdentifier = "Unable to determine Subject Key Identifier."
                 }
 
-                $tlsInfo.CertificateIsTrusted = $sslCert.Verify()
                 $tlsInfo.ValidFrom = $sslCert.NotBefore
                 $tlsInfo.ValidTo = $sslCert.NotAfter
                 $tlsInfo.CertificateValidityPeriodInYears = [Math]::Round((($sslCert.NotAfter - $sslCert.NotBefore).Days * 0.00273973), 1)
@@ -1622,7 +1621,15 @@ function Get-TlsInformation {
 
                 $certSubjectMatchesHostName = $sslCert.MatchesHostname($targetHost, $true, $true)
 
+                if (-not($certSubjectMatchesHostName)) {
+                    $tlsInfo.CertificateIsTrusted = $false
+                }
+                else {
+                    $tlsInfo.CertificateIsTrusted = $sslCert.Verify()
+                }
+
                 $tlsInfo.CertificateSubjectMatchesHostName = $certSubjectMatchesHostName
+
                 $tlsInfo.IsWildcardCertificate = $wildcardFound
 
                 [bool]$isSelfSigned = $sslCert.Subject -eq $sslCert.Issuer
