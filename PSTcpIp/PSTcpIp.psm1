@@ -2093,7 +2093,7 @@ function Invoke-WebCrawl {
                     AllowUnencryptedAuthentication = $true
                     UseDefaultCredentials          = $true
                     SessionVariable                = "websession"
-                    ConnectionTimeoutSeconds       = 10
+                    ConnectionTimeoutSeconds       = 30
                 }
 
                 if ($hasHeaders) {
