@@ -741,7 +741,7 @@ function Test-Uri {
 
         [Parameter(Mandatory = $false)]
         [ValidateSet('Absolute', 'Relative', 'RelativeOrAbsolute')]
-        [String]$UriKind = 'Absolute',
+        [String]$UriKind = 'RelativeOrAbsolute',
 
         [Parameter(Mandatory = $false)]
         [Switch]$ReturnUriKind
@@ -794,7 +794,6 @@ function Test-Uri {
         }
     }
 }
-
 
 function Test-TcpConnection {
     <#
