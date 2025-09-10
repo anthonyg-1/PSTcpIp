@@ -171,21 +171,6 @@ Add-Type -TypeDefinition $tlsStatusDefinition -ErrorAction Stop
 
 #region Private Functions
 
-function Test-Uri {
-    param (
-        [Parameter(Mandatory)]
-        [String]$InputString
-    )
-
-    try {
-        [void][System.Uri]::new($InputString)
-        return $true
-    }
-    catch {
-        return $false
-    }
-}
-
 function Get-SourceIPAddress([string]$Destination = "8.8.8.8") {
     [string]$sourceAddress = ""
 
@@ -699,7 +684,7 @@ function Test-IPAddress {
     [Alias('tip')]
     param
     (
-        [Parameter(Mandatory = $true, Position = 0)][String]$InputString
+        [Parameter(Mandatory = $true, Position = 0)][Alias('is')][String]$InputString
     )
     PROCESS {
         [bool]$isIpAddress = $false
@@ -717,6 +702,100 @@ function Test-IPAddress {
         return $isIpAddress
     }
 }
+
+
+function Test-Uri {
+    <#
+    .SYNOPSIS
+        Tests if a string is a valid URI and optionally determines if it's absolute or relative.
+    .DESCRIPTION
+        The Test-Uri function validates whether the input string is a well-formed URI.
+        It can also determine the URI kind (Absolute, Relative, or RelativeOrAbsolute).
+    .PARAMETER InputString
+        The string to test as a URI. This parameter is mandatory.
+    .PARAMETER UriKind
+        Specifies the kind of URI to validate against. Valid values are:
+        - Absolute: Must be a complete URI with scheme
+        - Relative: Must be a relative URI
+        - RelativeOrAbsolute: Can be either (default)
+    .PARAMETER ReturnUriKind
+        If specified, returns the actual URI kind instead of just true/false.
+    .EXAMPLE
+        Test-Uri -InputString "https://example.com"
+        Returns: $true
+    .EXAMPLE
+        Test-Uri -InputString "/path/to/page" -UriKind Relative
+        Returns: $true
+    .EXAMPLE
+        Test-Uri -InputString "https://example.com" -ReturnUriKind
+        Returns: "Absolute"
+    .OUTPUTS
+        System.Boolean or System.String (when ReturnUriKind is specified)
+    #>
+    [CmdletBinding()]
+    [OutputType([bool], [string])]
+    [Alias("turi")]
+    param (
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [AllowEmptyString()][Alias('is')]
+        [String]$InputString,
+
+        [Parameter(Mandatory = $false)]
+        [ValidateSet('Absolute', 'Relative', 'RelativeOrAbsolute')][Alias('roa')]
+        [String]$UriKind = 'RelativeOrAbsolute',
+
+        [Parameter(Mandatory = $false)][Alias('ruk')]
+        [Switch]$ReturnUriKind
+    )
+
+    process {
+        # Handle null, empty, or whitespace strings:
+        if ([string]::IsNullOrWhiteSpace($InputString)) {
+            if ($ReturnUriKind) {
+                return $null
+            }
+            return $false
+        }
+
+        try {
+            # Map string to UriKind enum:
+            $uriKindEnum = switch ($UriKind) {
+                'Absolute' { [System.UriKind]::Absolute }
+                'Relative' { [System.UriKind]::Relative }
+                'RelativeOrAbsolute' { [System.UriKind]::RelativeOrAbsolute }
+            }
+
+            # Test if it's a well-formed URI of the specified kind:
+            $isWellFormed = [System.Uri]::IsWellFormedUriString($InputString, $uriKindEnum)
+
+            if ($ReturnUriKind -and $isWellFormed) {
+                # Determine the actual URI kind
+                if ([System.Uri]::IsWellFormedUriString($InputString, [System.UriKind]::Absolute)) {
+                    return "Absolute"
+                }
+                elseif ([System.Uri]::IsWellFormedUriString($InputString, [System.UriKind]::Relative)) {
+                    return "Relative"
+                }
+                else {
+                    return "Unknown"
+                }
+            }
+            elseif ($ReturnUriKind) {
+                return $null
+            }
+
+            return $isWellFormed
+        }
+        catch {
+            # If any exception occurs, it's not a valid URI:
+            if ($ReturnUriKind) {
+                return $null
+            }
+            return $false
+        }
+    }
+}
+
 
 function Test-TcpConnection {
     <#
@@ -2097,12 +2176,12 @@ function Invoke-WebCrawl {
                     $originalHref = $_.href
                     $potentialAbsoluteUri = [Uri]::new([Uri]$targetUri, $originalHref).AbsoluteUri
 
-                    # Determine if the original href was absolute or relative
-                    $uriType = if ([Uri]::IsWellFormedUriString($originalHref, [UriKind]::Absolute) -and ($originalHref -match "^https?://")) {
-                        "Absolute"
-                    }
-                    else {
-                        "Relative"
+                    # Determine if the original href was absolute or relative using enhanced Test-Uri
+                    $uriType = Test-Uri -InputString $originalHref -ReturnUriKind
+
+                    # If Test-Uri couldn't determine the type, fall back to basic validation
+                    if (-not $uriType) {
+                        $uriType = if (Test-Uri -InputString $originalHref) { "Unknown" } else { "Invalid" }
                     }
 
                     if ([Uri]::IsWellFormedUriString($potentialAbsoluteUri, 1) -and ($potentialAbsoluteUri -match "https?://")) {
