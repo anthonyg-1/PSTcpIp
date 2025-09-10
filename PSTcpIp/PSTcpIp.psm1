@@ -734,17 +734,16 @@ function Test-Uri {
     #>
     [CmdletBinding()]
     [OutputType([bool], [string])]
-    [Alias("turi")]
     param (
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
-        [AllowEmptyString()][Alias('is')]
+        [ValidateNotNullOrWhiteSpace()]
         [String]$InputString,
 
         [Parameter(Mandatory = $false)]
-        [ValidateSet('Absolute', 'Relative', 'RelativeOrAbsolute')][Alias('roa')]
-        [String]$UriKind = 'RelativeOrAbsolute',
+        [ValidateSet('Absolute', 'Relative', 'RelativeOrAbsolute')]
+        [String]$UriKind = 'Absolute',
 
-        [Parameter(Mandatory = $false)][Alias('ruk')]
+        [Parameter(Mandatory = $false)]
         [Switch]$ReturnUriKind
     )
 
@@ -765,7 +764,7 @@ function Test-Uri {
                 'RelativeOrAbsolute' { [System.UriKind]::RelativeOrAbsolute }
             }
 
-            # Test if it's a well-formed URI of the specified kind:
+            # Test if it's a well-formed URI of the specified kind
             $isWellFormed = [System.Uri]::IsWellFormedUriString($InputString, $uriKindEnum)
 
             if ($ReturnUriKind -and $isWellFormed) {
@@ -787,7 +786,7 @@ function Test-Uri {
             return $isWellFormed
         }
         catch {
-            # If any exception occurs, it's not a valid URI:
+            # If any exception occurs, it's not a valid URI
             if ($ReturnUriKind) {
                 return $null
             }
