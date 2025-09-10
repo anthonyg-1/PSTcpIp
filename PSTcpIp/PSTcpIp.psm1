@@ -1952,6 +1952,7 @@ function Invoke-WebCrawl {
                 - StatusDescription: The status description returned for the visited link.
                 - ResponseHeaders: The HTTP response headers expressed as a hashtable
                 - Cookies: The HTTP cookies returned from the request to the target URI
+                - UriType: Indicates whether the discovered URI was originally Relative or Absolute
         .LINK
             Where-Object
             Get-HttpResponseHeader
@@ -1990,6 +1991,7 @@ function Invoke-WebCrawl {
                 [Parameter(Mandatory = $false)][String[]]$IncludeHosts,
                 [Parameter(Mandatory = $false)][String[]]$ExcludeHosts,
                 [Parameter(Mandatory = $false)][Switch]$IncludeContent,
+                [Parameter(Mandatory = $false)][string]$OriginalUriType = "BaseUri",
                 [hashtable]$Visited = @{}
             )
 
@@ -2073,6 +2075,7 @@ function Invoke-WebCrawl {
                     StatusDescription = $statusDescription
                     ResponseHeaders   = $responseHeaders
                     Cookies           = $cookies
+                    UriType           = $OriginalUriType
                 }
 
                 if ($addContentToOutput) {
@@ -2091,21 +2094,35 @@ function Invoke-WebCrawl {
 
                 # Extract absolute and relative links from the HTML content:
                 $links = $response.Links | Where-Object { $_.href } | ForEach-Object {
-                    $potentialAbsoluteUri = [Uri]::new([Uri]$targetUri, $_.href).AbsoluteUri
+                    $originalHref = $_.href
+                    $potentialAbsoluteUri = [Uri]::new([Uri]$targetUri, $originalHref).AbsoluteUri
+
+                    # Determine if the original href was absolute or relative
+                    $uriType = if ([Uri]::IsWellFormedUriString($originalHref, [UriKind]::Absolute) -and ($originalHref -match "^https?://")) {
+                        "Absolute"
+                    }
+                    else {
+                        "Relative"
+                    }
+
                     if ([Uri]::IsWellFormedUriString($potentialAbsoluteUri, 1) -and ($potentialAbsoluteUri -match "https?://")) {
-                        Write-Output -InputObject $potentialAbsoluteUri
+                        [PSCustomObject]@{
+                            AbsoluteUri = $potentialAbsoluteUri
+                            UriType     = $uriType
+                        }
                     }
                 }
 
-                foreach ($link in $links) {
+                foreach ($linkInfo in $links) {
                     # Recursively visit each link:
-                    $parsedUri = [Uri]::new($link)
+                    $parsedUri = [Uri]::new($linkInfo.AbsoluteUri)
                     $targetHost = $parsedUri.Host
 
                     $gwlsParamsInner = @{
-                        Uri     = $link
-                        Depth   = ($Depth - 1)
-                        Visited = $Visited
+                        Uri             = $linkInfo.AbsoluteUri
+                        Depth           = ($Depth - 1)
+                        Visited         = $Visited
+                        OriginalUriType = $linkInfo.UriType
                     }
 
                     if ($PSBoundParameters.ContainsKey("Headers")) {
@@ -2142,8 +2159,9 @@ function Invoke-WebCrawl {
             }
 
             $gwlsParamsOuter = @{
-                Uri   = $BaseUri
-                Depth = ($Depth - 1)
+                Uri             = $BaseUri
+                Depth           = ($Depth - 1)
+                OriginalUriType = "BaseUri"
             }
 
             if ($PSBoundParameters.ContainsKey("Headers")) {
@@ -2474,9 +2492,9 @@ function Test-PrivateIPAddress {
 
                 # Private IPv4 ranges:
                 if (
-                ($firstOctet -eq 10) -or
-                ($firstOctet -eq 192 -and $secondOctet -eq 168) -or
-                ($firstOctet -eq 172 -and $secondOctet -ge 16 -and $secondOctet -le 31)
+                    ($firstOctet -eq 10) -or
+                    ($firstOctet -eq 192 -and $secondOctet -eq 168) -or
+                    ($firstOctet -eq 172 -and $secondOctet -ge 16 -and $secondOctet -le 31)
                 ) {
                     return $true
                 }
