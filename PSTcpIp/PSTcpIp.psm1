@@ -2030,6 +2030,7 @@ function Invoke-WebCrawl {
                 - ResponseHeaders: The HTTP response headers expressed as a hashtable
                 - Cookies: The HTTP cookies returned from the request to the target URI
                 - UriType: Indicates whether the discovered URI was originally Relative or Absolute
+                - ExecutionTimeMilliseconds: The elapsed time of the request for the crawled URI, in milliseconds.
         .LINK
             Where-Object
             Get-HttpResponseHeader
@@ -2109,8 +2110,19 @@ function Invoke-WebCrawl {
                 [string]$statusDescription = ""
                 [System.Net.CookieCollection]$cookies = $null
                 [PSCustomObject]$responseHeaders = $null
+                $executionTime = $null
                 try {
+                    # Capture the start time:
+                    $startDateTime = Get-Date
+
                     $response = Invoke-WebRequest @iwrParams
+
+                    # Capture the end time in order to obtain the delta for the ExecutionTime property:
+                    $endDateTime = Get-Date
+
+                    # Get start time and end time for ExecutionTime property:
+                    $executionTime = (New-TimeSpan -Start $startDateTime -End $endDateTime)
+
                     $statusCode = $response.StatusCode
                     $statusDescription = $response.StatusDescription
 
@@ -2143,16 +2155,17 @@ function Invoke-WebCrawl {
                 }
 
                 $webCrawlResultHashtable = [ordered]@{
-                    BaseUri           = $BaseUri.AbsoluteUri
-                    Uri               = $targetUri
-                    HostName          = $targetHost
-                    IPAddress         = $targetIP
-                    Port              = $targetPort
-                    StatusCode        = $statusCode
-                    StatusDescription = $statusDescription
-                    ResponseHeaders   = $responseHeaders
-                    Cookies           = $cookies
-                    UriType           = $OriginalUriType
+                    BaseUri                   = $BaseUri.AbsoluteUri
+                    Uri                       = $targetUri
+                    HostName                  = $targetHost
+                    IPAddress                 = $targetIP
+                    Port                      = $targetPort
+                    StatusCode                = $statusCode
+                    StatusDescription         = $statusDescription
+                    ResponseHeaders           = $responseHeaders
+                    Cookies                   = $cookies
+                    UriType                   = $OriginalUriType
+                    ExecutionTimeMilliseconds = $executionTime.Milliseconds
                 }
 
                 if ($addContentToOutput) {
