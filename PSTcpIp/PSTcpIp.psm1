@@ -1698,7 +1698,7 @@ function Get-TlsInformation {
 
                 $certSubjectMatchesHostName = $sslCert.MatchesHostname($targetHost, $true, $true)
 
-                if (-not($certSubjectMatchesHostName)) {
+                if (-not($certSubjectMatchesHostName) -and (-not($isIp))) {
                     $tlsInfo.CertificateIsTrusted = $false
                 }
                 else {
