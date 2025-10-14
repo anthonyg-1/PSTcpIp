@@ -171,6 +171,93 @@ Add-Type -TypeDefinition $tlsStatusDefinition -ErrorAction Stop
 
 #region Private Functions
 
+function Test-CertificateChainNoRevocation {
+    <#
+    .SYNOPSIS
+        Performs TLS certificate chain validation like X509Certificate2.Verify(), but skips CRL/OCSP checks.
+
+    .DESCRIPTION
+    This function builds and validates a certificate chain for a given X509Certificate2 object. It performs all standard checks (time validity, trust, key usage, etc.) except CRL/OCSP validation.
+
+    .PARAMETER Certificate
+        The X509Certificate2 object to validate.
+
+    .PARAMETER AdditionalStore
+        Optional collection of intermediate certificates to assist in chain building.
+
+    .EXAMPLE
+        $cert = Get-TlsCertificate -HostName websitehost.com
+        Test-CertificateChainNoRevocation -Certificate $cert -Verbose
+    .LINK
+        Get-TlsCertificate
+#>
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param(
+        [Parameter(Mandatory, ValueFromPipeline)]
+        [X509Certificate2]$Certificate
+    )
+
+    BEGIN {
+        function Convert-ChainStatus {
+            param([X509ChainStatus[]]$Status)
+            if (-not $Status -or $Status.Count -eq 0) { return @() }
+            return ($Status | ForEach-Object { $_.Status.ToString() })
+        }
+    }
+
+    PROCESS {
+        [bool]$chainVerifies = $false
+
+        $chain = [X509Chain]::new()
+
+        try {
+            # Skip CRL/OCSP checks, enforce all other checks:
+            $chain.ChainPolicy.RevocationMode = [X509RevocationMode]::NoCheck
+            $chain.ChainPolicy.RevocationFlag = [X509RevocationFlag]::ExcludeRoot
+            $chain.ChainPolicy.VerificationFlags = [X509VerificationFlags]::NoFlag
+            $chain.ChainPolicy.VerificationTime = [DateTime]::UtcNow
+
+            # Keep AIA downloads allowed, but cap time to avoid long hangs:
+            $chain.ChainPolicy.UrlRetrievalTimeout = [TimeSpan]::FromSeconds(5)
+
+            Write-Verbose "Building chain for: $($Certificate.Subject)"
+            Write-Verbose "  NotBefore: $($Certificate.NotBefore)  NotAfter: $($Certificate.NotAfter)"
+            $chainVerifies = $chain.Build($Certificate)
+
+            if (-not $chainVerifies) {
+                $overall = Convert-ChainStatus -Status $chain.ChainStatus
+                if ($overall.Count) {
+                    Write-Verbose ("Overall chain status: " + ($overall -join ', '))
+                }
+                else {
+                    Write-Verbose "Overall chain status: (none reported)"
+                }
+            }
+            else {
+                Write-Verbose "Certificate chain validated successfully (revocation ignored)."
+            }
+
+            # Per-element verbose details
+            foreach ($chainElement in $chain.ChainElements) {
+                $statuses = Convert-ChainStatus -Status $chainElement.ChainElementStatus
+                if ($statuses.Count -eq 0) {
+                    Write-Verbose ("(issuer: {1}) - OK" -f $chainElement.Certificate.Subject, $chainElement.Certificate.Issuer)
+                }
+                else {
+                    Write-Verbose ("(issuer: {1}) - {2}" -f $chainElement.Certificate.Subject, $chainElement.Certificate.Issuer, ($statuses -join ', '))
+                }
+            }
+
+            return $chainVerifies
+        }
+        finally {
+            $chain.Dispose()
+        }
+    }
+}
+
+
 function Get-SourceIPAddress([string]$Destination = "8.8.8.8") {
     [string]$sourceAddress = ""
 
@@ -211,6 +298,7 @@ function Get-SourceIPAddress([string]$Destination = "8.8.8.8") {
 
     return $sourceAddress
 }
+
 
 if ($IsWindows) {
     function Get-WebServerCertificate([string]$TargetHost, [int]$Port = 443, [int]$Timeout = 10) {
@@ -374,6 +462,7 @@ else {
         }
     }
 }
+
 
 function Get-PublicKeySize {
     param (
@@ -1388,6 +1477,8 @@ function Get-TlsInformation {
             The port for the target host. This parameter is only applicable when using the HostName parameter. Default value is 443.
         .PARAMETER Uri
             Specifies the Uniform Resource Identifier (URI) of the internet resource as an alternative to the HostName and Port parameters. This parameter supports HTTPS only.
+        .PARAMETER EnableRevocationCheck
+            When specified, performs full certificate chain validation using the built-in .Verify() method, which includes revocation checking via CRL and OCSP endpoints.
         .EXAMPLE
             Get-TlsInformation -HostName mysite.com -Port 443
 
@@ -1512,7 +1603,8 @@ function Get-TlsInformation {
     (
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "HostName")][ValidateLength(1, 250)][Alias('ComputerName', 'IPAddress', 'Name', 'h', 'i')][String]$HostName,
         [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, Position = 1, ParameterSetName = "HostName")][ValidateRange(1, 65535)][Alias('PortNumber', 'p')][Int]$Port = 443,
-        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "Uri")][Alias('u', 'Url')][Uri]$Uri
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "Uri")][Alias('u', 'Url')][Uri]$Uri,
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, Position = 2)][Alias('erc')][Switch]$EnableRevocationCheck
     )
     PROCESS {
         [string]$targetHost = ""
@@ -1702,7 +1794,12 @@ function Get-TlsInformation {
                     $tlsInfo.CertificateIsTrusted = $false
                 }
                 else {
-                    $tlsInfo.CertificateIsTrusted = $sslCert.Verify()
+                    if ($PSBoundParameters.ContainsKey("EnableRevocationCheck")) {
+                        $tlsInfo.CertificateIsTrusted = $sslCert.Verify()
+                    }
+                    else {
+                        $tlsInfo.CertificateIsTrusted = Test-CertificateChainNoRevocation -Certificate $sslCert
+                    }
                 }
 
                 $tlsInfo.CertificateSubjectMatchesHostName = $certSubjectMatchesHostName
