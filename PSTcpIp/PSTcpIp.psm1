@@ -1478,7 +1478,7 @@ function Get-TlsInformation {
         .PARAMETER Uri
             Specifies the Uniform Resource Identifier (URI) of the internet resource as an alternative to the HostName and Port parameters. This parameter supports HTTPS only.
         .PARAMETER EnableRevocationCheck
-            When specified, performs full certificate chain validation using the built-in .Verify() method, which includes revocation checking via CRL and OCSP endpoints.
+            When specified, performs full certificate chain validation which includes revocation checking via CRL and/or OCSP endpoints. This influences the CertificateIsTrusted property if this parameter is used.
         .EXAMPLE
             Get-TlsInformation -HostName mysite.com -Port 443
 
@@ -1726,7 +1726,7 @@ function Get-TlsInformation {
                 if ($IsWindows) {
                     # Get list of Subject Alternative Names:
                     try {
-                        $sansList = ($sslCert.Extensions | Where-Object { $_.Oid.FriendlyName -eq "Subject Alternative Name" }).format($false).Split(",") | ForEach-Object {
+                        $sansList = ($sslCert.Extensions | Where-Object { $_.Oid.FriendlyName -eq "Subject Alternative Name" }).Format($false).Split(",") | ForEach-Object {
                             $_.Replace("DNS Name=", "").Trim()
                         }
                     }
@@ -1790,7 +1790,10 @@ function Get-TlsInformation {
 
                 $certSubjectMatchesHostName = $sslCert.MatchesHostname($targetHost, $true, $true)
 
-                if (-not($certSubjectMatchesHostName) -and (-not($isIp))) {
+                # Prior (and likely unnecessary) check for IP address to determine if cert subject matches hostname:
+                # if (-not($certSubjectMatchesHostName) -and (-not($isIp))) { }
+
+                if (-not($certSubjectMatchesHostName)) {
                     $tlsInfo.CertificateIsTrusted = $false
                 }
                 else {
