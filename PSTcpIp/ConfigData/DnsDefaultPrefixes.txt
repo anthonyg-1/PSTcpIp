@@ -252,6 +252,17 @@ correo
 correoweb
 cp
 cpanel
+crl
+crl1
+crl10
+crl2
+crl3
+crl4
+crl5
+crl6
+crl7
+crl8
+crl9
 crm
 cs
 css
@@ -1102,8 +1113,8 @@ webconf
 webct
 webdb
 webdisk
-webhooks-SIT
 webhooks-sit
+webhooks-SIT
 weblog
 weblogs
 webmail
