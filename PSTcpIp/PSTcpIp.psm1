@@ -2285,22 +2285,25 @@ function Invoke-WebCrawl {
                 # Extract absolute and relative links from the HTML content:
                 $links = $response.Links | Where-Object { $_.href } | ForEach-Object {
                     $originalHref = $_.href
-                    $potentialAbsoluteUri = [Uri]::new([Uri]$targetUri, $originalHref).AbsoluteUri
+                    try {
+                        $potentialAbsoluteUri = [Uri]::new([Uri]$targetUri, $originalHref).AbsoluteUri
 
-                    # Determine if the original href was absolute or relative using enhanced Test-Uri
-                    $uriType = Test-Uri -InputString $originalHref -ReturnUriKind
+                        # Determine if the original href was absolute or relative using enhanced Test-Uri
+                        $uriType = Test-Uri -InputString $originalHref -ReturnUriKind
 
-                    # If Test-Uri couldn't determine the type, fall back to basic validation
-                    if (-not $uriType) {
-                        $uriType = if (Test-Uri -InputString $originalHref) { "Unknown" } else { "Invalid" }
-                    }
+                        # If Test-Uri couldn't determine the type, fall back to basic validation
+                        if (-not $uriType) {
+                            $uriType = if (Test-Uri -InputString $originalHref) { "Unknown" } else { "Invalid" }
+                        }
 
-                    if ([Uri]::IsWellFormedUriString($potentialAbsoluteUri, 1) -and ($potentialAbsoluteUri -match "https?://")) {
-                        [PSCustomObject]@{
-                            AbsoluteUri = $potentialAbsoluteUri
-                            UriType     = $uriType
+                        if ([Uri]::IsWellFormedUriString($potentialAbsoluteUri, 1) -and ($potentialAbsoluteUri -match "https?://")) {
+                            [PSCustomObject]@{
+                                AbsoluteUri = $potentialAbsoluteUri
+                                UriType     = $uriType
+                            }
                         }
                     }
+                    catch {} # Proceed in the event [Uri]::new() throws an exception.
                 }
 
                 foreach ($linkInfo in $links) {
