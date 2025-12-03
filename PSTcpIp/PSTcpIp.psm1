@@ -1790,19 +1790,11 @@ function Get-TlsInformation {
 
                 $certSubjectMatchesHostName = $sslCert.MatchesHostname($targetHost, $true, $true)
 
-                # Prior (and likely unnecessary) check for IP address to determine if cert subject matches hostname:
-                # if (-not($certSubjectMatchesHostName) -and (-not($isIp))) { }
-
-                if (-not($certSubjectMatchesHostName)) {
-                    $tlsInfo.CertificateIsTrusted = $false
+                if ($PSBoundParameters.ContainsKey("EnableRevocationCheck")) {
+                    $tlsInfo.CertificateIsTrusted = $sslCert.Verify()
                 }
                 else {
-                    if ($PSBoundParameters.ContainsKey("EnableRevocationCheck")) {
-                        $tlsInfo.CertificateIsTrusted = $sslCert.Verify()
-                    }
-                    else {
-                        $tlsInfo.CertificateIsTrusted = Test-CertificateChainNoRevocation -Certificate $sslCert
-                    }
+                    $tlsInfo.CertificateIsTrusted = Test-CertificateChainNoRevocation -Certificate $sslCert
                 }
 
                 $tlsInfo.CertificateSubjectMatchesHostName = $certSubjectMatchesHostName
