@@ -1723,6 +1723,7 @@ function Get-TlsInformation {
                 # SECTION  If OS is Windows, the X509Certificate2.Extensions property is populated and thus we can infer SANS from that.
                 # Else, we default to openssl to obtain the list of SANs on the retrieved certificate:
                 $sansList = @()
+                $noSansMessage = "No subject alternative names found on this certificate"
                 if ($IsWindows) {
                     # Get list of Subject Alternative Names:
                     try {
@@ -1731,7 +1732,7 @@ function Get-TlsInformation {
                         }
                     }
                     catch {
-                        $sansList += "No subject alternative names found on this certificate"
+                        $sansList += $noSansMessage
                     }
                 }
                 else {
@@ -1746,7 +1747,12 @@ function Get-TlsInformation {
                         Write-Warning -Message $opensslNotFoundWarning
                     }
                 }
-                $tlsInfo.SubjectAlternativeNames = $sansList
+                if ($sansList.Count -ge 1) {
+                    $tlsInfo.SubjectAlternativeNames = $sansList
+                }
+                else {
+                    $tlsInfo.SubjectAlternativeNames += $noSansMessage
+                }
                 #!SECTION
 
                 # SECTION Obtain a list of SANs and cert subject to determine if the certificate subject matches the target host name:
