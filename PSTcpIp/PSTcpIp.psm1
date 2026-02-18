@@ -300,169 +300,64 @@ function Get-SourceIPAddress([string]$Destination = "8.8.8.8") {
 }
 
 
-if ($IsWindows) {
-    function Get-WebServerCertificate([string]$TargetHost, [int]$Port = 443, [int]$Timeout = 10) {
-        $cryptographicExceptionMessage = "Unable to establish TLS session with {0} over port {1}." -f $TargetHost, $Port
-        $CryptographicException = [System.Security.Cryptography.CryptographicException]::new($cryptographicExceptionMessage)
+function Get-WebServerCertificate([string]$TargetHost, [int]$Port = 443, [int]$Timeout = 10) {
+    $cryptographicExceptionMessage = "Unable to establish TLS session with {0} over port {1}." -f $TargetHost, $Port
+    $CryptographicException = [System.Security.Cryptography.CryptographicException]::new($cryptographicExceptionMessage)
 
-        [System.Net.Sockets.TcpClient]$tcpClient = $null
-        [System.Net.Security.SslStream]$sslStream = $null
-        [System.Security.Cryptography.X509Certificates.X509Certificate2]$sslCert = $null
+    [System.Net.Sockets.TcpClient]$tcpClient = $null
+    [System.Net.Security.SslStream]$sslStream = $null
+    [System.Security.Cryptography.X509Certificates.X509Certificate2]$sslCert = $null
 
-        try {
-            # Create TcpClient with timeout:
-            $tcpClient = [System.Net.Sockets.TcpClient]::new()
-            $tcpClient.ReceiveTimeout = $Timeout * 1000
-            $tcpClient.SendTimeout = $Timeout * 1000
+    try {
+        # Create TcpClient with timeout:
+        $tcpClient = [System.Net.Sockets.TcpClient]::new()
+        $tcpClient.ReceiveTimeout = $Timeout * 1000
+        $tcpClient.SendTimeout = $Timeout * 1000
 
-            # Connect with timeout using async method:
-            $connectTask = $tcpClient.ConnectAsync($TargetHost, $Port)
-            if (-not $connectTask.Wait($Timeout * 1000)) {
-                throw [System.TimeoutException]::new("Connection timed out")
-            }
-
-            $callback = { param($certSender, $cert, $chain, $errors) return $true }
-            $sslStream = [System.Net.Security.SslStream]::new($tcpClient.GetStream(), $false, $callback)
-
-            # Set read/write timeouts for SSL stream:
-            $sslStream.ReadTimeout = $Timeout * 1000
-            $sslStream.WriteTimeout = $Timeout * 1000
-
-            $sslStream.AuthenticateAsClient($TargetHost)
-            $sslCert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($sslStream.RemoteCertificate)
-
-            return $sslCert
+        # Connect with timeout using async method:
+        $connectTask = $tcpClient.ConnectAsync($TargetHost, $Port)
+        if (-not $connectTask.Wait($Timeout * 1000)) {
+            throw [System.TimeoutException]::new("Connection timed out")
         }
-        catch {
-            throw $CryptographicException
-        }
-        finally {
-            # CRITICAL: Cleanup must be in finally block to ensure it always happens:
-            if ($null -ne $sslStream) {
-                try {
-                    $sslStream.Close()
-                    $sslStream.Dispose()
-                }
-                catch {
-                    # Ignore disposal errors
-                }
-            }
 
-            if ($null -ne $tcpClient) {
-                try {
-                    $tcpClient.Close()
-                    $tcpClient.Dispose()
-                }
-                catch {
-                    # Ignore disposal errors.
-                }
-            }
-        }
+        $callback = { param($certSender, $cert, $chain, $errors) return $true }
+        $sslStream = [System.Net.Security.SslStream]::new($tcpClient.GetStream(), $false, $callback)
+
+        # Set read/write timeouts for SSL stream:
+        $sslStream.ReadTimeout = $Timeout * 1000
+        $sslStream.WriteTimeout = $Timeout * 1000
+
+        $sslStream.AuthenticateAsClient($TargetHost)
+        $sslCert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($sslStream.RemoteCertificate)
+
+        return $sslCert
     }
-}
-else {
-    function Get-WebServerCertificate([string]$TargetHost, [int]$Port = 443, [int]$Timeout = 10) {
-        $cryptographicExceptionMessage = "Unable to establish TLS session with {0} over port {1}." -f $TargetHost, $Port
-        $CryptographicException = [System.Security.Cryptography.CryptographicException]::new($cryptographicExceptionMessage)
-
-        $getCertScriptBlock = {
-            [System.Net.Sockets.TcpClient]$tcpClient = $null
-            [System.Net.Security.SslStream]$sslStream = $null
-            [System.Security.Cryptography.X509Certificates.X509Certificate2]$sslCert = $null
-
+    catch {
+        throw $CryptographicException
+    }
+    finally {
+        # CRITICAL: Cleanup must be in finally block to ensure it always happens:
+        if ($null -ne $sslStream) {
             try {
-                $tcpClient = [System.Net.Sockets.TcpClient]::new($using:TargetHost, $using:Port)
-                $callback = { param($certSender, $cert, $chain, $errors) return $true }
-                $sslStream = [System.Net.Security.SslStream]::new($tcpClient.GetStream(), $false, $callback)
-
-                $sslStream.AuthenticateAsClient($using:TargetHost)
-
-                $sslCert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($sslStream.RemoteCertificate)
-
-                if ($null -ne $sslStream) {
-                    $sslStream.Close()
-                    $sslStream.Dispose()
-                }
-
-                if ($null -ne $tcpClient) {
-                    $tcpClient.Close()
-                    $tcpClient.Dispose()
-                }
-
-                Write-Output -InputObject $sslCert
+                $sslStream.Close()
+                $sslStream.Dispose()
             }
             catch {
-                throw $CryptographicException
+                # Ignore disposal errors
             }
         }
 
-        $getCertJobResult = $null
-        try {
-            $certRetrievalJob = Start-Job -ScriptBlock $getCertScriptBlock
-
-            Wait-Job -Job $certRetrievalJob -Timeout $Timeout | Out-Null
-
-            if ((Get-Job -Id $certRetrievalJob.Id).State -ne "Failed") {
-                $getCertJobResult = Receive-Job -Job $certRetrievalJob
+        if ($null -ne $tcpClient) {
+            try {
+                $tcpClient.Close()
+                $tcpClient.Dispose()
             }
-
-            Remove-Job -Job $certRetrievalJob -Force
-        }
-        finally {
-            Get-Job | Where-Object -Property State -eq "Failed" | Remove-Job -Force | Out-Null
-        }
-
-        if ($null -ne $getCertJobResult) {
-            return $getCertJobResult
-        }
-        else {
-            [bool]$opensslFound = $null -ne (Get-Command -CommandType Application -Name "openssl" -ErrorAction SilentlyContinue)
-            if ($opensslFound) {
-                # Build target host and part for connect argument for openssl:
-                $targetHostAndPort = "{0}:{1}" -f $TargetHost, $Port
-
-                try {
-                    # Cert object to be returned:
-                    $tlsCert = $null
-
-                    # Get the cert:
-                    $openSslResult = "Q" | openssl s_client -connect $targetHostAndPort 2>$null
-
-                    $openSslResultString = $openSslResult -join ""
-
-                    # Header and footer values for base64 cert:
-                    $beginString = "BEGIN CERTIFICATE"
-                    $endString = "END CERTIFICATE"
-
-                    # Determine that the results of the openssl command contain the header and footer for the base64 cert:
-                    if (($openSslResultString.Contains($beginString)) -and ($openSslResultString.Contains($endString))) {
-                        # Parse the relevant base64 cert resulting from openssl:
-                        $base64CertString = ($openSslResultString.Split($beginString)[1].Split($endString)[0]).Replace("-", "")
-
-                        # Convert the base64 string to a byte array to be fed to the X509Certificate2 constructor:
-                        [byte[]]$certBytes = [System.Convert]::FromBase64String($base64CertString)
-
-                        # Instantiate the certificate from the deserialized byte array:
-                        $tlsCert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($certBytes)
-                    }
-                    else {
-                        throw $CryptographicException
-                    }
-
-                    # return the TLS cert:
-                    return $tlsCert
-                }
-                catch {
-                    throw $CryptographicException
-                }
-            }
-            else {
-                throw $CryptographicException
+            catch {
+                # Ignore disposal errors.
             }
         }
     }
 }
-
 
 function Get-PublicKeySize {
     param (
@@ -1218,7 +1113,7 @@ function Get-TlsCertificate {
             [X509Certificate2]$sslCert = $null
             [bool]$handshakeSucceeded = $false
             try {
-                $sslCert = Get-WebServerCertificate -TargetHost $targetHost -Port $Port
+                $sslCert = Get-WebServerCertificate -TargetHost $targetHost -Port $targetPort
                 $handshakeSucceeded = $true
             }
             catch {
@@ -1608,7 +1503,7 @@ function Get-TlsInformation {
     )
     PROCESS {
         [string]$targetHost = ""
-        [string]$targetPort = ""
+        [int]$targetPort = 0
         [string]$targetUri = ""
 
         if ($PSBoundParameters.ContainsKey("Uri")) {
