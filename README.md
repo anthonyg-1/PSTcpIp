@@ -1,5 +1,3 @@
-# ReadMe
-
 ## PSTcpIp
 
 This PowerShell module contains functions that provide TCP connectivity testing as well as TLS certificate retrieval, TLS endpoint security posture, DNS record enumeration, and HTTP response header assessment.
