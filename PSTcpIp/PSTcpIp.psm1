@@ -1021,6 +1021,10 @@ function Get-TlsCertificate {
             Gets a TLS certificate from an endpoint.
         .DESCRIPTION
             Gets a TLS certificate from an endpoint specified as a host name and port or URI.
+
+            When -IncludeChain is specified, the function returns the certificate chain captured
+            from the SslStream validation callback. This preserves the full platform-built chain
+            on Linux/macOS as well as Windows.
         .PARAMETER HostName
             The target host to obtain an TLS certificate from.
         .PARAMETER Port
@@ -1028,7 +1032,7 @@ function Get-TlsCertificate {
         .PARAMETER Uri
             Specifies the Uniform Resource Identifier (URI) of the internet resource to which the request for the TLS certificate is sent. This parameter supports HTTPS only.
         .PARAMETER IncludeChain
-            Instructs the function to return the x509 certificate chain for the given certificate as a list starting with the end-entity certificate followed by one or more CA certificates.
+            Instructs the function to return the X509 certificate chain for the given certificate as a list starting with the end-entity certificate followed by one or more CA certificates.
         .EXAMPLE
             Get-TlsCertificate -HostName www.mysite.com
 
@@ -1040,11 +1044,11 @@ function Get-TlsCertificate {
         .EXAMPLE
             Get-TlsCertificate -HostName www.mysite.com -Port 443 | Select Thumbprint, Subject, NotAfter | Format-List
 
-            Gets a TLS certificate from www.mysite.com over port 443, selects three properties (Thumprint, Subject, NotAfter) and formats the output as a list.
+            Gets a TLS certificate from www.mysite.com over port 443, selects three properties (Thumbprint, Subject, NotAfter) and formats the output as a list.
         .EXAMPLE
             Get-TlsCertificate -Uri https://www.mysite.com/default.htm | Select Thumbprint, Subject, NotAfter | Format-List
 
-            Gets a TLS certificate from https://www.mysite.com, selects three properties (Thumprint, Subject, NotAfter) and formats the output as a list.
+            Gets a TLS certificate from https://www.mysite.com, selects three properties (Thumbprint, Subject, NotAfter) and formats the output as a list.
         .EXAMPLE
             Get-TlsCertificate -HostName www.mysite.com -IncludeChain | Select Subject, Thumbprint, NotAfter | Format-List
 
@@ -1070,14 +1074,28 @@ function Get-TlsCertificate {
     [Alias('gtls', 'gtlsc', 'gssl', 'Get-SslCertificate')]
     [OutputType([System.Security.Cryptography.X509Certificates.X509Certificate2])]
     param(
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "HostName")][ValidateLength(1, 250)][Alias('ComputerName', 'IPAddress', 'Name', 'h', 'i')][String]$HostName,
-        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, Position = 1, ParameterSetName = "HostName")][ValidateRange(1, 65535)][Alias('PortNumber', 'p')][Int]$Port = 443,
-        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "Uri")][Alias('u', 'Url')][Uri]$Uri,
-        [Parameter(Mandatory = $false, Position = 2)][Alias('ic')][Switch]$IncludeChain
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "HostName")]
+        [ValidateLength(1, 250)]
+        [Alias('ComputerName', 'IPAddress', 'Name', 'h', 'i')]
+        [String]$HostName,
+
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, Position = 1, ParameterSetName = "HostName")]
+        [ValidateRange(1, 65535)]
+        [Alias('PortNumber', 'p')]
+        [Int]$Port = 443,
+
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "Uri")]
+        [Alias('u', 'Url')]
+        [Uri]$Uri,
+
+        [Parameter(Mandatory = $false, Position = 2)]
+        [Alias('ic')]
+        [Switch]$IncludeChain
     )
+
     PROCESS {
         [string]$targetHost = ""
-        [string]$targetPort = ""
+        [int]$targetPort = 443
 
         if ($PSBoundParameters.ContainsKey("Uri")) {
             if ((Test-Uri -InputString $Uri) -and ($Uri.Scheme -eq "https")) {
@@ -1086,7 +1104,7 @@ function Get-TlsCertificate {
             }
             else {
                 $argumentExceptionMessage = "Provided value is not a valid URI or does not contain the necessary https:// prefix."
-                $ArgumentException = New-Object ArgumentException -ArgumentList $argumentExceptionMessage
+                $ArgumentException = [ArgumentException]::new($argumentExceptionMessage)
                 Write-Error -Exception $ArgumentException -Category InvalidArgument -ErrorAction Stop
             }
         }
@@ -1098,44 +1116,91 @@ function Get-TlsCertificate {
         $connectionTestResult = Test-TcpConnection -DNSHostName $targetHost -Port $targetPort
 
         [bool]$isIp = Test-IPAddress -InputString $targetHost
-
         if ($isIp) {
             $targetHost = $connectionTestResult.HostName
         }
 
-        if ($null -eq $targetHost) {
+        if ([string]::IsNullOrWhiteSpace($targetHost)) {
             $webExceptionMessage = "Host not specified. Unable to connect."
-            $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
+            $WebException = [WebException]::new($webExceptionMessage)
             Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Stop
         }
 
-        if ($connectionTestResult.Connected) {
-            [X509Certificate2]$sslCert = $null
-            [bool]$handshakeSucceeded = $false
-            try {
-                $sslCert = Get-WebServerCertificate -TargetHost $targetHost -Port $targetPort
-                $handshakeSucceeded = $true
-            }
-            catch {
-                $cryptographicExceptionMessage = $_.Exception.Message
-                $CryptographicException = New-Object -TypeName CryptographicException -ArgumentList $cryptographicExceptionMessage
-                Write-Error -Exception $CryptographicException -Category SecurityError -ErrorAction $ErrorActionPreference
+        if (-not $connectionTestResult.Connected) {
+            $webExceptionMessage = "Unable to connect to {0} over the following port: {1}" -f $targetHost, $targetPort
+            $WebException = [WebException]::new($webExceptionMessage)
+            Write-Error -Exception $WebException -Category ConnectionError -ErrorAction $ErrorActionPreference
+            return
+        }
+
+        [TcpClient]$tcpClient = $null
+        [SslStream]$sslStream = $null
+        [X509Certificate2]$sslCert = $null
+        [X509Certificate2[]]$callbackChain = @()
+
+        try {
+            $tcpClient = [TcpClient]::new()
+            $tcpClient.ReceiveTimeout = 10000
+            $tcpClient.SendTimeout = 10000
+
+            $connectTask = $tcpClient.ConnectAsync($targetHost, $targetPort)
+            if (-not $connectTask.Wait(10000)) {
+                throw [TimeoutException]::new("Connection timed out")
             }
 
-            if ($handshakeSucceeded) {
-                if ($PSBoundParameters.ContainsKey("IncludeChain")) {
-                    $allCertsInChain = Get-X509CertificateChain -Certificate $sslCert
-                    return $allCertsInChain
+            $script:PSTcpIp_TlsCertificate_CallbackChain = @()
+
+            $callback = {
+                param($sender, $certificate, $chain, $sslPolicyErrors)
+
+                if ($null -ne $chain -and $null -ne $chain.ChainElements) {
+                    $script:PSTcpIp_TlsCertificate_CallbackChain = @(
+                        foreach ($element in $chain.ChainElements) {
+                            [X509Certificate2]::new($element.Certificate.RawData)
+                        }
+                    )
                 }
-                else {
-                    return $sslCert
-                }
+
+                return $true
             }
+
+            $sslStream = [SslStream]::new($tcpClient.GetStream(), $false, $callback)
+            $sslStream.ReadTimeout = 10000
+            $sslStream.WriteTimeout = 10000
+
+            $sslStream.AuthenticateAsClient($targetHost)
+
+            $sslCert = [X509Certificate2]::new($sslStream.RemoteCertificate)
+
+            if ($IncludeChain) {
+                $callbackChain = @($script:PSTcpIp_TlsCertificate_CallbackChain)
+
+                if ($callbackChain.Count -gt 0) {
+                    return $callbackChain
+                }
+
+                return Get-X509CertificateChain -Certificate $sslCert
+            }
+
+            return $sslCert
         }
-        else {
-            $webExceptionMessage = "Unable to connect to {0} over the following port: {1}" -f $targetHost, $targetPort
-            $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
-            Write-Error -Exception $WebException -Category ConnectionError -ErrorAction $ErrorActionPreference
+        catch {
+            $cryptographicExceptionMessage = "Unable to establish TLS session with {0} over port {1}. {2}" -f $targetHost, $targetPort, $_.Exception.Message
+            $CryptographicException = [CryptographicException]::new($cryptographicExceptionMessage)
+            Write-Error -Exception $CryptographicException -Category SecurityError -ErrorAction $ErrorActionPreference
+        }
+        finally {
+            Remove-Variable -Name PSTcpIp_TlsCertificate_CallbackChain -Scope Script -ErrorAction SilentlyContinue
+
+            if ($null -ne $sslStream) {
+                try { $sslStream.Close() } catch {}
+                try { $sslStream.Dispose() } catch {}
+            }
+
+            if ($null -ne $tcpClient) {
+                try { $tcpClient.Close() } catch {}
+                try { $tcpClient.Dispose() } catch {}
+            }
         }
     }
 }
@@ -1366,6 +1431,8 @@ function Get-TlsInformation {
             Gets TLS protocols, certificate and cipher information against a remote computer running TLS/SSL.
         .DESCRIPTION
             Obtains the negotiated TLS protocols, certificate data (lifetime, validity, subject, serial number, subject alternative names, and other identifiable information, etc.) and cipher information against a remote target running TLS/SSL.
+
+            CertificateChain is populated from Get-TlsCertificate -IncludeChain so the platform-built TLS chain is preserved on Linux/macOS as well as Windows.
         .PARAMETER HostName
             The target host to get TLS/SSL settings from.
         .PARAMETER Port
@@ -1397,93 +1464,6 @@ function Get-TlsInformation {
                 A string value is received by the HostName parameter
         .OUTPUTS
             PSTcpIp.TlsInfo
-
-                This function returns a TlsInfo object. Example output against "https://www.microsoft.com/en-us" using the Uri parameter:
-
-                HostName                          : www.microsoft.com
-                IPAddress                         : 23.56.210.93
-                Port                              : 443
-                SerialNumber                      : 33009F7B734DB0480411EB0BBA0000009F7B73
-                Thumbprint                        : C0CF0C1580E20618EA15357FC1028622518DDC4D
-                Subject                           : CN=www.microsoft.com, O=Microsoft Corporation, L=Redmond, S=WA, C=US
-                SubjectKeyIdentifier              : 0A27CADD90615213B8B28160508ECC41BD2F4D7E
-                Issuer                            : CN=Microsoft Azure RSA TLS Issuing CA 04, O=Microsoft Corporation, C=US
-                CertificateChain                  : {[Subject]
-                                                    CN=www.microsoft.com, O=Microsoft Corporation, L=Redmond, S=WA, C=US
-
-                                                    [Issuer]
-                                                    CN=Microsoft Azure RSA TLS Issuing CA 04, O=Microsoft Corporation, C=US
-
-                                                    [Serial Number]
-                                                    33009F7B734DB0480411EB0BBA0000009F7B73
-
-                                                    [Not Before]
-                                                    8/26/2024 12:01:06 PM
-
-                                                    [Not After]
-                                                    8/21/2025 12:01:06 PM
-
-                                                    [Thumbprint]
-                                                    C0CF0C1580E20618EA15357FC1028622518DDC4D
-                                                    , [Subject]
-                                                    CN=Microsoft Azure RSA TLS Issuing CA 04, O=Microsoft Corporation, C=US
-
-                                                    [Issuer]
-                                                    CN=DigiCert Global Root G2, OU=www.digicert.com, O=DigiCert Inc, C=US
-
-                                                    [Serial Number]
-                                                    09F96EC295555F24749EAF1E5DCED49D
-
-                                                    [Not Before]
-                                                    6/7/2023 8:00:00 PM
-
-                                                    [Not After]
-                                                    8/25/2026 7:59:59 PM
-
-                                                    [Thumbprint]
-                                                    BE68D0ADAA2345B48E507320B695D386080E5B25
-                                                    , [Subject]
-                                                    CN=DigiCert Global Root G2, OU=www.digicert.com, O=DigiCert Inc, C=US
-
-                                                    [Issuer]
-                                                    CN=DigiCert Global Root G2, OU=www.digicert.com, O=DigiCert Inc, C=US
-
-                                                    [Serial Number]
-                                                    033AF1E6A711A9A0BB2864B11D09FAE5
-
-                                                    [Not Before]
-                                                    8/1/2013 8:00:00 AM
-
-                                                    [Not After]
-                                                    1/15/2038 7:00:00 AM
-
-                                                    [Thumbprint]
-                                                    DF3C24F9BFD666761B268073FE06D1CC8D4F82A4
-                                                    }
-                CertificateIsTrusted              : True
-                ValidFrom                         : 8/26/2024 12:01:06 PM
-                ValidTo                           : 8/21/2025 12:01:06 PM
-                CertificateValidityPeriodInYears  : 1
-                CertificateValidityPeriodInDays   : 360
-                CertificateIsExpired              : False
-                CertificateSubjectMatchesHostName : True
-                IsWildcardCertificate             : False
-                IsSelfSignedCertificate           : False
-                SignatureAlgorithm                : sha384RSA
-                NegotiatedCipherSuites            : {TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384, TLS_AES_256_GCM_SHA384}
-                CipherAlgorithm                   : Aes256
-                CipherStrength                    : 256
-                KeyExchangeAlgorithm              : ECDH Ephemeral
-                KeySize                           : 2048
-                StrictTransportSecurity           : Strict-Transport-Security not found in header
-                SubjectAlternativeNames           : {wwwqa.microsoft.com, www.microsoft.com, staticview.microsoft.com, i.s-microsoft.comΓÇª}
-                Ssl2                              : False
-                Ssl3                              : False
-                Tls                               : False
-                Tls11                             : False
-                Tls12                             : True
-                Tls13                             : True
-
         .NOTES
             If StrictTransportSecurity returns "Unable to acquire HSTS value" or "No value specified for strict transport security (HSTS)" with the HostName parameter set, try the fully qualified web address with the Uri parameter.
         .LINK
@@ -1496,11 +1476,25 @@ function Get-TlsInformation {
     [OutputType([PSTcpIp.TlsInfo])]
     param
     (
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "HostName")][ValidateLength(1, 250)][Alias('ComputerName', 'IPAddress', 'Name', 'h', 'i')][String]$HostName,
-        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, Position = 1, ParameterSetName = "HostName")][ValidateRange(1, 65535)][Alias('PortNumber', 'p')][Int]$Port = 443,
-        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "Uri")][Alias('u', 'Url')][Uri]$Uri,
-        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, Position = 2)][Alias('erc')][Switch]$EnableRevocationCheck
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "HostName")]
+        [ValidateLength(1, 250)]
+        [Alias('ComputerName', 'IPAddress', 'Name', 'h', 'i')]
+        [String]$HostName,
+
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, Position = 1, ParameterSetName = "HostName")]
+        [ValidateRange(1, 65535)]
+        [Alias('PortNumber', 'p')]
+        [Int]$Port = 443,
+
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "Uri")]
+        [Alias('u', 'Url')]
+        [Uri]$Uri,
+
+        [Parameter(Mandatory = $false, ValueFromPipelineByPropertyName = $true, Position = 2)]
+        [Alias('erc')]
+        [Switch]$EnableRevocationCheck
     )
+
     PROCESS {
         [string]$targetHost = ""
         [int]$targetPort = 0
@@ -1510,11 +1504,11 @@ function Get-TlsInformation {
             if ((Test-Uri -InputString $Uri) -and ($Uri.Scheme -eq "https")) {
                 $targetHost = $Uri.DnsSafeHost
                 $targetPort = $Uri.Port
-                $targetUri = $Uri
+                $targetUri = $Uri.AbsoluteUri
             }
             else {
                 $argumentExceptionMessage = "Provided value is not a valid URI or does not contain the necessary https:// prefix."
-                $ArgumentException = New-Object ArgumentException -ArgumentList $argumentExceptionMessage
+                $ArgumentException = [ArgumentException]::new($argumentExceptionMessage)
                 Write-Error -Exception $ArgumentException -Category InvalidArgument -ErrorAction Stop
             }
         }
@@ -1539,213 +1533,236 @@ function Get-TlsInformation {
             $targetHost = $connectionTestResult.HostName
         }
 
-        if ($null -eq $targetHost) {
+        if ([string]::IsNullOrWhiteSpace($targetHost)) {
             $webExceptionMessage = "Host not specified. Unable to connect."
-            $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
+            $WebException = [WebException]::new($webExceptionMessage)
             Write-Error -Exception $WebException -Category ConnectionError -ErrorAction Stop
         }
 
+        [bool]$canConnect = $connectionTestResult.Connected
+
+        if (-not $canConnect) {
+            $webExceptionMessage = "Unable to connect to {0} over the following port: {1}" -f $targetHost, $targetPort
+            $WebException = [WebException]::new($webExceptionMessage)
+            Write-Error -Exception $WebException -Category ConnectionError -ErrorAction $ErrorActionPreference
+            return
+        }
+
+        $tlsInfo = [PSTcpIp.TlsInfo]::new()
+        $tlsInfo.HostName = $targetHost
+
+        try {
+            $tlsInfo.IPAddress = $connectionTestResult.IPAddress
+        }
+        catch {
+            $tlsInfo.IPAddress = $null
+        }
+
+        $tlsInfo.Port = $targetPort
+
+        [X509Certificate2]$sslCert = $null
+        [X509Certificate2[]]$fullCertChain = @()
         [bool]$handshakeSucceeded = $false
 
-        [bool]$canConnect = $connectionTestResult.Connected
-        if ($canConnect) {
-            $tlsInfo = New-Object -TypeName PSTcpIp.TlsInfo
-            $tlsInfo.HostName = $targetHost
+        try {
+            $fullCertChain = @(
+                Get-TlsCertificate -HostName $targetHost -Port $targetPort -IncludeChain -ErrorAction Stop
+            )
+
+            if ($null -eq $fullCertChain -or $fullCertChain.Count -lt 1) {
+                $webExceptionMessage = "Unable to establish TLS session with {0} over port {1}." -f $targetHost, $targetPort
+                $WebException = [WebException]::new($webExceptionMessage)
+                throw $WebException
+            }
+
+            $sslCert = $fullCertChain[0]
+
+            [string]$subjectKeyIdentifier = ""
+            $subjectKeyIdentifier = $sslCert.Extensions |
+            Where-Object { $_.Oid.Value -eq "2.5.29.14" } |
+            Select-Object -ExpandProperty SubjectKeyIdentifier -ErrorAction SilentlyContinue
+
+            if ([string]::IsNullOrWhiteSpace($subjectKeyIdentifier)) {
+                $subjectKeyIdentifier = "Unable to determine Subject Key Identifier."
+            }
+
+            $tlsInfo.ValidFrom = $sslCert.NotBefore
+            $tlsInfo.ValidTo = $sslCert.NotAfter
+            $tlsInfo.CertificateValidityPeriodInYears = [Math]::Round((($sslCert.NotAfter - $sslCert.NotBefore).Days * 0.00273973), 1)
+            $tlsInfo.CertificateValidityPeriodInDays = ($sslCert.NotAfter - $sslCert.NotBefore).Days
+            $tlsInfo.CertificateIsExpired = ($sslCert.NotAfter -le (Get-Date))
+            $tlsInfo.SerialNumber = $sslCert.GetSerialNumberString()
+            $tlsInfo.Thumbprint = $sslCert.Thumbprint
+            $tlsInfo.Subject = $sslCert.Subject
+            $tlsInfo.SubjectKeyIdentifier = $subjectKeyIdentifier
+            $tlsInfo.Issuer = $sslCert.Issuer
+            $tlsInfo.CertificateChain = $fullCertChain
+
+            $handshakeSucceeded = $true
+        }
+        catch {
+            $cryptographicExceptionMessage = $_.Exception.Message
+            $CryptographicException = [CryptographicException]::new($cryptographicExceptionMessage)
+            Write-Error -Exception $CryptographicException -Category SecurityError -ErrorAction $ErrorActionPreference
+        }
+
+        if (-not $handshakeSucceeded) {
+            return
+        }
+
+        [string]$strictTransportSecurityValue = "No value specified for strict transport security (HSTS)"
+
+        try {
+            [Hashtable]$responseHeaders = Get-HttpResponseHeader -Uri $targetUri -AsHashtable -ErrorAction Stop
+            $strictTransportSecurityValue = $responseHeaders['Strict-Transport-Security']
+
+            if ([string]::IsNullOrWhiteSpace($strictTransportSecurityValue)) {
+                $strictTransportSecurityValue = "Strict-Transport-Security not found in header"
+            }
+        }
+        catch {
+            $strictTransportSecurityValue = "Unable to acquire HSTS value"
+        }
+
+        $tlsInfo.StrictTransportSecurity = $strictTransportSecurityValue
+
+        $sansList = @()
+        $noSansMessage = "No subject alternative names found on this certificate"
+
+        if ($IsWindows) {
             try {
-                $tlsInfo.IPAddress = $connectionTestResult.IPAddress
+                $sansList = ($sslCert.Extensions |
+                    Where-Object { $_.Oid.FriendlyName -eq "Subject Alternative Name" }).
+                Format($false).
+                Split(",") |
+                ForEach-Object {
+                    $_.Replace("DNS Name=", "").Trim()
+                }
             }
             catch {
-                $tlsInfo.IPAddress = $null
-            }
-            $tlsInfo.Port = $targetPort
-
-            [X509Certificate2]$sslCert = $null
-
-            try {
-                $sslCert = Get-WebServerCertificate -TargetHost $targetHost -Port $targetPort
-
-                # Obtain certificate chain:
-                $fullCertChain = Get-X509CertificateChain -Certificate $sslCert
-
-                if ($null -eq $fullCertChain) {
-                    $webExceptionMessage = "Unable to establish TLS session with {0} over port {1}." -f $targetHost, $targetHost
-                    $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
-                    throw $WebException
-                }
-
-                [string]$subjectKeyIdentifier = ""
-                $subjectKeyIdentifier = $sslCert.Extensions | Where-Object { $_.Oid.Value -eq "2.5.29.14" } | Select-Object -ExpandProperty SubjectKeyIdentifier
-                if ($null -eq $subjectKeyIdentifier ) {
-                    $subjectKeyIdentifier = "Unable to determine Subject Key Identifier."
-                }
-
-                $tlsInfo.ValidFrom = $sslCert.NotBefore
-                $tlsInfo.ValidTo = $sslCert.NotAfter
-                $tlsInfo.CertificateValidityPeriodInYears = [Math]::Round((($sslCert.NotAfter - $sslCert.NotBefore).Days * 0.00273973), 1)
-                $tlsInfo.CertificateValidityPeriodInDays = ($sslCert.NotAfter - $sslCert.NotBefore).Days
-                $tlsInfo.CertificateIsExpired = ($sslCert.NotAfter -le (Get-Date))
-                $tlsInfo.SerialNumber = $sslCert.GetSerialNumberString()
-                $tlsInfo.Thumbprint = $sslCert.Thumbprint
-                $tlsInfo.Subject = $sslCert.Subject
-                $tlsInfo.SubjectKeyIdentifier = $subjectKeyIdentifier
-                $tlsInfo.Issuer = $sslCert.Issuer
-                $tlsInfo.CertificateChain = $fullCertChain
-                $handshakeSucceeded = $true
-            }
-            catch {
-                $cryptographicExceptionMessage = $_.Exception.Message
-                $CryptographicException = New-Object -TypeName CryptographicException -ArgumentList $cryptographicExceptionMessage
-                Write-Error -Exception $CryptographicException -Category SecurityError -ErrorAction $ErrorActionPreference
-            }
-
-            if ($handshakeSucceeded) {
-                # Get HTTP Strict Transport Security values:
-                [string]$strictTransportSecurityValue = "No value specified for strict transport security (HSTS)"
-                try {
-                    [Hashtable]$responseHeaders = Get-HttpResponseHeader -Uri $targetUri -AsHashtable -ErrorAction Stop
-
-                    $strictTransportSecurityValue = $responseHeaders['Strict-Transport-Security']
-
-                    if ($strictTransportSecurityValue.Length -lt 1) {
-                        $strictTransportSecurityValue = "Strict-Transport-Security not found in header"
-                    }
-                }
-                catch {
-                    $strictTransportSecurityValue = "Unable to acquire HSTS value"
-                }
-                $tlsInfo.StrictTransportSecurity = $strictTransportSecurityValue
-
-                # SECTION  If OS is Windows, the X509Certificate2.Extensions property is populated and thus we can infer SANS from that.
-                # Else, we default to openssl to obtain the list of SANs on the retrieved certificate:
-                $sansList = @()
-                $noSansMessage = "No subject alternative names found on this certificate"
-                if ($IsWindows) {
-                    # Get list of Subject Alternative Names:
-                    try {
-                        $sansList = ($sslCert.Extensions | Where-Object { $_.Oid.FriendlyName -eq "Subject Alternative Name" }).Format($false).Split(",") | ForEach-Object {
-                            $_.Replace("DNS Name=", "").Trim()
-                        }
-                    }
-                    catch {
-                        $sansList += $noSansMessage
-                    }
-                }
-                else {
-                    $opensslFound = $null -ne (Get-Command -CommandType Application -Name "openssl" -ErrorAction SilentlyContinue)
-                    if ($opensslFound) {
-                        $sansList = (($sslCert.ExportCertificatePem() | openssl x509 -noout -text 2>$null | Select-String -Pattern "DNS:") -split ",") | ForEach-Object {
-                            $_.Replace("DNS:", "").Trim()
-                        }
-                    }
-                    else {
-                        $opensslNotFoundWarning = "The openssl binary was not found. SubjectAlternativeNames will not be populated."
-                        Write-Warning -Message $opensslNotFoundWarning
-                    }
-                }
-                if ($sansList.Count -ge 1) {
-                    $tlsInfo.SubjectAlternativeNames = $sansList
-                }
-                else {
-                    $tlsInfo.SubjectAlternativeNames += $noSansMessage
-                }
-                #!SECTION
-
-                # SECTION Obtain a list of SANs and cert subject to determine if the certificate subject matches the target host name:
-                [Boolean]$certSubjectMatchesHostName = $false
-
-                $validHostNames = [List[String]]::new()
-                $parsedCertSubject = (($sslCert.Subject).Split(",")[0].Replace("CN=", "")).Trim()
-
-                $validHostNames = [List[String]]::new()
-                foreach ($san in $sansList) {
-                    if (-not($validHostNames.Contains($san))) {
-                        $validHostNames.Add($san)
-                    }
-                }
-
-                if (-not($validHostNames.Contains($parsedCertSubject))) {
-                    $validHostNames.Add($parsedCertSubject)
-                }
-
-                # Determine if certificate is a wildcard certifcate from cert subject and SANs:
-                [bool]$wildcardFound = $false
-                foreach ($name in $validHostNames) {
-                    if ($name.StartsWith("*")) {
-                        $wildcardFound = $true
-                        break
-                    }
-                }
-
-                # Construct a list of wildcard entries:
-                $wildcardEntries = [List[String]]::new()
-                if ($wildcardFound) {
-                    foreach ($name in $validHostNames) {
-                        if ($name.Contains("*")) {
-                            $wcEntry = $name.Replace("*.", "")
-                            if (-not($wildcardEntries.Contains($wcEntry))) {
-                                $wildcardEntries.Add($wcEntry)
-                            }
-                        }
-                    }
-                }
-
-                $certSubjectMatchesHostName = $sslCert.MatchesHostname($targetHost, $true, $true)
-
-                if ($PSBoundParameters.ContainsKey("EnableRevocationCheck")) {
-                    $tlsInfo.CertificateIsTrusted = $sslCert.Verify()
-                }
-                else {
-                    $tlsInfo.CertificateIsTrusted = Test-CertificateChainNoRevocation -Certificate $sslCert
-                }
-
-                $tlsInfo.CertificateSubjectMatchesHostName = $certSubjectMatchesHostName
-
-                $tlsInfo.IsWildcardCertificate = $wildcardFound
-
-                [bool]$isSelfSigned = $sslCert.Subject -eq $sslCert.Issuer
-                $tlsInfo.IsSelfSignedCertificate = $isSelfSigned
-
-                #!SECTION
-
-                # SECTION Obtain TLS version and strength information
-
-                $tlsInfo.SignatureAlgorithm = $sslCert.SignatureAlgorithm.FriendlyName
-
-                # Determine public key size from private function if running in Windows and MacOS only:
-                if (-not($IsLinux)) {
-                    $tlsInfo.KeySize = Get-PublicKeySize -Certificate $sslCert
-                }
-
-                # Test TLS versions and obtain relevant info to return:
-                $tlsVersionResults = Test-TlsVersion -HostName $targetHost -Port $targetPort
-                $tlsInfo.NegotiatedCipherSuites = $tlsVersionResults.NegotiatedCipherSuites
-                $tlsInfo.CipherAlgorithm = $tlsVersionResults.CipherAlgorithm
-                $tlsInfo.CipherStrength = $tlsVersionResults.CipherStrength
-
-                if ($tlsVersionResults.KeyExchangeAlgorithm) {
-                    $tlsInfo.KeyExchangeAlgorithm = $tlsVersionResults.KeyExchangeAlgorithm
-                }
-                else {
-                    $tlsInfo.KeyExchangeAlgorithm = "Unable to determine key exchange algorithm."
-                }
-
-                $tlsInfo.Ssl2 = $tlsVersionResults.Ssl2
-                $tlsInfo.Ssl3 = $tlsVersionResults.Ssl3
-                $tlsInfo.Tls = $tlsVersionResults.Tls
-                $tlsInfo.Tls11 = $tlsVersionResults.Tls11
-                $tlsInfo.Tls12 = $tlsVersionResults.Tls12
-                $tlsInfo.Tls13 = $tlsVersionResults.Tls13
-
-                #!SECTION
-
-                return $tlsInfo
+                $sansList += $noSansMessage
             }
         }
         else {
-            $webExceptionMessage = "Unable to connect to {0} over the following port: {1}" -f $targetHost, $targetPort
-            $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
-            Write-Error -Exception $WebException -Category ConnectionError -ErrorAction $ErrorActionPreference
+            $opensslFound = $null -ne (Get-Command -CommandType Application -Name "openssl" -ErrorAction SilentlyContinue)
+
+            if ($opensslFound) {
+                $sansList = (($sslCert.ExportCertificatePem() |
+                        openssl x509 -noout -text 2>$null |
+                        Select-String -Pattern "DNS:") -split ",") |
+                ForEach-Object {
+                    $_.Replace("DNS:", "").Trim()
+                }
+            }
+            else {
+                $opensslNotFoundWarning = "The openssl binary was not found. SubjectAlternativeNames will not be populated."
+                Write-Warning -Message $opensslNotFoundWarning
+            }
         }
+
+        if ($sansList.Count -ge 1) {
+            $tlsInfo.SubjectAlternativeNames = $sansList
+        }
+        else {
+            $tlsInfo.SubjectAlternativeNames += $noSansMessage
+        }
+
+        [bool]$certSubjectMatchesHostName = $false
+        [List[String]]$validHostNames = [List[String]]::new()
+
+        $parsedCertSubject = (($sslCert.Subject).Split(",")[0].Replace("CN=", "")).Trim()
+
+        foreach ($san in $sansList) {
+            if (-not $validHostNames.Contains($san)) {
+                $validHostNames.Add($san)
+            }
+        }
+
+        if (-not $validHostNames.Contains($parsedCertSubject)) {
+            $validHostNames.Add($parsedCertSubject)
+        }
+
+        [bool]$wildcardFound = $false
+
+        foreach ($name in $validHostNames) {
+            if ($name.StartsWith("*")) {
+                $wildcardFound = $true
+                break
+            }
+        }
+
+        $wildcardEntries = [List[String]]::new()
+
+        if ($wildcardFound) {
+            foreach ($name in $validHostNames) {
+                if ($name.Contains("*")) {
+                    $wcEntry = $name.Replace("*.", "")
+                    if (-not $wildcardEntries.Contains($wcEntry)) {
+                        $wildcardEntries.Add($wcEntry)
+                    }
+                }
+            }
+        }
+
+        $certSubjectMatchesHostName = $sslCert.MatchesHostname($targetHost, $true, $true)
+
+        if ($PSBoundParameters.ContainsKey("EnableRevocationCheck")) {
+            $tlsInfo.CertificateIsTrusted = $sslCert.Verify()
+        }
+        else {
+            $chain = [X509Chain]::new()
+
+            try {
+                $chain.ChainPolicy.RevocationMode = [X509RevocationMode]::NoCheck
+                $chain.ChainPolicy.RevocationFlag = [X509RevocationFlag]::ExcludeRoot
+                $chain.ChainPolicy.VerificationFlags = [X509VerificationFlags]::NoFlag
+                $chain.ChainPolicy.VerificationTime = [DateTime]::UtcNow
+                $chain.ChainPolicy.UrlRetrievalTimeout = [TimeSpan]::FromSeconds(5)
+
+                foreach ($cert in @($fullCertChain | Select-Object -Skip 1)) {
+                    [void]$chain.ChainPolicy.ExtraStore.Add($cert)
+                }
+
+                $tlsInfo.CertificateIsTrusted = $chain.Build($sslCert)
+            }
+            finally {
+                $chain.Dispose()
+            }
+        }
+
+        $tlsInfo.CertificateSubjectMatchesHostName = $certSubjectMatchesHostName
+        $tlsInfo.IsWildcardCertificate = $wildcardFound
+
+        [bool]$isSelfSigned = $sslCert.Subject -eq $sslCert.Issuer
+        $tlsInfo.IsSelfSignedCertificate = $isSelfSigned
+
+        $tlsInfo.SignatureAlgorithm = $sslCert.SignatureAlgorithm.FriendlyName
+
+        if (-not $IsLinux) {
+            $tlsInfo.KeySize = Get-PublicKeySize -Certificate $sslCert
+        }
+
+        $tlsVersionResults = Test-TlsVersion -HostName $targetHost -Port $targetPort
+
+        $tlsInfo.NegotiatedCipherSuites = $tlsVersionResults.NegotiatedCipherSuites
+        $tlsInfo.CipherAlgorithm = $tlsVersionResults.CipherAlgorithm
+        $tlsInfo.CipherStrength = $tlsVersionResults.CipherStrength
+
+        if ($tlsVersionResults.KeyExchangeAlgorithm) {
+            $tlsInfo.KeyExchangeAlgorithm = $tlsVersionResults.KeyExchangeAlgorithm
+        }
+        else {
+            $tlsInfo.KeyExchangeAlgorithm = "Unable to determine key exchange algorithm."
+        }
+
+        $tlsInfo.Ssl2 = $tlsVersionResults.Ssl2
+        $tlsInfo.Ssl3 = $tlsVersionResults.Ssl3
+        $tlsInfo.Tls = $tlsVersionResults.Tls
+        $tlsInfo.Tls11 = $tlsVersionResults.Tls11
+        $tlsInfo.Tls12 = $tlsVersionResults.Tls12
+        $tlsInfo.Tls13 = $tlsVersionResults.Tls13
+
+        return $tlsInfo
     }
 }
 
