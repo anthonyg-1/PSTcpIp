@@ -1185,7 +1185,7 @@ function Get-TlsCertificate {
             return $sslCert
         }
         catch {
-            $cryptographicExceptionMessage = "Unable to establish TLS session with {0} over port {1}. {2}" -f $targetHost, $targetPort, $_.Exception.Message
+            $cryptographicExceptionMessage = "Unable to establish TLS session with {0} over port {1}." -f $targetHost, $targetPort
             $CryptographicException = [CryptographicException]::new($cryptographicExceptionMessage)
             Write-Error -Exception $CryptographicException -Category SecurityError -ErrorAction $ErrorActionPreference
         }
