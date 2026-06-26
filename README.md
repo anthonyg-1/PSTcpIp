@@ -123,22 +123,28 @@ Get-TlsInformation -Uri https://mysite.com | Select Tls*
 
 ### DNS record enumeration examples
 ```powershell
-# Enumerates DNS record data from the mydomain.org DNS domain
-Invoke-DnsEnumeration -Domain mydomain.org
+# Enumerates DNS record data from the mydomain.org DNS zone
+Invoke-DnsEnumeration -DnsZone "mydomain.org"
 
-# Enumerates DNS record data from the mydomain.org DNS domain using the subdomains.txt text file as input
-Invoke-DnsEnumeration -Domain mydomain.org -WordListPath subdomains.txt
+# Enumerates DNS record data from the mydomain.org DNS zone using the subdomains.txt text file as input
+Invoke-DnsEnumeration -DnsZone mydomain.org -WordListPath subdomains.txt
 
-# Enumerates DNS record data from the mydomain.org DNS domain, tests TCP connectivity, and returns only the hosts that are listening on ports 80 and 443
-Invoke-DnsEnumeration -Domain mydomain.org | Test-TcpConnection -Port 80,443 -ShowConnectedOnly
+# Resolves DNS record data for a single hostname without DNS prefix enumeration
+Invoke-DnsEnumeration -HostName api.mydomain.org
 
-# Enumerates DNS record data from the mydomain.org DNS domain, tests connectivity to TCP port 443, and obtains to obtain TLS information about the endpoint
-Invoke-DnsEnumeration -Domain mydomain.org | Test-TcpConnection -Port 443 -WhereConnected | Get-TlsInformation
+# Enumerates DNS record data from the mydomain.org DNS zone, tests TCP connectivity, and returns only the hosts that are listening on ports 80 and 443
+Invoke-DnsEnumeration -DnsZone mydomain.org | Test-TcpConnection -Port 80,443 -ShowConnectedOnly
 
-# Enumerates DNS record data from the mydomain.org DNS domain, tests connectivity to TCP port 443, obtains to obtain TLS information about the endpoint, and generates an export report as a CSV file
-Invoke-DnsEnumeration -Domain mydomain.com | Test-TcpConnection -Port 443 -WhereConnected | Get-TlsInformation | 
+# Resolves DNS record data for a single hostname, tests connectivity to TCP port 443, and obtains to obtain TLS information about the endpoint
+Invoke-DnsEnumeration -HostName api.mydomain.org | Test-TcpConnection -Port 443 -ShowConnectedOnly | Get-TlsInformation
+
+# Enumerates DNS record data from the mydomain.org DNS zone, tests connectivity to TCP port 443, obtains to obtain TLS information about the endpoint, and generates an export report as a CSV file
+Invoke-DnsEnumeration -DnsZone mydomain.com | Test-TcpConnection -Port 443 -ShowConnectedOnly | Get-TlsInformation |
     Select HostName, IPAddress, Subject, Issuer, CertificateIsExpired, ValidFrom, ValidTo | 
         Export-Csv TlsCertificateExpirationReport.csv
+
+# Enumerates DNS record data using the backwards-compatible Domain alias
+Invoke-DnsEnumeration -Domain mydomain.org
 ```
 
 ### Active Directory server security testing

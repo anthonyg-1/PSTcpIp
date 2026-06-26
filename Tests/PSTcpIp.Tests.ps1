@@ -91,4 +91,72 @@ Describe "Testing module and cmdlets" -Tag Unit -WarningAction SilentlyContinue 
             }
         }
     }
+
+    Context "Invoke-DnsEnumeration DNS zone parameter" {
+        It "accepts DnsZone as the primary parameter" {
+            Import-Module -Name $modulePath -Force -ErrorAction Stop
+            $wordListPath = Join-Path -Path $TestDrive -ChildPath "subdomains.txt"
+            New-Item -Path $wordListPath -ItemType File -Force | Out-Null
+
+            { Invoke-DnsEnumeration -DnsZone example.com -WordListPath $wordListPath -ErrorAction Stop } | Should Not Throw
+        }
+
+        It "accepts Domain as a backwards-compatible alias" {
+            Import-Module -Name $modulePath -Force -ErrorAction Stop
+            $wordListPath = Join-Path -Path $TestDrive -ChildPath "subdomains.txt"
+            New-Item -Path $wordListPath -ItemType File -Force | Out-Null
+
+            { Invoke-DnsEnumeration -Domain example.com -WordListPath $wordListPath -ErrorAction Stop } | Should Not Throw
+        }
+
+        It "accepts HostName as a single-host lookup parameter" {
+            Import-Module -Name $modulePath -Force -ErrorAction Stop
+
+            { Invoke-DnsEnumeration -HostName example.com -ErrorAction Stop } | Should Not Throw
+        }
+
+        It "does not accept WordListPath with HostName" {
+            Import-Module -Name $modulePath -Force -ErrorAction Stop
+            $wordListPath = Join-Path -Path $TestDrive -ChildPath "subdomains.txt"
+            New-Item -Path $wordListPath -ItemType File -Force | Out-Null
+
+            { Invoke-DnsEnumeration -HostName example.com -WordListPath $wordListPath -ErrorAction Stop } | Should Throw
+        }
+
+        It "accepts DnsZone from pipeline property binding" {
+            Import-Module -Name $modulePath -Force -ErrorAction Stop
+            $wordListPath = Join-Path -Path $TestDrive -ChildPath "subdomains.txt"
+            New-Item -Path $wordListPath -ItemType File -Force | Out-Null
+
+            { [PSCustomObject]@{ DnsZone = 'example.com' } | Invoke-DnsEnumeration -WordListPath $wordListPath -ErrorAction Stop } | Should Not Throw
+        }
+
+        It "accepts HostName from pipeline property binding" {
+            Import-Module -Name $modulePath -Force -ErrorAction Stop
+
+            { [PSCustomObject]@{ HostName = 'example.com' } | Invoke-DnsEnumeration -ErrorAction Stop } | Should Not Throw
+        }
+
+        It "returns HostName and IPAddress properties" {
+            Import-Module -Name $modulePath -Force -ErrorAction Stop
+            $wordListPath = Join-Path -Path $TestDrive -ChildPath "subdomains.txt"
+            New-Item -Path $wordListPath -ItemType File -Force | Out-Null
+
+            $result = Invoke-DnsEnumeration -DnsZone localhost -WordListPath $wordListPath | Select-Object -First 1
+
+            $result | Should Not BeNullOrEmpty
+            $result.PSObject.Properties.Name -contains 'HostName' | Should Be $true
+            $result.PSObject.Properties.Name -contains 'IPAddress' | Should Be $true
+        }
+
+        It "returns HostName and IPAddress properties for HostName lookups" {
+            Import-Module -Name $modulePath -Force -ErrorAction Stop
+
+            $result = Invoke-DnsEnumeration -HostName localhost | Select-Object -First 1
+
+            $result | Should Not BeNullOrEmpty
+            $result.PSObject.Properties.Name -contains 'HostName' | Should Be $true
+            $result.PSObject.Properties.Name -contains 'IPAddress' | Should Be $true
+        }
+    }
 }

@@ -1770,35 +1770,45 @@ function Get-TlsInformation {
 function Invoke-DnsEnumeration {
     <#
     .SYNOPSIS
-        Performs a DNS enumeration for the specified domain.
+        Performs DNS enumeration or single-host DNS resolution.
     .DESCRIPTION
-        The Invoke-DnsEnumeration function retrieves record data for a given domain and its subdomains.
-    .PARAMETER Domain
-        Specifies the domain to perform DNS enumeration on.
+        The Invoke-DnsEnumeration function retrieves DNS record data for a given DNS zone/name suffix using common prefixes or a wordlist. It can also resolve one specific hostname without enumeration.
+    .PARAMETER DnsZone
+        Specifies the base DNS zone/name suffix used for enumeration. Domain is supported as a backwards-compatible alias for this parameter.
+    .PARAMETER HostName
+        Specifies one fully qualified hostname to resolve without DNS prefix enumeration.
     .PARAMETER WordListPath
-        Specifies the path to a word list that contains a list of subdomains and/or hosts to check against the domain.
+        Specifies the path to a word list that contains a list of subdomains and/or hosts to check against the DNS zone. This parameter only applies with DnsZone.
     .EXAMPLE
-        Invoke-DnsEnumeration -Domain "mydomain.org"
+        Invoke-DnsEnumeration -DnsZone "mydomain.org"
 
-        Enumerates DNS record data from the mydomain.org DNS domain.
+        Enumerates DNS record data from the mydomain.org DNS zone.
     .EXAMPLE
-        Invoke-DnsEnumeration -Domain mydomain.org -WordListPath subdomains.txt
+        Invoke-DnsEnumeration -DnsZone mydomain.org -WordListPath subdomains.txt
 
-        Enumerates DNS record data from the mydomain.org DNS domain using the subdomains.txt text file as input.
+        Enumerates DNS record data from the mydomain.org DNS zone using the subdomains.txt text file as input.
     .EXAMPLE
-        Invoke-DnsEnumeration -Domain mydomain.org | Test-TcpConnection -Port 80,443 -ShowConnectedOnly
+        Invoke-DnsEnumeration -HostName api.mydomain.org
 
-        Enumerates DNS record data from the mydomain.org DNS domain, tests connectivity to TCP port 443, and returns only the hosts that are listening on ports 80 and 443.
+        Resolves DNS record data for the api.mydomain.org hostname without DNS prefix enumeration.
     .EXAMPLE
-        Invoke-DnsEnumeration -Domain mydomain.org | Test-TcpConnection -Port 443 -ShowConnectedOnly | Get-TlsInformation
+        Invoke-DnsEnumeration -DnsZone mydomain.org | Test-TcpConnection -Port 80,443 -ShowConnectedOnly
 
-        Enumerates DNS record data from the mydomain.org DNS domain, tests connectivity to TCP port 443, and obtains to obtain TLS information about the endpoint.
+        Enumerates DNS record data from the mydomain.org DNS zone, tests connectivity to TCP port 443, and returns only the hosts that are listening on ports 80 and 443.
     .EXAMPLE
-        Invoke-DnsEnumeration -Domain mydomain.com | Test-TcpConnection -Port 443 -ShowConnectedOnly | Get-TlsInformation |
+        Invoke-DnsEnumeration -HostName api.mydomain.org | Test-TcpConnection -Port 443 -ShowConnectedOnly | Get-TlsInformation
+
+        Resolves DNS record data for the api.mydomain.org hostname, tests connectivity to TCP port 443, and obtains to obtain TLS information about the endpoint.
+    .EXAMPLE
+        Invoke-DnsEnumeration -DnsZone mydomain.com | Test-TcpConnection -Port 443 -ShowConnectedOnly | Get-TlsInformation |
             Select HostName, IPAddress, Subject, Issuer, CertificateIsExpired, ValidFrom, ValidTo |
                 Export-Csv TlsCertificateExpirationReport.csv
 
-        Enumerates DNS record data from the mydomain.org DNS domain, tests connectivity to TCP port 443, obtains to obtain TLS information about the endpoint, and generates an export report as a CSV file.
+        Enumerates DNS record data from the mydomain.org DNS zone, tests connectivity to TCP port 443, obtains to obtain TLS information about the endpoint, and generates an export report as a CSV file.
+    .EXAMPLE
+        Invoke-DnsEnumeration -Domain mydomain.org
+
+        Enumerates DNS record data from the mydomain.org DNS zone using the backwards-compatible Domain alias.
     .LINK
         Test-TcpConnection
         Get-TlsInformation
@@ -1806,13 +1816,15 @@ function Invoke-DnsEnumeration {
         Export-Csv
         https://github.com/anthonyg-1/PSTcpIp
 #>
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = 'DnsZone')]
     [Alias('idnse', 'dnse')]
     [OutputType([PSCustomObject])]
     param (
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][ValidateLength(1, 255)][Alias('d')][System.String]$Domain,
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, ParameterSetName = 'DnsZone')][ValidateLength(1, 255)][Alias('Domain', 'Zone', 'd')][System.String]$DnsZone,
 
-        [Parameter(Mandatory = $false)][ValidateNotNullOrEmpty()][Alias('wl', 'Path')][System.IO.FileInfo]$WordListPath
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, ParameterSetName = 'HostName')][ValidateLength(1, 255)][Alias('ComputerName', 'Name', 'h')][System.String]$HostName,
+
+        [Parameter(Mandatory = $false, ParameterSetName = 'DnsZone')][ValidateNotNullOrEmpty()][Alias('wl', 'Path')][System.IO.FileInfo]$WordListPath
     )
     BEGIN {
         function _queryDnsDomain([string]$dnsDomain) {
@@ -1832,6 +1844,11 @@ function Invoke-DnsEnumeration {
         }
     }
     PROCESS {
+        if ($PSCmdlet.ParameterSetName -eq 'HostName') {
+            _queryDnsDomain $HostName
+            return
+        }
+
         # Load subdomains from WordListPath if provided:
         $subdomains = @()
         if ($PSBoundParameters.ContainsKey("WordListPath")) {
@@ -1842,11 +1859,11 @@ function Invoke-DnsEnumeration {
         }
 
         # Primary domain query:
-        _queryDnsDomain $Domain
+        _queryDnsDomain $DnsZone
 
         # Subdomains/hosts query:
         foreach ($prefix in $subdomains) {
-            _queryDnsDomain "$prefix.$Domain"
+            _queryDnsDomain "$prefix.$DnsZone"
         }
     }
 }
