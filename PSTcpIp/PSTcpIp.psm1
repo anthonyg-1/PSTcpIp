@@ -1,4 +1,4 @@
-using namespace System
+﻿using namespace System
 using namespace System.Collections.Generic
 using namespace System.Net
 using namespace System.Net.Sockets
@@ -1073,6 +1073,8 @@ function Get-TlsCertificate {
     [CmdletBinding(DefaultParameterSetName = 'HostName')]
     [Alias('gtls', 'gtlsc', 'gssl', 'Get-SslCertificate')]
     [OutputType([System.Security.Cryptography.X509Certificates.X509Certificate2])]
+    [OutputType([System.Security.Cryptography.X509Certificates.X509Certificate2[]], ParameterSetName = 'HostName')]
+    [OutputType([System.Security.Cryptography.X509Certificates.X509Certificate2[]], ParameterSetName = 'Uri')]
     param(
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, Position = 0, ParameterSetName = "HostName")]
         [ValidateLength(1, 250)]
@@ -1151,7 +1153,7 @@ function Get-TlsCertificate {
             $script:PSTcpIp_TlsCertificate_CallbackChain = @()
 
             $callback = {
-                param($sender, $certificate, $chain, $sslPolicyErrors)
+                param($callbackSender, $certificate, $chain, $sslPolicyErrors)
 
                 if ($null -ne $chain -and $null -ne $chain.ChainElements) {
                     $script:PSTcpIp_TlsCertificate_CallbackChain = @(
@@ -1176,10 +1178,10 @@ function Get-TlsCertificate {
                 $callbackChain = @($script:PSTcpIp_TlsCertificate_CallbackChain)
 
                 if ($callbackChain.Count -gt 0) {
-                    return $callbackChain
+                    return [X509Certificate2[]]$callbackChain
                 }
 
-                return Get-X509CertificateChain -Certificate $sslCert
+                return [X509Certificate2[]](Get-X509CertificateChain -Certificate $sslCert)
             }
 
             return $sslCert
@@ -1827,20 +1829,99 @@ function Invoke-DnsEnumeration {
         [Parameter(Mandatory = $false, ParameterSetName = 'DnsZone')][ValidateNotNullOrEmpty()][Alias('wl', 'Path')][System.IO.FileInfo]$WordListPath
     )
     BEGIN {
-        function _queryDnsDomain([string]$dnsDomain) {
-            # Query record data:
+        function _getDnsAddress {
+            param (
+                [Parameter(Mandatory = $true)][string]$DnsDomain
+            )
+
             try {
-                $ips = [System.Net.Dns]::GetHostAddresses($dnsDomain) | ForEach-Object { $_.IPAddressToString }
-                if ($ips.Count -ne 0) {
-                    foreach ($ip in $ips) {
-                        ([PSCustomObject]@{
-                            'HostName'  = $dnsDomain
-                            'IPAddress' = $ip
-                        })
+                @([System.Net.Dns]::GetHostAddresses($DnsDomain) | ForEach-Object { $_.IPAddressToString } | Sort-Object -Unique)
+            }
+            catch { @() } # Have to swallow exceptions to allow enumeration
+        }
+
+        function _getDnsAddressKey {
+            param (
+                [Parameter(Mandatory = $true)][string[]]$IPAddress
+            )
+
+            (@($IPAddress) | Sort-Object -Unique) -join '|'
+        }
+
+        function _getWildcardDnsRecord {
+            param (
+                [Parameter(Mandatory = $true)][string]$DnsZone
+            )
+
+            $wildcardResults = @()
+
+            1..3 | ForEach-Object {
+                $probeHostName = '{0}.{1}' -f ([guid]::NewGuid().ToString('N').Substring(0, 16)), $DnsZone
+                $probeIPAddress = _getDnsAddress -DnsDomain $probeHostName
+
+                if ($probeIPAddress.Count -ne 0) {
+                    $wildcardResults += [PSCustomObject]@{
+                        HostName  = $probeHostName
+                        IPAddress = $probeIPAddress
+                        Key       = _getDnsAddressKey -IPAddress $probeIPAddress
                     }
                 }
             }
-            catch {} # Have to swallow exceptions to allow enumeration
+
+            if ($wildcardResults.Count -eq 0) {
+                return $null
+            }
+
+            $wildcardAddressKeys = @{}
+            foreach ($result in $wildcardResults) {
+                if (-not($wildcardAddressKeys.ContainsKey($result.Key))) {
+                    $wildcardAddressKeys.Add($result.Key, $true)
+                }
+            }
+
+            [PSCustomObject]@{
+                IPAddress = @($wildcardResults | ForEach-Object { $_.IPAddress } | Sort-Object -Unique)
+                Keys      = $wildcardAddressKeys
+            }
+        }
+
+        function _testWildcardDnsRecord {
+            param (
+                [Parameter(Mandatory = $true)][string[]]$IPAddress,
+                [Parameter(Mandatory = $false)]$WildcardDnsRecord
+            )
+
+            if ($null -eq $WildcardDnsRecord) {
+                return $false
+            }
+
+            $addressKey = _getDnsAddressKey -IPAddress $IPAddress
+            if ($WildcardDnsRecord.Keys.ContainsKey($addressKey)) {
+                return $true
+            }
+
+            $nonWildcardIPAddress = @($IPAddress | Where-Object { $WildcardDnsRecord.IPAddress -notcontains $_ })
+
+            return ($nonWildcardIPAddress.Count -eq 0)
+        }
+
+        function _queryDnsDomain {
+            param (
+                [Parameter(Mandatory = $true)][string]$DnsDomain,
+                [Parameter(Mandatory = $false)]$WildcardDnsRecord
+            )
+
+            # Query record data:
+            $ips = _getDnsAddress -DnsDomain $DnsDomain
+
+            if (($ips.Count -ne 0) -and -not(_testWildcardDnsRecord -IPAddress $ips -WildcardDnsRecord $WildcardDnsRecord)) {
+                foreach ($ip in $ips) {
+                    ([PSCustomObject]@{
+                        'HostName'  = $DnsDomain
+                        'IPAddress' = $ip
+                    })
+                }
+            }
         }
     }
     PROCESS {
@@ -1861,9 +1942,14 @@ function Invoke-DnsEnumeration {
         # Primary domain query:
         _queryDnsDomain $DnsZone
 
+        $wildcardDnsRecord = _getWildcardDnsRecord -DnsZone $DnsZone
+        if ($null -ne $wildcardDnsRecord) {
+            Write-Verbose -Message ('Wildcard DNS record detected for {0}; matching enumeration results will be suppressed.' -f $DnsZone)
+        }
+
         # Subdomains/hosts query:
         foreach ($prefix in $subdomains) {
-            _queryDnsDomain "$prefix.$DnsZone"
+            _queryDnsDomain "$prefix.$DnsZone" -WildcardDnsRecord $wildcardDnsRecord
         }
     }
 }
