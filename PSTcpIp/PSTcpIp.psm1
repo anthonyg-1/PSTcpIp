@@ -411,6 +411,164 @@ function Get-PublicKeySize {
 }
 
 
+function Get-TlsProtocolPreference {
+    [CmdletBinding()]
+    [OutputType([PSCustomObject])]
+    param()
+
+    [PSCustomObject]@{
+        Name        = 'SystemDefault'
+        DisplayName = 'system default TLS negotiation'
+        Protocol    = [SslProtocols]::None
+        IsDefault   = $true
+    }
+
+    $explicitProtocols = @(
+        @{
+            Name        = 'Tls13'
+            DisplayName = 'TLS 1.3'
+        }
+        @{
+            Name        = 'Tls12'
+            DisplayName = 'TLS 1.2'
+        }
+        @{
+            Name        = 'Tls11'
+            DisplayName = 'TLS 1.1'
+        }
+        @{
+            Name        = 'Tls'
+            DisplayName = 'TLS 1.0'
+        }
+    )
+
+    foreach ($explicitProtocol in $explicitProtocols) {
+        $protocol = [SslProtocols]::None
+
+        if ([Enum]::TryParse([SslProtocols], $explicitProtocol.Name, $true, [ref]$protocol)) {
+            [PSCustomObject]@{
+                Name        = $explicitProtocol.Name
+                DisplayName = $explicitProtocol.DisplayName
+                Protocol    = $protocol
+                IsDefault   = $false
+            }
+        }
+    }
+}
+
+
+function Invoke-TlsCertificateHandshake {
+    [CmdletBinding()]
+    [OutputType([PSCustomObject])]
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateLength(1, 250)]
+        [String]$HostName,
+
+        [Parameter(Mandatory = $true)]
+        [ValidateRange(1, 65535)]
+        [Int]$Port,
+
+        [Parameter(Mandatory = $false)]
+        [ValidateRange(1, 60000)]
+        [Int]$TimeoutMilliseconds = 10000
+    )
+
+    PROCESS {
+        [Exception]$lastException = $null
+        [String[]]$attemptedProtocols = @()
+
+        foreach ($tlsProtocol in (Get-TlsProtocolPreference)) {
+            [TcpClient]$tcpClient = $null
+            [SslStream]$sslStream = $null
+            [X509Certificate2]$sslCert = $null
+            [X509Certificate2[]]$callbackChain = @()
+            $attemptedProtocols += $tlsProtocol.DisplayName
+
+            try {
+                $tcpClient = [TcpClient]::new()
+                $tcpClient.ReceiveTimeout = $TimeoutMilliseconds
+                $tcpClient.SendTimeout = $TimeoutMilliseconds
+
+                $connectTask = $tcpClient.ConnectAsync($HostName, $Port)
+                if (-not $connectTask.Wait($TimeoutMilliseconds)) {
+                    throw [TimeoutException]::new("Connection timed out")
+                }
+
+                $script:PSTcpIp_TlsCertificate_CallbackChain = @()
+
+                $callback = {
+                    param($callbackSender, $certificate, $chain, $sslPolicyErrors)
+
+                    if ($null -ne $chain -and $null -ne $chain.ChainElements) {
+                        $script:PSTcpIp_TlsCertificate_CallbackChain = @(
+                            foreach ($element in $chain.ChainElements) {
+                                [X509Certificate2]::new($element.Certificate.RawData)
+                            }
+                        )
+                    }
+
+                    return $true
+                }
+
+                $sslStream = [SslStream]::new($tcpClient.GetStream(), $false, $callback)
+                $sslStream.ReadTimeout = $TimeoutMilliseconds
+                $sslStream.WriteTimeout = $TimeoutMilliseconds
+
+                if ($tlsProtocol.IsDefault) {
+                    $sslStream.AuthenticateAsClient($HostName)
+                }
+                else {
+                    $sslStream.AuthenticateAsClient($HostName, $null, $tlsProtocol.Protocol, $false)
+                }
+
+                $sslCert = [X509Certificate2]::new($sslStream.RemoteCertificate)
+                $callbackChain = @($script:PSTcpIp_TlsCertificate_CallbackChain)
+                $protocolDisplayName = $tlsProtocol.DisplayName
+
+                if ($tlsProtocol.IsDefault -and $sslStream.SslProtocol) {
+                    $protocolDisplayName = "{0} ({1})" -f $tlsProtocol.DisplayName, $sslStream.SslProtocol
+                }
+
+                return [PSCustomObject]@{
+                    Certificate         = $sslCert
+                    CertificateChain    = $callbackChain
+                    Protocol            = $sslStream.SslProtocol
+                    ProtocolName        = $sslStream.SslProtocol.ToString()
+                    ProtocolDisplayName = $protocolDisplayName
+                }
+            }
+            catch {
+                $lastException = $_.Exception
+                $baseException = $_.Exception.GetBaseException()
+                Write-Verbose ("Unable to establish TLS session with {0} over port {1} using {2}: {3}" -f $HostName, $Port, $tlsProtocol.DisplayName, $baseException.Message)
+            }
+            finally {
+                Remove-Variable -Name PSTcpIp_TlsCertificate_CallbackChain -Scope Script -ErrorAction SilentlyContinue
+
+                if ($null -ne $sslStream) {
+                    try { $sslStream.Close() } catch {}
+                    try { $sslStream.Dispose() } catch {}
+                }
+
+                if ($null -ne $tcpClient) {
+                    try { $tcpClient.Close() } catch {}
+                    try { $tcpClient.Dispose() } catch {}
+                }
+            }
+        }
+
+        $cryptographicExceptionMessage = "Unable to establish TLS session with {0} over port {1} using {2}." -f $HostName, $Port, ($attemptedProtocols -join ', ')
+
+        if ($null -ne $lastException) {
+            throw [CryptographicException]::new($cryptographicExceptionMessage, $lastException)
+        }
+
+        throw [CryptographicException]::new($cryptographicExceptionMessage)
+    }
+}
+
+
 function Test-TlsVersion {
     [CmdletBinding()]
     param(
@@ -500,17 +658,17 @@ function Test-TlsVersion {
         }
     }
     PROCESS {
-        # Test each protocol individually:
-        $ssl2Info = Test-Protocol -Protocol ([System.Security.Authentication.SslProtocols]::Ssl2) -ProtocolName "Ssl2"
-        $ssl3Info = Test-Protocol -Protocol ([System.Security.Authentication.SslProtocols]::Ssl3) -ProtocolName "Ssl3"
-        $tlsInfo = Test-Protocol -Protocol ([System.Security.Authentication.SslProtocols]::Tls) -ProtocolName "Tls"
-        $tls11Info = Test-Protocol -Protocol ([System.Security.Authentication.SslProtocols]::Tls11) -ProtocolName "Tls11"
-        $tls12Info = Test-Protocol -Protocol ([System.Security.Authentication.SslProtocols]::Tls12) -ProtocolName "Tls12"
+        # Test each protocol individually from strongest to weakest.
         $tls13Info = Test-Protocol -Protocol ([System.Security.Authentication.SslProtocols]::Tls13) -ProtocolName "Tls13"
+        $tls12Info = Test-Protocol -Protocol ([System.Security.Authentication.SslProtocols]::Tls12) -ProtocolName "Tls12"
+        $tls11Info = Test-Protocol -Protocol ([System.Security.Authentication.SslProtocols]::Tls11) -ProtocolName "Tls11"
+        $tlsInfo = Test-Protocol -Protocol ([System.Security.Authentication.SslProtocols]::Tls) -ProtocolName "Tls"
+        $ssl3Info = Test-Protocol -Protocol ([System.Security.Authentication.SslProtocols]::Ssl3) -ProtocolName "Ssl3"
+        $ssl2Info = Test-Protocol -Protocol ([System.Security.Authentication.SslProtocols]::Ssl2) -ProtocolName "Ssl2"
 
         # Collect all negotiated cipher suites into an array
         $negotiatedCipherSuites = @()
-        foreach ($info in @($ssl2Info, $ssl3Info, $tlsInfo, $tls11Info, $tls12Info, $tls13Info)) {
+        foreach ($info in @($tls13Info, $tls12Info, $tls11Info, $tlsInfo, $ssl3Info, $ssl2Info)) {
             if ($info.Supported -and $info.NegotiatedCipherSuite) {
                 $negotiatedCipherSuites += $info.NegotiatedCipherSuite
             }
@@ -1111,6 +1269,13 @@ function Get-TlsCertificate {
             }
         }
         else {
+            [bool]$hostNameIsUri = [System.Uri]::IsWellFormedUriString($HostName, [System.UriKind]::Absolute)
+            if ($hostNameIsUri) {
+                $argumentExceptionMessage = "Value passed to HostName is a URI. Use the Uri parameter instead."
+                $ArgumentException = [ArgumentException]::new($argumentExceptionMessage)
+                Write-Error -Exception $ArgumentException -Category InvalidArgument -ErrorAction Stop
+            }
+
             $targetHost = $HostName
             $targetPort = $Port
         }
@@ -1135,47 +1300,15 @@ function Get-TlsCertificate {
             return
         }
 
-        [TcpClient]$tcpClient = $null
-        [SslStream]$sslStream = $null
         [X509Certificate2]$sslCert = $null
         [X509Certificate2[]]$callbackChain = @()
 
         try {
-            $tcpClient = [TcpClient]::new()
-            $tcpClient.ReceiveTimeout = 10000
-            $tcpClient.SendTimeout = 10000
-
-            $connectTask = $tcpClient.ConnectAsync($targetHost, $targetPort)
-            if (-not $connectTask.Wait(10000)) {
-                throw [TimeoutException]::new("Connection timed out")
-            }
-
-            $script:PSTcpIp_TlsCertificate_CallbackChain = @()
-
-            $callback = {
-                param($callbackSender, $certificate, $chain, $sslPolicyErrors)
-
-                if ($null -ne $chain -and $null -ne $chain.ChainElements) {
-                    $script:PSTcpIp_TlsCertificate_CallbackChain = @(
-                        foreach ($element in $chain.ChainElements) {
-                            [X509Certificate2]::new($element.Certificate.RawData)
-                        }
-                    )
-                }
-
-                return $true
-            }
-
-            $sslStream = [SslStream]::new($tcpClient.GetStream(), $false, $callback)
-            $sslStream.ReadTimeout = 10000
-            $sslStream.WriteTimeout = 10000
-
-            $sslStream.AuthenticateAsClient($targetHost)
-
-            $sslCert = [X509Certificate2]::new($sslStream.RemoteCertificate)
+            $tlsHandshakeResult = Invoke-TlsCertificateHandshake -HostName $targetHost -Port $targetPort
+            $sslCert = $tlsHandshakeResult.Certificate
 
             if ($IncludeChain) {
-                $callbackChain = @($script:PSTcpIp_TlsCertificate_CallbackChain)
+                $callbackChain = @($tlsHandshakeResult.CertificateChain)
 
                 if ($callbackChain.Count -gt 0) {
                     return [X509Certificate2[]]$callbackChain
@@ -1187,22 +1320,14 @@ function Get-TlsCertificate {
             return $sslCert
         }
         catch {
-            $cryptographicExceptionMessage = "Unable to establish TLS session with {0} over port {1}." -f $targetHost, $targetPort
-            $CryptographicException = [CryptographicException]::new($cryptographicExceptionMessage)
+            $cryptographicExceptionMessage = $_.Exception.Message
+            if ($_.Exception -is [CryptographicException]) {
+                $CryptographicException = $_.Exception
+            }
+            else {
+                $CryptographicException = [CryptographicException]::new($cryptographicExceptionMessage, $_.Exception)
+            }
             Write-Error -Exception $CryptographicException -Category SecurityError -ErrorAction $ErrorActionPreference
-        }
-        finally {
-            Remove-Variable -Name PSTcpIp_TlsCertificate_CallbackChain -Scope Script -ErrorAction SilentlyContinue
-
-            if ($null -ne $sslStream) {
-                try { $sslStream.Close() } catch {}
-                try { $sslStream.Dispose() } catch {}
-            }
-
-            if ($null -ne $tcpClient) {
-                try { $tcpClient.Close() } catch {}
-                try { $tcpClient.Dispose() } catch {}
-            }
         }
     }
 }
@@ -1304,12 +1429,11 @@ function Get-HttpResponseHeader {
             $webExceptionMessage = "Unable to connect to {0} over port {1}. Verify hostname and port and try again." -f $HostName, $Port
             $WebException = New-Object -TypeName WebException -ArgumentList $webExceptionMessage
 
-            [bool]$hostNameIsUri = [System.Uri]::IsWellFormedUriString($HostName, 1)
+            [bool]$hostNameIsUri = [System.Uri]::IsWellFormedUriString($HostName, [System.UriKind]::Absolute)
             if ($hostNameIsUri) {
                 $argumentExceptionMessage = "Value passed to HostName is a URI. Use the Uri parameter instead."
                 $ArgumentException = [ArgumentException]::new($argumentExceptionMessage)
-                Write-Error -Exception $ArgumentException -Category InvalidArgument -ErrorAction $ErrorActionPreference
-                return
+                Write-Error -Exception $ArgumentException -Category InvalidArgument -ErrorAction Stop
             }
 
             $targetPort = $Port
@@ -1515,6 +1639,13 @@ function Get-TlsInformation {
             }
         }
         else {
+            [bool]$hostNameIsUri = [System.Uri]::IsWellFormedUriString($HostName, [System.UriKind]::Absolute)
+            if ($hostNameIsUri) {
+                $argumentExceptionMessage = "Value passed to HostName is a URI. Use the Uri parameter instead."
+                $ArgumentException = [ArgumentException]::new($argumentExceptionMessage)
+                Write-Error -Exception $ArgumentException -Category InvalidArgument -ErrorAction Stop
+            }
+
             $targetHost = $HostName
             $targetPort = $Port
             $targetUri = "https://{0}:{1}" -f $targetHost, $targetPort
@@ -1604,7 +1735,12 @@ function Get-TlsInformation {
         }
         catch {
             $cryptographicExceptionMessage = $_.Exception.Message
-            $CryptographicException = [CryptographicException]::new($cryptographicExceptionMessage)
+            if ($_.Exception -is [CryptographicException]) {
+                $CryptographicException = $_.Exception
+            }
+            else {
+                $CryptographicException = [CryptographicException]::new($cryptographicExceptionMessage, $_.Exception)
+            }
             Write-Error -Exception $CryptographicException -Category SecurityError -ErrorAction $ErrorActionPreference
         }
 

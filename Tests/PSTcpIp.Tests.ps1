@@ -92,6 +92,34 @@ Describe "Testing module and cmdlets" -Tag Unit -WarningAction SilentlyContinue 
         }
     }
 
+    Context "HostName URI validation" {
+        It "<CommandName> throws when HostName is a URI" -TestCases @(
+            @{ CommandName = 'Get-TlsCertificate' }
+            @{ CommandName = 'Get-TlsInformation' }
+            @{ CommandName = 'Get-HttpResponseHeader' }
+        ) {
+            param($CommandName)
+
+            Import-Module -Name $modulePath -Force -ErrorAction Stop
+
+            { & $CommandName -HostName 'https://example.com' } | Should -Throw -ExpectedMessage 'Value passed to HostName is a URI. Use the Uri parameter instead.'
+        }
+    }
+
+    Context "TLS protocol preference" {
+        It "attempts default TLS negotiation before explicit TLS fallback" {
+            Import-Module -Name $modulePath -Force -ErrorAction Stop
+
+            InModuleScope -ModuleName $module {
+                $protocolPreference = Get-TlsProtocolPreference
+
+                $protocolPreference[0].DisplayName | Should -Be 'system default TLS negotiation'
+                $protocolPreference[0].IsDefault | Should -Be $true
+                ($protocolPreference[1..($protocolPreference.Count - 1)].DisplayName -join ',') | Should -Be 'TLS 1.3,TLS 1.2,TLS 1.1,TLS 1.0'
+            }
+        }
+    }
+
     Context "Invoke-DnsEnumeration DNS zone parameter" {
         It "accepts DnsZone as the primary parameter" {
             Import-Module -Name $modulePath -Force -ErrorAction Stop
